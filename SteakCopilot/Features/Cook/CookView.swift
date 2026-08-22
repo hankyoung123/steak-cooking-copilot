@@ -46,7 +46,7 @@ struct CookView: View {
 
             actionReadout(at: date)
 
-            if controller.session.phase == .checkTemperature {
+            if controller.guidance.currentAction == .checkTemperature {
                 temperatureControl(at: date)
                     .transition(.opacity)
             }
@@ -56,7 +56,7 @@ struct CookView: View {
             if shouldShowConfirmButton {
                 PrimaryActionButton(
                     title: confirmButtonTitle,
-                    icon: controller.session.phase == .pull ? "arrow.up" : "checkmark",
+                    icon: controller.guidance.currentAction == .takeOut ? "arrow.up" : "checkmark",
                     isEnabled: canConfirm,
                     lightOnDark: true
                 ) {
@@ -70,7 +70,7 @@ struct CookView: View {
         .padding(.top, 18)
         .padding(.bottom, 22)
         .foregroundStyle(theme.cream)
-        .animation(.easeOut(duration: 0.24), value: controller.guidance.action)
+        .animation(.easeOut(duration: 0.24), value: controller.guidance.currentAction)
     }
 
     private var cookHeader: some View {
@@ -174,8 +174,8 @@ struct CookView: View {
 
     @ViewBuilder
     private var cookingAccent: some View {
-        switch controller.session.phase {
-        case .butter:
+        switch controller.guidance.currentAction {
+        case .addButter:
             ForEach(0..<6, id: \.self) { index in
                 Circle()
                     .stroke(theme.butter.opacity(0.52), lineWidth: 2)
@@ -218,12 +218,10 @@ struct CookView: View {
 
     private var phaseTitle: String {
         switch controller.session.phase {
-        case .searFirst, .searSecond: "Searing"
+        case .sear: "Searing"
         case .fatCap: "Fat cap"
-        case .butter: "Butter"
         case .baste: "Basting"
         case .checkTemperature: "Temperature"
-        case .pull: "Pull"
         default: "Cooking"
         }
     }
@@ -231,19 +229,19 @@ struct CookView: View {
     private var actionHeadline: String {
         if case .flipNow = controller.guidance.event { return "FLIP\nNOW" }
         if controller.guidance.event == .pullNow { return "TAKE\nIT OUT" }
-        return controller.guidance.action.title
+        return controller.guidance.currentAction.title
     }
 
     private var actionDetail: String {
-        switch controller.guidance.action {
-        case .wait: "Don't touch it. Let the crust build."
+        switch controller.guidance.currentAction {
+        case .wait: "Let the crust build until the next check."
         case .flip: controller.guidance.remainingTime > 0 ? "Get your tongs ready." : "Turn it over now."
-        case .standItUp: "Hold the fat edge against the pan."
+        case .standFatCap: "Hold the fat edge against the pan."
         case .addButter: "Add butter, garlic, and herbs if you like."
         case .baste: "Tilt the pan and spoon the foaming butter."
         case .checkTemperature: "Probe through the side toward the center."
-        case .takeItOut: "Carryover heat will finish the center."
-        case .rest, .eat: ""
+        case .takeOut: "Carryover heat will finish the center."
+        case .waitForFinish, .eat: ""
         }
     }
 
@@ -260,36 +258,35 @@ struct CookView: View {
     }
 
     private var shouldShowConfirmButton: Bool {
-        controller.guidance.action != .wait
+        ![.wait, .baste, .waitForFinish].contains(controller.guidance.currentAction)
     }
 
     private var canConfirm: Bool {
         controller.guidance.remainingTime <= 0
-            || controller.session.phase == .pull
             || controller.guidance.event == .pullNow
     }
 
     private var confirmButtonTitle: String {
-        switch controller.session.phase {
-        case .searFirst, .searSecond: "Flipped"
-        case .checkTemperature: "Temperature checked"
-        case .pull: "Steak is out"
+        switch controller.guidance.currentAction {
+        case .flip: "Flipped"
+        case .standFatCap: "Start fat cap"
+        case .addButter: "Butter added"
+        case .checkTemperature: "No thermometer — continue"
+        case .takeOut: "Steak is out"
         default: "Done"
         }
     }
 
     private var showsButter: Bool {
-        [.butter, .baste, .checkTemperature, .pull].contains(controller.session.phase)
+        controller.session.butterAddedAt != nil
     }
 
     private var overallCookedProgress: Double {
         switch controller.session.phase {
-        case .searFirst: 0.1 + controller.guidance.progress * 0.25
-        case .searSecond: 0.35 + controller.guidance.progress * 0.22
+        case .sear: 0.1 + controller.guidance.estimatedProgress * 0.5
         case .fatCap: 0.6
-        case .butter: 0.68
-        case .baste: 0.76 + controller.guidance.progress * 0.12
-        case .checkTemperature, .pull: 0.92
+        case .baste: 0.76 + controller.guidance.estimatedProgress * 0.12
+        case .checkTemperature: 0.92
         default: 0
         }
     }
@@ -315,7 +312,7 @@ struct CookView: View {
         .padding(14)
         .background(theme.cream.opacity(0.08), in: RoundedRectangle(cornerRadius: 18))
         .onAppear {
-            manualTemperature = controller.session.manualTemperatureC
+            manualTemperature = controller.session.lastManualTemperatureC
                 ?? controller.guidance.pullTemperatureC - 2
         }
     }

@@ -22,14 +22,14 @@ final class NotificationService {
     ) async {
         guard isEnabled else { return }
         center.removePendingNotificationRequests(withIdentifiers: ["next-cooking-action"])
-        guard session.phaseDuration > 0 else { return }
-
-        let fireDate = session.phaseStartedAt.addingTimeInterval(session.phaseDuration)
+        guard let fireDate = guidance.nextActionAt,
+              let action = guidance.nextAction
+        else { return }
         guard fireDate > .now else { return }
 
         let content = UNMutableNotificationContent()
-        content.title = notificationTitle(for: session.phase)
-        content.body = notificationBody(for: session.phase, target: guidance.pullTemperatureC)
+        content.title = notificationTitle(for: action)
+        content.body = notificationBody(for: action, target: guidance.pullTemperatureC)
         content.sound = .default
         content.interruptionLevel = .timeSensitive
 
@@ -50,22 +50,23 @@ final class NotificationService {
         center.removePendingNotificationRequests(withIdentifiers: ["next-cooking-action"])
     }
 
-    private func notificationTitle(for phase: CookingPhase) -> String {
-        switch phase {
-        case .searFirst, .searSecond: "FLIP NOW"
-        case .fatCap: "ADD BUTTER"
-        case .butter: "BASTE"
-        case .baste: "CHECK TEMP"
-        case .checkTemperature: "TAKE IT OUT"
-        case .resting: "READY"
+    private func notificationTitle(for action: CookingAction) -> String {
+        switch action {
+        case .flip: "FLIP NOW"
+        case .standFatCap: "STAND THE FAT CAP"
+        case .addButter: "ADD BUTTER"
+        case .baste: "BASTE"
+        case .checkTemperature: "CHECK TEMP"
+        case .takeOut: "TAKE IT OUT"
+        case .eat: "READY"
         default: "Steak needs you"
         }
     }
 
-    private func notificationBody(for phase: CookingPhase, target: Double) -> String {
-        switch phase {
+    private func notificationBody(for action: CookingAction, target: Double) -> String {
+        switch action {
         case .checkTemperature: "Pull at about \(target.formatted(.number.precision(.fractionLength(0))))°C."
-        case .resting: "Carryover cooking is complete. Time to eat."
+        case .eat: "Estimated finishing time is complete. Time to eat."
         default: "Open Perfect Steak for the next step."
         }
     }

@@ -15,15 +15,23 @@ enum Doneness: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    var targetTemperatureC: Double {
+        switch self {
+        case .rare: 52
+        case .mediumRare: 54
+        case .medium: 60
+        }
+    }
+
     var pullTemperatureC: Double {
         switch self {
-        case .rare: 48
+        case .rare: 49
         case .mediumRare: 52
         case .medium: 57
         }
     }
 
-    var cookingMultiplier: Double {
+    var cookingBudgetFactor: Double {
         switch self {
         case .rare: 0.88
         case .mediumRare: 1

@@ -1,34 +1,16 @@
 import Foundation
 
 struct CookingProfile: Equatable, Sendable {
-    let firstSearDuration: TimeInterval
-    let secondSearDuration: TimeInterval
-    let fatCapDuration: TimeInterval
-    let butterDuration: TimeInterval
+    let flipInterval: TimeInterval
+    let estimatedCookingBudget: TimeInterval
+    let initialSearBias: TimeInterval
+    let fatCapDuration: TimeInterval?
     let basteDuration: TimeInterval
-    let temperatureCheckDuration: TimeInterval
+    let targetTemperatureC: Double
     let pullTemperatureC: Double
-    let restDuration: TimeInterval
+    let finishingEstimate: ClosedRange<TimeInterval>
 
-    var totalCookingDuration: TimeInterval {
-        firstSearDuration
-            + secondSearDuration
-            + fatCapDuration
-            + butterDuration
-            + basteDuration
-            + temperatureCheckDuration
-    }
-
-    func duration(for phase: CookingPhase) -> TimeInterval {
-        switch phase {
-        case .searFirst: firstSearDuration
-        case .searSecond: secondSearDuration
-        case .fatCap: fatCapDuration
-        case .butter: butterDuration
-        case .baste: basteDuration
-        case .checkTemperature: temperatureCheckDuration
-        case .resting: restDuration
-        default: 0
-        }
+    var lateStageDateOffset: TimeInterval {
+        max(flipInterval * 2, estimatedCookingBudget * 0.65 + initialSearBias)
     }
 }

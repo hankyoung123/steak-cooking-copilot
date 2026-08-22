@@ -21,7 +21,7 @@ final class LiveActivityService {
         )
         let content = ActivityContent(
             state: contentState(for: session, guidance: guidance),
-            staleDate: actionDate(for: session)?.addingTimeInterval(30)
+            staleDate: guidance.nextActionAt?.addingTimeInterval(30)
         )
         activity = try? Activity.request(
             attributes: attributes,
@@ -34,7 +34,7 @@ final class LiveActivityService {
         guard isEnabled, let activity else { return }
         let content = ActivityContent(
             state: contentState(for: session, guidance: guidance),
-            staleDate: actionDate(for: session)?.addingTimeInterval(30)
+            staleDate: guidance.nextActionAt?.addingTimeInterval(30)
         )
         await activity.update(content)
     }
@@ -60,26 +60,19 @@ final class LiveActivityService {
     ) -> SteakActivityAttributes.ContentState {
         SteakActivityAttributes.ContentState(
             phaseTitle: phaseTitle(for: session.phase),
-            actionTitle: guidance.action.title,
-            actionDate: actionDate(for: session),
+            actionTitle: guidance.currentAction.title,
+            actionDate: guidance.nextActionAt,
             isUrgent: guidance.remainingTime <= 5
         )
     }
 
-    private func actionDate(for session: CookingSession) -> Date? {
-        guard session.phaseDuration > 0 else { return nil }
-        return session.phaseStartedAt.addingTimeInterval(session.phaseDuration)
-    }
-
     private func phaseTitle(for phase: CookingPhase) -> String {
         switch phase {
-        case .searFirst, .searSecond: "SEAR"
+        case .sear: "SEAR"
         case .fatCap: "FAT CAP"
-        case .butter: "BUTTER"
         case .baste: "BASTE"
         case .checkTemperature: "CHECK TEMP"
-        case .pull: "PULL"
-        case .resting: "FINISH"
+        case .finishing: "FINISH"
         case .ready: "READY"
         default: "COOK"
         }

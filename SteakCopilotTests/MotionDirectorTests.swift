@@ -37,20 +37,4 @@ final class MotionDirectorTests: XCTestCase {
         )
     }
 
-    func testHandlingMotionCannotMutateCookingSession() {
-        let director = MotionDirector(
-            haptics: HapticService(isEnabled: false),
-            sounds: SoundService(isEnabled: false)
-        )
-        let session = CookingSession.fixture(
-            phase: .searFirst,
-            phaseStartedAt: Date(timeIntervalSince1970: 1),
-            phaseDuration: 60
-        )
-
-        director.handle(.flipNow(style: .hero))
-
-        XCTAssertEqual(session.phase, .searFirst)
-        XCTAssertEqual(session.phaseDuration, 60)
-    }
 }

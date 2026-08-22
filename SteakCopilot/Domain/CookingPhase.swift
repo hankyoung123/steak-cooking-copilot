@@ -4,14 +4,11 @@ enum CookingPhase: String, Codable, Equatable, Sendable {
     case setup
     case prep
     case heat
-    case searFirst
-    case searSecond
+    case sear
     case fatCap
-    case butter
     case baste
     case checkTemperature
-    case pull
-    case resting
+    case finishing
     case ready
     case eat
     case feedback
@@ -21,8 +18,8 @@ enum CookingPhase: String, Codable, Equatable, Sendable {
         case .setup: .setup
         case .prep: .prep
         case .heat: .heat
-        case .searFirst, .searSecond, .fatCap, .butter, .baste, .checkTemperature, .pull: .cook
-        case .resting: .finish
+        case .sear, .fatCap, .baste, .checkTemperature: .cook
+        case .finishing: .finish
         case .ready, .eat: .eat
         case .feedback: .feedback
         }
@@ -58,25 +55,31 @@ enum CookingEvent: Equatable, Sendable {
 enum CookingAction: String, Equatable, Sendable {
     case wait
     case flip
-    case standItUp
+    case standFatCap
     case addButter
     case baste
     case checkTemperature
-    case takeItOut
-    case rest
+    case takeOut
+    case waitForFinish
     case eat
 
     var title: String {
         switch self {
-        case .wait: "DON'T TOUCH IT"
+        case .wait: "KEEP COOKING"
         case .flip: "FLIP"
-        case .standItUp: "STAND IT UP"
+        case .standFatCap: "STAND IT UP"
         case .addButter: "ADD BUTTER"
         case .baste: "BASTE"
         case .checkTemperature: "CHECK TEMP"
-        case .takeItOut: "TAKE IT OUT"
-        case .rest: "RESTING"
+        case .takeOut: "TAKE IT OUT"
+        case .waitForFinish: "FINISHING"
         case .eat: "TIME TO EAT"
         }
     }
+}
+
+enum PullRecommendation: String, Equatable, Sendable {
+    case keepCooking
+    case checkTemperature
+    case takeOut
 }

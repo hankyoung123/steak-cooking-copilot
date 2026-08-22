@@ -4,53 +4,63 @@ struct CookingSession: Codable, Equatable, Identifiable, Sendable {
     var id: UUID
     var configuration: SteakConfiguration
     var phase: CookingPhase
-    var phaseStartedAt: Date
-    var phaseDuration: TimeInterval
-    var flipCount: Int
-    var manualTemperatureC: Double?
     var startedAt: Date?
+    var phaseStartedAt: Date
+    var nextActionAt: Date?
+    var flipCount: Int
+    var lastFlipAt: Date?
+    var lastManualTemperatureC: Double?
+    var lastManualTemperatureAt: Date?
+    var butterAddedAt: Date?
+    var temperatureCheckConfirmedAt: Date?
+    var pulledAt: Date?
+    var finishedAt: Date?
 
     static func fresh(at date: Date = .now) -> CookingSession {
         CookingSession(
             id: UUID(),
             configuration: SteakConfiguration(),
             phase: .setup,
+            startedAt: nil,
             phaseStartedAt: date,
-            phaseDuration: 0,
+            nextActionAt: nil,
             flipCount: 0,
-            manualTemperatureC: nil,
-            startedAt: nil
+            lastFlipAt: nil,
+            lastManualTemperatureC: nil,
+            lastManualTemperatureAt: nil,
+            butterAddedAt: nil,
+            temperatureCheckConfirmedAt: nil,
+            pulledAt: nil,
+            finishedAt: nil
         )
     }
 
     mutating func enter(
         _ phase: CookingPhase,
         at date: Date,
-        duration: TimeInterval = 0
+        nextActionAt: Date? = nil
     ) {
         self.phase = phase
         phaseStartedAt = date
-        phaseDuration = max(0, duration)
+        self.nextActionAt = nextActionAt
     }
 
     func remaining(at date: Date) -> TimeInterval {
-        max(0, phaseDuration - date.timeIntervalSince(phaseStartedAt))
+        guard let nextActionAt else { return 0 }
+        return max(0, nextActionAt.timeIntervalSince(date))
     }
 
     static func fixture(
         phase: CookingPhase,
         phaseStartedAt: Date,
-        phaseDuration: TimeInterval
+        nextActionAt: Date?
     ) -> CookingSession {
-        CookingSession(
-            id: UUID(uuidString: "00000000-0000-0000-0000-000000000001")!,
-            configuration: SteakConfiguration(),
-            phase: phase,
-            phaseStartedAt: phaseStartedAt,
-            phaseDuration: phaseDuration,
-            flipCount: 0,
-            manualTemperatureC: nil,
-            startedAt: phase == .setup ? nil : phaseStartedAt
-        )
+        var session = CookingSession.fresh(at: phaseStartedAt)
+        session.id = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+        session.phase = phase
+        session.phaseStartedAt = phaseStartedAt
+        session.nextActionAt = nextActionAt
+        session.startedAt = phase == .setup ? nil : phaseStartedAt
+        return session
     }
 }

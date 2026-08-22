@@ -37,7 +37,12 @@ final class CookingSessionController {
         calibration = restoredCalibration
         let restored = store.loadSession() ?? CookingSession.fresh(at: now)
         session = restored
-        guidance = engine.guidance(for: restored, at: now, calibration: restoredCalibration)
+        guidance = engine.guidance(
+            for: restored,
+            at: now,
+            calibration: restoredCalibration,
+            timeScale: timeScale
+        )
     }
 
     func updateConfiguration(_ configuration: SteakConfiguration) {
@@ -57,9 +62,12 @@ final class CookingSessionController {
     }
 
     func panIsReady(at date: Date = .now) {
-        let profile = currentProfile
         session.startedAt = date
-        session.enter(.searFirst, at: date, duration: profile.firstSearDuration)
+        session.enter(
+            .sear,
+            at: date,
+            nextActionAt: date.addingTimeInterval(currentProfile.flipInterval)
+        )
         persistAndRefresh(at: date)
         Task {
             _ = await notificationService.requestAuthorization()
@@ -69,12 +77,14 @@ final class CookingSessionController {
     }
 
     func refresh(at date: Date = .now) {
-        guidance = engine.guidance(for: session, at: date, calibration: calibration)
+        guidance = makeGuidance(at: date)
 
-        if session.phase == .resting, guidance.remainingTime <= 0 {
+        if session.phase == .finishing,
+           session.remaining(at: date) <= 0 {
+            session.finishedAt = date
             session.enter(.ready, at: date)
             store.save(session: session)
-            guidance = engine.guidance(for: session, at: date, calibration: calibration)
+            guidance = makeGuidance(at: date)
             Task {
                 await liveActivityService.end(for: session, guidance: guidance)
             }
@@ -84,34 +94,76 @@ final class CookingSessionController {
     }
 
     func confirmCurrentAction(at date: Date = .now) {
-        switch session.phase {
-        case .searFirst:
+        switch guidance.currentAction {
+        case .flip:
+            guard session.remaining(at: date) <= 0 else { return }
             session.flipCount += 1
-            enter(.searSecond, at: date)
-        case .searSecond:
-            session.flipCount += 1
-            enter(.fatCap, at: date)
-        case .fatCap:
-            enter(.butter, at: date)
-        case .butter:
-            enter(.baste, at: date)
-        case .baste:
-            enter(.checkTemperature, at: date)
+            session.lastFlipAt = date
+            session.nextActionAt = date.addingTimeInterval(currentProfile.flipInterval)
+            persistAndRefresh(at: date)
+        case .standFatCap:
+            guard session.phase == .sear else { return }
+            let duration = currentProfile.fatCapDuration ?? 0
+            session.enter(
+                .fatCap,
+                at: date,
+                nextActionAt: date.addingTimeInterval(duration)
+            )
+            persistAndRefresh(at: date)
+        case .addButter:
+            session.butterAddedAt = date
+            session.enter(
+                .baste,
+                at: date,
+                nextActionAt: date.addingTimeInterval(currentProfile.basteDuration)
+            )
+            persistAndRefresh(at: date)
         case .checkTemperature:
-            enter(.pull, at: date)
-        case .pull:
-            enter(.resting, at: date)
-        case .ready:
-            enter(.eat, at: date)
+            session.enter(.checkTemperature, at: date)
+            session.temperatureCheckConfirmedAt = date
+            persistAndRefresh(at: date)
+        case .takeOut:
+            session.pulledAt = date
+            let estimate = engine.guidance(
+                for: session,
+                at: date,
+                calibration: calibration,
+                timeScale: timeScale
+            ).finishingEstimate
+            session.enter(
+                .finishing,
+                at: date,
+                nextActionAt: date.addingTimeInterval(estimate.upperBound)
+            )
+            persistAndRefresh(at: date)
         case .eat:
-            enter(.feedback, at: date)
-        default:
+            if session.phase == .ready {
+                session.enter(.eat, at: date)
+                persistAndRefresh(at: date)
+            } else if session.phase == .eat {
+                session.enter(.feedback, at: date)
+                persistAndRefresh(at: date)
+            }
+        case .wait, .baste, .waitForFinish:
             break
         }
     }
 
     func recordManualTemperature(_ temperatureC: Double, at date: Date = .now) {
-        session.manualTemperatureC = temperatureC
+        guard session.phase.flowStage == .cook else { return }
+        session.enter(.checkTemperature, at: date)
+        session.lastManualTemperatureC = temperatureC
+        session.lastManualTemperatureAt = date
+        session.temperatureCheckConfirmedAt = date
+
+        let measuredGuidance = makeGuidance(at: date)
+        if measuredGuidance.pullRecommendation == .keepCooking {
+            session.enter(
+                .sear,
+                at: date,
+                nextActionAt: date.addingTimeInterval(currentProfile.flipInterval)
+            )
+        }
         persistAndRefresh(at: date)
     }
 
@@ -145,7 +197,7 @@ final class CookingSessionController {
         refresh(at: date)
     }
 
-    private var currentProfile: CookingProfile {
+    var currentProfile: CookingProfile {
         engine.profile(
             for: session.configuration,
             calibration: calibration,
@@ -153,9 +205,13 @@ final class CookingSessionController {
         )
     }
 
-    private func enter(_ phase: CookingPhase, at date: Date) {
-        session.enter(phase, at: date, duration: currentProfile.duration(for: phase))
-        persistAndRefresh(at: date)
+    private func makeGuidance(at date: Date) -> CookingGuidance {
+        engine.guidance(
+            for: session,
+            at: date,
+            calibration: calibration,
+            timeScale: timeScale
+        )
     }
 
     private func persistAndRefresh(at date: Date) {
@@ -173,7 +229,8 @@ final class CookingSessionController {
             return
         }
 
-        let token = "\(session.phase.rawValue)|\(String(describing: event))"
+        let actionDate = session.nextActionAt?.timeIntervalSinceReferenceDate ?? 0
+        let token = "\(session.phase.rawValue)|\(session.flipCount)|\(actionDate)|\(String(describing: event))"
         guard token != lastMotionToken else { return }
         lastMotionToken = token
         motionDirector.handle(event)

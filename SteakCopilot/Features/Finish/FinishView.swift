@@ -6,13 +6,13 @@ struct FinishView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 0.2)) { context in
+        TimelineView(.periodic(from: .now, by: 1)) { context in
             VStack(spacing: 24) {
-                Text("FINISH")
+                Text("FINISHING")
                     .quietEyebrowStyle(color: theme.ink)
                     .padding(.top, 22)
 
-                Text("Out of the pan.\nStill becoming perfect.")
+                Text("Out of the pan.\nCarryover heat is finishing the center.")
                     .font(.largeTitle.bold())
                     .multilineTextAlignment(.center)
 
@@ -24,25 +24,16 @@ struct FinishView: View {
                 .padding(.horizontal, 36)
                 .scaleEffect(reduceMotion ? 1 : breathingScale(at: context.date))
 
-                VStack(spacing: 4) {
-                    Text("\(carryoverTemperature, specifier: "%.1f")°C")
-                        .font(.system(size: 60, weight: .medium, design: .rounded).monospacedDigit())
-                        .contentTransition(.numericText())
-                    Label("Rising", systemImage: "arrow.up.right")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(theme.ember)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Temperature \(carryoverTemperature, specifier: "%.1f") degrees Celsius, rising")
+                readingSummary
 
-                TemperatureCurve(progress: controller.guidance.progress)
-                    .stroke(theme.ember, style: StrokeStyle(lineWidth: 4, lineCap: .round))
-                    .frame(height: 82)
+                ProgressView(value: finishingProgress(at: context.date))
+                    .tint(theme.ember)
                     .padding(.horizontal, 36)
+                    .accessibilityLabel("Estimated finishing progress")
 
                 Spacer()
 
-                Text("Carryover heat is finishing the center.\nNo need to touch it yet.")
+                Text("This is an estimate, not a live temperature measurement.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
@@ -50,37 +41,56 @@ struct FinishView: View {
             }
             .padding(.horizontal, 22)
             .onChange(of: context.date, initial: true) { _, date in
-                controller.refresh(at: date)
+                if controller.session.nextActionAt.map({ date >= $0 }) == true {
+                    controller.refresh(at: date)
+                }
             }
         }
     }
 
-    private var carryoverTemperature: Double {
-        controller.guidance.pullTemperatureC + controller.guidance.progress * 2
+    @ViewBuilder
+    private var readingSummary: some View {
+        if let reading = controller.guidance.lastManualTemperatureC {
+            VStack(spacing: 7) {
+                Text("LAST READING")
+                    .quietEyebrowStyle(color: theme.ink)
+                Text("\(reading, specifier: "%.0f")°C")
+                    .font(.system(size: 58, weight: .medium, design: .rounded).monospacedDigit())
+                Text("Expected carryover +1–3°C · Estimated")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(theme.ember)
+            }
+            .accessibilityElement(children: .combine)
+        } else {
+            VStack(spacing: 7) {
+                Text("ESTIMATED FINISH")
+                    .quietEyebrowStyle(color: theme.ink)
+                Text(estimatedRangeText)
+                    .font(.system(size: 48, weight: .medium, design: .rounded).monospacedDigit())
+                Text("No thermometer reading recorded")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .accessibilityElement(children: .combine)
+        }
+    }
+
+    private var estimatedRangeText: String {
+        let range = controller.guidance.finishingEstimate
+        let lower = max(1, Int(ceil(range.lowerBound / 60)))
+        let upper = max(lower + 1, Int(ceil(range.upperBound / 60)))
+        return "\(lower)–\(upper) min"
+    }
+
+    private func finishingProgress(at date: Date) -> Double {
+        guard let actionDate = controller.session.nextActionAt else { return 0 }
+        let duration = actionDate.timeIntervalSince(controller.session.phaseStartedAt)
+        guard duration > 0 else { return 1 }
+        return min(max(date.timeIntervalSince(controller.session.phaseStartedAt) / duration, 0), 1)
     }
 
     private func breathingScale(at date: Date) -> CGFloat {
         let phase = date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 4) / 4
         return 1 + 0.015 * sin(phase * .pi * 2)
-    }
-}
-
-private struct TemperatureCurve: Shape {
-    var progress: Double
-    var animatableData: Double {
-        get { progress }
-        set { progress = newValue }
-    }
-
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        let width = rect.width * max(0.02, min(progress, 1))
-        path.move(to: CGPoint(x: 0, y: rect.maxY * 0.82))
-        path.addCurve(
-            to: CGPoint(x: width, y: rect.maxY * 0.18),
-            control1: CGPoint(x: width * 0.28, y: rect.maxY * 0.82),
-            control2: CGPoint(x: width * 0.62, y: rect.maxY * 0.28)
-        )
-        return path
     }
 }
