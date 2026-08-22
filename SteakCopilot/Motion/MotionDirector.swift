@@ -30,6 +30,16 @@ final class MotionDirector {
         sounds.play(cue.sound)
     }
 
+    func resetTransientState() {
+        cue = MotionCue(
+            visual: .none,
+            preset: .subtle,
+            haptic: .none,
+            sound: .none
+        )
+        sequence += 1
+    }
+
     static func cue(for event: CookingEvent) -> MotionCue {
         switch event {
         case let .flipApproaching(seconds):

@@ -1,0 +1,17 @@
+[
+  {
+    "attachments" : [
+      {
+        "configurationName" : "Test Scheme Action",
+        "deviceId" : "8D8FADF9-EA99-4BA8-A415-92F38416F12E",
+        "deviceName" : "iPhone 17",
+        "exportedFileName" : "case-a-estimated-finish.png",
+        "isAssociatedWithFailure" : false,
+        "suggestedHumanReadableName" : "case-a-estimated-finish_0_1D78A6F7-DC43-4332-BA5A-7B93EC94054F.png",
+        "timestamp" : 1787423049.352
+      }
+    ],
+    "testIdentifier" : "SteakCopilotUITests/testCaseARibeyeWithoutThermometerCompletesEstimatedFlow()",
+    "testIdentifierURL" : "test://com.apple.xcode/SteakCopilot/SteakCopilotUITests/SteakCopilotUITests/testCaseARibeyeWithoutThermometerCompletesEstimatedFlow"
+  }
+]

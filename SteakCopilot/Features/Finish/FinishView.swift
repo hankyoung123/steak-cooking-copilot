@@ -7,21 +7,22 @@ struct FinishView: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
-            VStack(spacing: 24) {
+            VStack(spacing: 20) {
                 Text("FINISHING")
                     .quietEyebrowStyle(color: theme.ink)
                     .padding(.top, 22)
 
                 Text("Out of the pan.\nCarryover heat is finishing the center.")
-                    .font(.largeTitle.bold())
+                    .font(.title.bold())
                     .multilineTextAlignment(.center)
 
                 SteakVisual(
                     configuration: controller.session.configuration,
                     cookedProgress: 1
                 )
-                .frame(height: 205)
-                .padding(.horizontal, 36)
+                .frame(height: 170)
+                .padding(.horizontal, 48)
+                .padding(.bottom, 14)
                 .scaleEffect(reduceMotion ? 1 : breathingScale(at: context.date))
 
                 readingSummary
@@ -40,11 +41,9 @@ struct FinishView: View {
                     .padding(.bottom, 24)
             }
             .padding(.horizontal, 22)
-            .onChange(of: context.date, initial: true) { _, date in
-                if controller.session.nextActionAt.map({ date >= $0 }) == true {
-                    controller.refresh(at: date)
-                }
-            }
+        }
+        .task(id: controller.session.nextActionAt) {
+            await refreshAtFinishBoundary()
         }
     }
 
@@ -92,5 +91,19 @@ struct FinishView: View {
     private func breathingScale(at date: Date) -> CGFloat {
         let phase = date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 4) / 4
         return 1 + 0.015 * sin(phase * .pi * 2)
+    }
+
+    private func refreshAtFinishBoundary() async {
+        guard let actionDate = controller.session.nextActionAt else { return }
+        let delay = actionDate.timeIntervalSinceNow
+        if delay > 0 {
+            do {
+                try await Task.sleep(for: .seconds(delay))
+            } catch {
+                return
+            }
+        }
+        guard !Task.isCancelled else { return }
+        controller.refresh(at: .now)
     }
 }

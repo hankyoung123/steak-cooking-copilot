@@ -69,7 +69,11 @@ struct EatView: View {
         .padding(.bottom, 24)
         .task(id: controller.session.phase) {
             if controller.session.phase == .ready {
-                try? await Task.sleep(for: .milliseconds(reduceMotion ? 50 : 260))
+                try? await Task.sleep(
+                    for: .seconds(
+                        reduceMotion ? 0.05 : MotionTiming.readyRevealDelay
+                    )
+                )
                 sliced = true
             } else {
                 sliced = true

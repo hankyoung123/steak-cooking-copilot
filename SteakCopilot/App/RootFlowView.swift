@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct RootFlowView: View {
-    let controller: CookingSessionController
     @Environment(AppTheme.self) private var theme
+    @Environment(\.scenePhase) private var scenePhase
+    let controller: CookingSessionController
 
     var body: some View {
         ZStack {
@@ -31,8 +32,16 @@ struct RootFlowView: View {
             .transition(stageTransition)
         }
         .foregroundStyle(theme.foreground(for: controller.flowStage))
-        .animation(.easeInOut(duration: 0.7), value: controller.flowStage)
+        .animation(
+            .easeInOut(duration: MotionTiming.stageTransition),
+            value: controller.flowStage
+        )
         .preferredColorScheme(controller.flowStage == .cook ? .dark : .light)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                controller.refresh(at: .now)
+            }
+        }
     }
 
     private var stageTransition: AnyTransition {

@@ -11,7 +11,7 @@ struct FeedbackRecord: Codable, Equatable, Identifiable, Sendable {
 struct CookingStore {
     private enum Key {
         static let session = "steak.session.v1"
-        static let calibration = "steak.calibration.v1"
+        static let calibrations = "steak.calibrations.v2"
         static let feedback = "steak.feedback.v1"
     }
 
@@ -35,12 +35,21 @@ struct CookingStore {
         defaults.removeObject(forKey: Key.session)
     }
 
-    func loadCalibration() -> CookingCalibration {
-        decode(CookingCalibration.self, forKey: Key.calibration) ?? .neutral
+    func loadCalibrations() -> [CalibrationKey: CookingCalibration] {
+        decode(
+            [CalibrationKey: CookingCalibration].self,
+            forKey: Key.calibrations
+        ) ?? [:]
     }
 
-    func save(calibration: CookingCalibration) {
-        encode(calibration, forKey: Key.calibration)
+    func loadCalibration(for key: CalibrationKey) -> CookingCalibration {
+        loadCalibrations()[key] ?? .neutral
+    }
+
+    func save(calibration: CookingCalibration, for key: CalibrationKey) {
+        var calibrations = loadCalibrations()
+        calibrations[key] = calibration
+        encode(calibrations, forKey: Key.calibrations)
     }
 
     func loadFeedback() -> [FeedbackRecord] {

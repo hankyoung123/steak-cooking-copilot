@@ -2,7 +2,14 @@ import Foundation
 import UserNotifications
 
 @MainActor
-final class NotificationService {
+protocol CookingNotificationServing: AnyObject {
+    func requestAuthorization() async -> Bool
+    func scheduleNextAction(guidance: CookingGuidance) async
+    func clearCookingNotifications()
+}
+
+@MainActor
+final class NotificationService: CookingNotificationServing {
     private let center: UNUserNotificationCenter
     private let isEnabled: Bool
 
@@ -16,10 +23,7 @@ final class NotificationService {
         return (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
     }
 
-    func scheduleNextAction(
-        for session: CookingSession,
-        guidance: CookingGuidance
-    ) async {
+    func scheduleNextAction(guidance: CookingGuidance) async {
         guard isEnabled else { return }
         center.removePendingNotificationRequests(withIdentifiers: ["next-cooking-action"])
         guard let fireDate = guidance.nextActionAt,

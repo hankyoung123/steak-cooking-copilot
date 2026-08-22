@@ -98,6 +98,71 @@ final class CookingSessionControllerTests: XCTestCase {
         XCTAssertNotNil(controller.session.nextActionAt)
     }
 
+    func testStartOverClearsNotificationsEndsLiveActivityAndMotion() async {
+        let notifications = NotificationServiceSpy()
+        let liveActivity = LiveActivityServiceSpy()
+        let motion = MotionDirector(
+            haptics: HapticService(isEnabled: false),
+            sounds: SoundService(isEnabled: false)
+        )
+        motion.handle(.flipNow(style: .hero))
+        let suite = "CookingSessionControllerTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let start = Date(timeIntervalSince1970: 60_000)
+        let controller = CookingSessionController(
+            store: CookingStore(defaults: defaults),
+            motionDirector: motion,
+            notificationService: notifications,
+            liveActivityService: liveActivity,
+            now: start
+        )
+        controller.finishSetup(at: start)
+        controller.finishPrep(at: start)
+        controller.panIsReady(at: start)
+        let oldSessionID = controller.session.id
+
+        await controller.startOver(at: start.addingTimeInterval(5))
+
+        XCTAssertEqual(notifications.clearCount, 1)
+        XCTAssertEqual(liveActivity.endedSessionIDs, [oldSessionID])
+        XCTAssertEqual(motion.cue.visual, .none)
+        XCTAssertNotEqual(controller.session.id, oldSessionID)
+        XCTAssertEqual(controller.session.phase, .setup)
+    }
+
+    func testFinishingBoundaryDispatchesEngineReadyEvent() {
+        let suite = "CookingSessionControllerTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let start = Date(timeIntervalSince1970: 70_000)
+        let readyAt = start.addingTimeInterval(180)
+        let store = CookingStore(defaults: defaults)
+        store.save(
+            session: CookingSession.fixture(
+                phase: .finishing,
+                phaseStartedAt: start,
+                nextActionAt: readyAt
+            )
+        )
+        let motion = MotionDirector(
+            haptics: HapticService(isEnabled: false),
+            sounds: SoundService(isEnabled: false)
+        )
+        let controller = CookingSessionController(
+            store: store,
+            motionDirector: motion,
+            notificationService: NotificationService(isEnabled: false),
+            liveActivityService: LiveActivityService(isEnabled: false),
+            now: start
+        )
+
+        controller.refresh(at: readyAt)
+
+        XCTAssertEqual(controller.session.phase, .ready)
+        XCTAssertEqual(motion.cue.visual, .ready)
+    }
+
     private func makeController(at start: Date) -> (controller: CookingSessionController, start: Date) {
         let suite = "CookingSessionControllerTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
@@ -111,5 +176,31 @@ final class CookingSessionControllerTests: XCTestCase {
             ),
             start
         )
+    }
+}
+
+@MainActor
+private final class NotificationServiceSpy: CookingNotificationServing {
+    private(set) var clearCount = 0
+
+    func requestAuthorization() async -> Bool { true }
+
+    func scheduleNextAction(guidance: CookingGuidance) async {}
+
+    func clearCookingNotifications() {
+        clearCount += 1
+    }
+}
+
+@MainActor
+private final class LiveActivityServiceSpy: CookingLiveActivityServing {
+    private(set) var endedSessionIDs: [UUID] = []
+
+    func recover(for session: CookingSession, guidance: CookingGuidance) async {}
+    func start(for session: CookingSession, guidance: CookingGuidance) async {}
+    func update(for session: CookingSession, guidance: CookingGuidance) async {}
+
+    func end(for session: CookingSession, guidance: CookingGuidance) async {
+        endedSessionIDs.append(session.id)
     }
 }

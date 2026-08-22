@@ -70,6 +70,7 @@ struct SetupView: View {
                                 .foregroundStyle(configuration.cut == cut ? .white : .primary)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("setup.cut.\(cut.rawValue)")
                         .accessibilityAddTraits(configuration.cut == cut ? .isSelected : [])
                     }
                 }
@@ -82,6 +83,7 @@ struct SetupView: View {
                     Slider(value: $configuration.thicknessCM, in: 2...5, step: 0.5)
                         .tint(.brown)
                         .accessibilityLabel("Steak thickness")
+                        .accessibilityIdentifier("setup.thickness")
                     Text("\(configuration.thicknessCM, specifier: "%.1f") cm")
                         .font(.headline.monospacedDigit())
                         .frame(width: 70, alignment: .trailing)
@@ -94,23 +96,38 @@ struct SetupView: View {
                         Button {
                             configuration.doneness = doneness
                         } label: {
-                            VStack(spacing: 8) {
-                                Circle()
-                                    .fill(donenessColor(doneness))
-                                    .frame(width: 24, height: 24)
-                                    .overlay(Circle().stroke(.white.opacity(0.6), lineWidth: 2))
+                            VStack(spacing: 7) {
+                                Image(donenessAssetName(for: doneness))
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(height: 72)
+                                    .clipShape(RoundedRectangle(cornerRadius: 14))
                                 Text(doneness.title)
                                     .font(.caption.weight(.semibold))
                                     .multilineTextAlignment(.center)
                             }
-                            .frame(maxWidth: .infinity, minHeight: 70)
-                            .padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, minHeight: 108)
+                            .padding(5)
                             .background(
                                 RoundedRectangle(cornerRadius: 18)
-                                    .fill(configuration.doneness == doneness ? .white.opacity(0.76) : .clear)
+                                    .fill(
+                                        configuration.doneness == doneness
+                                            ? .white.opacity(0.9)
+                                            : .white.opacity(0.24)
+                                    )
                             )
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 18)
+                                    .stroke(
+                                        configuration.doneness == doneness
+                                            ? .black.opacity(0.82)
+                                            : .clear,
+                                        lineWidth: 2
+                                    )
+                            }
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("setup.doneness.\(doneness.rawValue)")
                         .accessibilityAddTraits(configuration.doneness == doneness ? .isSelected : [])
                     }
                 }
@@ -129,11 +146,11 @@ struct SetupView: View {
         }
     }
 
-    private func donenessColor(_ doneness: Doneness) -> Color {
+    private func donenessAssetName(for doneness: Doneness) -> String {
         switch doneness {
-        case .rare: Color(red: 0.72, green: 0.08, blue: 0.10)
-        case .mediumRare: Color(red: 0.80, green: 0.24, blue: 0.20)
-        case .medium: Color(red: 0.67, green: 0.36, blue: 0.28)
+        case .rare: "DonenessRare"
+        case .mediumRare: "DonenessMediumRare"
+        case .medium: "DonenessMedium"
         }
     }
 }

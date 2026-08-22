@@ -9,7 +9,10 @@ struct SteakVisual: View {
     var body: some View {
         Group {
             if sliced {
-                slicedSteak
+                Image(donenessAssetName)
+                    .resizable()
+                    .scaledToFit()
+                    .clipShape(RoundedRectangle(cornerRadius: 26))
             } else {
                 wholeSteak
             }
@@ -20,85 +23,42 @@ struct SteakVisual: View {
 
     private var wholeSteak: some View {
         ZStack {
-            SteakShape(cut: configuration.cut)
-                .fill(meatGradient)
+            Image("SteakSurface")
+                .resizable()
+                .scaledToFill()
+                .saturation(0.82 + normalizedProgress * 0.18)
+                .brightness(-0.08 + normalizedProgress * 0.03)
 
-            SteakShape(cut: configuration.cut)
-                .strokeBorder(
-                    LinearGradient(
-                        colors: [.white.opacity(0.36), .brown.opacity(0.45), .black.opacity(0.42)],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 5
-                )
-
-            SteakShape(cut: configuration.cut)
-                .fill(
-                    RadialGradient(
-                        colors: [.clear, .black.opacity(0.56)],
-                        center: .center,
-                        startRadius: 16,
-                        endRadius: 150
-                    )
-                )
-                .opacity(min(max(cookedProgress, 0), 1))
-
-            if configuration.cut == .ribeye {
-                Ellipse()
-                    .stroke(.white.opacity(0.46), lineWidth: 6)
-                    .frame(width: 78, height: 46)
-                    .rotationEffect(.degrees(-18))
-                    .offset(x: 28, y: -6)
-            }
+            LinearGradient(
+                colors: [.white.opacity(0.14), .clear, .black.opacity(0.22)],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
 
             if showButter {
                 RoundedRectangle(cornerRadius: 5)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.yellow.opacity(0.95), Color.orange.opacity(0.84)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                    )
+                    .fill(.yellow.opacity(0.88))
                     .frame(width: 42, height: 24)
                     .rotationEffect(.degrees(12))
                     .offset(x: 74, y: -54)
-                    .shadow(color: .orange.opacity(0.5), radius: 12)
                     .transition(.scale.combined(with: .opacity))
             }
         }
+        .clipShape(SteakShape(cut: configuration.cut))
         .aspectRatio(1.48, contentMode: .fit)
         .shadow(color: .black.opacity(0.28), radius: 18, y: 12)
     }
 
-    private var slicedSteak: some View {
-        HStack(spacing: 5) {
-            ForEach(0..<6, id: \.self) { index in
-                Capsule()
-                    .fill(meatGradient)
-                    .overlay(Capsule().stroke(.brown.opacity(0.7), lineWidth: 3))
-                    .frame(width: 34 + Double(index % 2) * 4, height: 132 - Double(abs(index - 3)) * 7)
-                    .rotationEffect(.degrees(Double(index - 3) * 2.5))
-                    .offset(y: Double(abs(index - 3)) * 3)
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .shadow(color: .black.opacity(0.2), radius: 16, y: 10)
+    private var normalizedProgress: Double {
+        min(max(cookedProgress, 0), 1)
     }
 
-    private var meatGradient: LinearGradient {
-        let center: Color
+    private var donenessAssetName: String {
         switch configuration.doneness {
-        case .rare: center = Color(red: 0.72, green: 0.12, blue: 0.13)
-        case .mediumRare: center = Color(red: 0.78, green: 0.25, blue: 0.22)
-        case .medium: center = Color(red: 0.66, green: 0.34, blue: 0.27)
+        case .rare: "DonenessRare"
+        case .mediumRare: "DonenessMediumRare"
+        case .medium: "DonenessMedium"
         }
-        return LinearGradient(
-            colors: [Color(red: 0.31, green: 0.10, blue: 0.06), center, Color(red: 0.23, green: 0.07, blue: 0.035)],
-            startPoint: .topLeading,
-            endPoint: .bottomTrailing
-        )
     }
 
     private var accessibilityDescription: String {
@@ -138,7 +98,13 @@ struct SteakShape: InsettableShape {
                 control2: CGPoint(x: r.minX, y: r.maxY - r.height * 0.20)
             )
         case .strip:
-            path.addRoundedRect(in: r, cornerSize: CGSize(width: r.height * 0.28, height: r.height * 0.28))
+            path.addRoundedRect(
+                in: r,
+                cornerSize: CGSize(
+                    width: r.height * 0.28,
+                    height: r.height * 0.28
+                )
+            )
         case .tenderloin:
             path.addEllipse(in: r.insetBy(dx: r.width * 0.12, dy: 0))
         }
@@ -152,9 +118,13 @@ struct SteakShape: InsettableShape {
     }
 }
 
-#Preview("Configured steak") {
+#Preview("Asset-based steak") {
     SteakVisual(
-        configuration: .init(cut: .ribeye, thicknessCM: 3.5, doneness: .mediumRare),
+        configuration: .init(
+            cut: .ribeye,
+            thicknessCM: 3.5,
+            doneness: .mediumRare
+        ),
         cookedProgress: 0.72,
         showButter: true
     )

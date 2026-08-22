@@ -7,13 +7,13 @@ final class CookingSessionController {
     private let engine: CookingEngine
     private let store: CookingStore
     private let timeScale: Double
-    private let notificationService: NotificationService
-    private let liveActivityService: LiveActivityService
+    private let notificationService: any CookingNotificationServing
+    private let liveActivityService: any CookingLiveActivityServing
     private var lastMotionToken: String?
 
     private(set) var session: CookingSession
     private(set) var guidance: CookingGuidance
-    private(set) var calibration: CookingCalibration
+    private(set) var calibrations: [CalibrationKey: CookingCalibration]
     let motionDirector: MotionDirector
 
     var flowStage: CookingFlowStage { session.phase.flowStage }
@@ -22,8 +22,8 @@ final class CookingSessionController {
         engine: CookingEngine = CookingEngine(),
         store: CookingStore = CookingStore(),
         motionDirector: MotionDirector = MotionDirector(),
-        notificationService: NotificationService = NotificationService(),
-        liveActivityService: LiveActivityService = LiveActivityService(),
+        notificationService: any CookingNotificationServing = NotificationService(),
+        liveActivityService: any CookingLiveActivityServing = LiveActivityService(),
         timeScale: Double = 1,
         now: Date = .now
     ) {
@@ -33,16 +33,27 @@ final class CookingSessionController {
         self.notificationService = notificationService
         self.liveActivityService = liveActivityService
         self.timeScale = timeScale
-        let restoredCalibration = store.loadCalibration()
-        calibration = restoredCalibration
+        let restoredCalibrations = store.loadCalibrations()
+        calibrations = restoredCalibrations
         let restored = store.loadSession() ?? CookingSession.fresh(at: now)
         session = restored
+        let restoredCalibration = restoredCalibrations[
+            CalibrationKey(configuration: restored.configuration)
+        ] ?? .neutral
         guidance = engine.guidance(
             for: restored,
             at: now,
             calibration: restoredCalibration,
             timeScale: timeScale
         )
+        if restored.phase.flowStage == .cook || restored.phase == .finishing {
+            Task {
+                await liveActivityService.recover(
+                    for: restored,
+                    guidance: guidance
+                )
+            }
+        }
     }
 
     func updateConfiguration(_ configuration: SteakConfiguration) {
@@ -71,7 +82,7 @@ final class CookingSessionController {
         persistAndRefresh(at: date)
         Task {
             _ = await notificationService.requestAuthorization()
-            await notificationService.scheduleNextAction(for: session, guidance: guidance)
+            await notificationService.scheduleNextAction(guidance: guidance)
             await liveActivityService.start(for: session, guidance: guidance)
         }
     }
@@ -81,6 +92,7 @@ final class CookingSessionController {
 
         if session.phase == .finishing,
            session.remaining(at: date) <= 0 {
+            dispatchMotionEventIfNeeded()
             session.finishedAt = date
             session.enter(.ready, at: date)
             store.save(session: session)
@@ -88,6 +100,7 @@ final class CookingSessionController {
             Task {
                 await liveActivityService.end(for: session, guidance: guidance)
             }
+            return
         }
 
         dispatchMotionEventIfNeeded()
@@ -127,7 +140,7 @@ final class CookingSessionController {
             let estimate = engine.guidance(
                 for: session,
                 at: date,
-                calibration: calibration,
+                calibration: currentCalibration,
                 timeScale: timeScale
             ).finishingEstimate
             session.enter(
@@ -180,18 +193,39 @@ final class CookingSessionController {
             crust: crust
         )
         store.append(feedback: record)
-        calibration = calibration.applying(doneness: doneness, crust: crust)
-        store.save(calibration: calibration)
+        let calibrationKey = CalibrationKey(configuration: session.configuration)
+        let updatedCalibration = currentCalibration.applying(
+            doneness: doneness,
+            crust: crust
+        )
+        calibrations[calibrationKey] = updatedCalibration
+        store.save(calibration: updatedCalibration, for: calibrationKey)
+        let previousSession = session
+        let previousGuidance = guidance
         session = CookingSession.fresh(at: date)
         store.save(session: session)
         notificationService.clearCookingNotifications()
+        motionDirector.resetTransientState()
+        lastMotionToken = nil
         Task {
-            await liveActivityService.end(for: session, guidance: guidance)
+            await liveActivityService.end(
+                for: previousSession,
+                guidance: previousGuidance
+            )
         }
         refresh(at: date)
     }
 
-    func startOver(at date: Date = .now) {
+    func startOver(at date: Date = .now) async {
+        let previousSession = session
+        let previousGuidance = guidance
+        notificationService.clearCookingNotifications()
+        motionDirector.resetTransientState()
+        lastMotionToken = nil
+        await liveActivityService.end(
+            for: previousSession,
+            guidance: previousGuidance
+        )
         session = CookingSession.fresh(at: date)
         store.save(session: session)
         refresh(at: date)
@@ -200,7 +234,7 @@ final class CookingSessionController {
     var currentProfile: CookingProfile {
         engine.profile(
             for: session.configuration,
-            calibration: calibration,
+            calibration: currentCalibration,
             timeScale: timeScale
         )
     }
@@ -209,16 +243,22 @@ final class CookingSessionController {
         engine.guidance(
             for: session,
             at: date,
-            calibration: calibration,
+            calibration: currentCalibration,
             timeScale: timeScale
         )
+    }
+
+    private var currentCalibration: CookingCalibration {
+        calibrations[
+            CalibrationKey(configuration: session.configuration)
+        ] ?? .neutral
     }
 
     private func persistAndRefresh(at date: Date) {
         store.save(session: session)
         refresh(at: date)
         Task {
-            await notificationService.scheduleNextAction(for: session, guidance: guidance)
+            await notificationService.scheduleNextAction(guidance: guidance)
             await liveActivityService.update(for: session, guidance: guidance)
         }
     }

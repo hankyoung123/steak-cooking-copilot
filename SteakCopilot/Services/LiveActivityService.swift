@@ -2,7 +2,15 @@
 import Foundation
 
 @MainActor
-final class LiveActivityService {
+protocol CookingLiveActivityServing: AnyObject {
+    func recover(for session: CookingSession, guidance: CookingGuidance) async
+    func start(for session: CookingSession, guidance: CookingGuidance) async
+    func update(for session: CookingSession, guidance: CookingGuidance) async
+    func end(for session: CookingSession, guidance: CookingGuidance) async
+}
+
+@MainActor
+final class LiveActivityService: CookingLiveActivityServing {
     private var activity: Activity<SteakActivityAttributes>?
     private let isEnabled: Bool
 
@@ -10,11 +18,26 @@ final class LiveActivityService {
         self.isEnabled = isEnabled
     }
 
+    func recover(for session: CookingSession, guidance: CookingGuidance) async {
+        guard isEnabled else { return }
+        activity = matchingActivity(for: session)
+        if activity != nil {
+            await update(for: session, guidance: guidance)
+        } else if session.phase.flowStage == .cook || session.phase == .finishing {
+            await start(for: session, guidance: guidance)
+        }
+    }
+
     func start(for session: CookingSession, guidance: CookingGuidance) async {
-        guard isEnabled,
-              ActivityAuthorizationInfo().areActivitiesEnabled,
-              activity == nil
-        else { return }
+        guard isEnabled, ActivityAuthorizationInfo().areActivitiesEnabled else { return }
+
+        if activity == nil {
+            activity = matchingActivity(for: session)
+        }
+        if activity != nil {
+            await update(for: session, guidance: guidance)
+            return
+        }
 
         let attributes = SteakActivityAttributes(
             steakName: "\(session.configuration.cut.title) · \(session.configuration.doneness.title)"
@@ -31,7 +54,11 @@ final class LiveActivityService {
     }
 
     func update(for session: CookingSession, guidance: CookingGuidance) async {
-        guard isEnabled, let activity else { return }
+        guard isEnabled else { return }
+        if activity == nil {
+            activity = matchingActivity(for: session)
+        }
+        guard let activity else { return }
         let content = ActivityContent(
             state: contentState(for: session, guidance: guidance),
             staleDate: guidance.nextActionAt?.addingTimeInterval(30)
@@ -40,6 +67,9 @@ final class LiveActivityService {
     }
 
     func end(for session: CookingSession, guidance: CookingGuidance) async {
+        if activity == nil {
+            activity = matchingActivity(for: session)
+        }
         guard let activity else { return }
         let final = SteakActivityAttributes.ContentState(
             phaseTitle: "READY",
@@ -52,6 +82,15 @@ final class LiveActivityService {
             dismissalPolicy: .after(.now.addingTimeInterval(60))
         )
         self.activity = nil
+    }
+
+    private func matchingActivity(
+        for session: CookingSession
+    ) -> Activity<SteakActivityAttributes>? {
+        let steakName = "\(session.configuration.cut.title) · \(session.configuration.doneness.title)"
+        return Activity<SteakActivityAttributes>.activities.first {
+            $0.attributes.steakName == steakName
+        }
     }
 
     private func contentState(

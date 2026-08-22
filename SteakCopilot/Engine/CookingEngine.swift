@@ -30,7 +30,7 @@ struct CookingGuidance: Equatable, Sendable {
             targetTemperatureC: targetTemperatureC,
             pullTemperatureC: pullTemperatureC,
             lastManualTemperatureC: nil,
-            finishingEstimate: 120...240,
+            finishingEstimate: 120...225,
             event: nil
         )
     }
@@ -61,24 +61,32 @@ struct CookingEngine: Sendable {
             * thicknessFactor
             * configuration.doneness.cookingBudgetFactor
             + cutBudgetOffset
-            + calibration.durationAdjustment
+            + calibration.cookingTimeAdjustment
         let budget = min(max(rawBudget, 180), 720) * scale
         let flip = flipInterval(for: configuration) * scale
+        let budgetFinishAdjustment = min(
+            max((rawBudget - 300) * 0.08, -15),
+            30
+        )
         let lowerFinish = (
-            90
+            65
                 + configuration.thicknessCM * 15
                 + (configuration.doneness == .medium ? 15 : 0)
+                + budgetFinishAdjustment
         ) * scale
 
         return CookingProfile(
             flipInterval: max(0.3, flip),
             estimatedCookingBudget: max(flip * 3, budget),
-            initialSearBias: calibration.searAdjustment * scale,
+            initialSearBias: calibration.searBias * scale,
             fatCapDuration: configuration.cut.profile.fatCapDuration.map { max(0.5, $0 * scale) },
             basteDuration: max(0.8, min(75, rawBudget * 0.16) * scale),
             targetTemperatureC: configuration.doneness.targetTemperatureC,
             pullTemperatureC: configuration.doneness.pullTemperatureC,
-            finishingEstimate: max(1, lowerFinish)...max(2, lowerFinish + 120 * scale)
+            finishingEstimate: max(1, lowerFinish)...max(
+                2,
+                lowerFinish + 105 * scale
+            )
         )
     }
 
