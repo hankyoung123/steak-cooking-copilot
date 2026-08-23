@@ -1,12 +1,12 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "%@ %@ centimeter %@, %@" : {
+    "%.0f°C" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "%1$@，%2$@ 厘米，%3$@，%4$@"
+            "value" : "%.0f°C"
           }
         }
       }
@@ -17,6 +17,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "%.1f 厘米"
+          }
+        }
+      }
+    },
+    "%@ %@ centimeter %@, %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@，%2$@ 厘米，%3$@，%4$@"
+          }
+        }
+      }
+    },
+    "%lld" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld"
           }
         }
       }
@@ -41,22 +61,22 @@
         }
       }
     },
-    "A dry surface builds a better crust." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "表面越干，焦香外壳越好。"
-          }
-        }
-      }
-    },
     "A drop of water should dance and evaporate." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "一滴水应该在锅中跳动并蒸发。"
+          }
+        }
+      }
+    },
+    "A dry surface builds a better crust." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表面越干，焦香外壳越好。"
           }
         }
       }
@@ -261,22 +281,22 @@
         }
       }
     },
-    "FAT CAP" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "脂肪边"
-          }
-        }
-      }
-    },
     "Fat cap" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "煎脂肪边"
+          }
+        }
+      }
+    },
+    "FAT CAP" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "脂肪边"
           }
         }
       }
@@ -471,22 +491,22 @@
         }
       }
     },
-    "No thermometer reading recorded" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未记录温度计读数"
-          }
-        }
-      }
-    },
     "No thermometer — continue" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "没有温度计—继续"
+          }
+        }
+      }
+    },
+    "No thermometer reading recorded" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未记录温度计读数"
           }
         }
       }
@@ -701,6 +721,16 @@
         }
       }
     },
+    "sliced" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已切片"
+          }
+        }
+      }
+    },
     "Slightly done" : {
       "localizations" : {
         "zh-Hans" : {
@@ -831,22 +861,22 @@
         }
       }
     },
-    "This is an estimate, not a live temperature measurement." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "这是估算时间，并非实时温度测量。"
-          }
-        }
-      }
-    },
     "THICKNESS" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "厚度"
+          }
+        }
+      }
+    },
+    "This is an estimate, not a live temperature measurement." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这是估算时间，并非实时温度测量。"
           }
         }
       }
@@ -861,22 +891,22 @@
         }
       }
     },
-    "TIME TO EAT" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "可以享用了"
-          }
-        }
-      }
-    },
     "Time to eat" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "开始享用"
+          }
+        }
+      }
+    },
+    "TIME TO EAT" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以享用了"
           }
         }
       }
@@ -981,12 +1011,152 @@
         }
       }
     },
-    "sliced" : {
+    "Cancel" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "已切片"
+            "value" : "取消"
+          }
+        }
+      }
+    },
+    "Continue to feedback?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续填写反馈？"
+          }
+        }
+      }
+    },
+    "Continue to serving?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续进入享用阶段？"
+          }
+        }
+      }
+    },
+    "Continue without completing the prep steps?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不完成准备步骤并继续？"
+          }
+        }
+      }
+    },
+    "Exit" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出"
+          }
+        }
+      }
+    },
+    "Exit Session" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出本次烹饪"
+          }
+        }
+      }
+    },
+    "Exit this session?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "退出本次烹饪？"
+          }
+        }
+      }
+    },
+    "Only continue after taking the steak out of the pan." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "请先将牛排出锅再继续。"
+          }
+        }
+      }
+    },
+    "Return to setup without saving feedback?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不保存反馈并返回设置？"
+          }
+        }
+      }
+    },
+    "Skip" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跳过"
+          }
+        }
+      }
+    },
+    "Skip Stage" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跳过阶段"
+          }
+        }
+      }
+    },
+    "Skip this stage?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "跳过当前阶段？"
+          }
+        }
+      }
+    },
+    "Start cooking without confirming the pan is hot?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "不确认锅已热好就开始煎制？"
+          }
+        }
+      }
+    },
+    "The steak may still be finishing with carryover heat." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "牛排可能仍在通过余温完成中心加热。"
+          }
+        }
+      }
+    },
+    "Your progress will be cleared and you’ll return to setup." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当前进度将被清除，并返回设置界面。"
           }
         }
       }

@@ -92,14 +92,7 @@ final class CookingSessionController {
 
         if session.phase == .finishing,
            session.remaining(at: date) <= 0 {
-            dispatchMotionEventIfNeeded()
-            session.finishedAt = date
-            session.enter(.ready, at: date)
-            store.save(session: session)
-            guidance = makeGuidance(at: date)
-            Task {
-                await liveActivityService.end(for: session, guidance: guidance)
-            }
+            completeFinishing(at: date)
             return
         }
 
@@ -136,19 +129,7 @@ final class CookingSessionController {
             session.temperatureCheckConfirmedAt = date
             persistAndRefresh(at: date)
         case .takeOut:
-            session.pulledAt = date
-            let estimate = engine.guidance(
-                for: session,
-                at: date,
-                calibration: currentCalibration,
-                timeScale: timeScale
-            ).finishingEstimate
-            session.enter(
-                .finishing,
-                at: date,
-                nextActionAt: date.addingTimeInterval(estimate.upperBound)
-            )
-            persistAndRefresh(at: date)
+            beginFinishing(at: date)
         case .eat:
             if session.phase == .ready {
                 session.enter(.eat, at: date)
@@ -158,6 +139,25 @@ final class CookingSessionController {
                 persistAndRefresh(at: date)
             }
         case .wait, .baste, .waitForFinish:
+            break
+        }
+    }
+
+    func skipCurrentStage(at date: Date = .now) async {
+        switch session.phase {
+        case .prep:
+            finishPrep(at: date)
+        case .heat:
+            panIsReady(at: date)
+        case .sear, .fatCap, .baste, .checkTemperature:
+            beginFinishing(at: date)
+        case .finishing:
+            completeFinishing(at: date)
+        case .ready, .eat:
+            confirmCurrentAction(at: date)
+        case .feedback:
+            await startOver(at: date)
+        case .setup:
             break
         }
     }
@@ -260,6 +260,36 @@ final class CookingSessionController {
         Task {
             await notificationService.scheduleNextAction(guidance: guidance)
             await liveActivityService.update(for: session, guidance: guidance)
+        }
+    }
+
+    private func beginFinishing(at date: Date) {
+        session.pulledAt = date
+        let estimate = engine.guidance(
+            for: session,
+            at: date,
+            calibration: currentCalibration,
+            timeScale: timeScale
+        ).finishingEstimate
+        session.enter(
+            .finishing,
+            at: date,
+            nextActionAt: date.addingTimeInterval(estimate.upperBound)
+        )
+        persistAndRefresh(at: date)
+    }
+
+    private func completeFinishing(at date: Date) {
+        session.nextActionAt = date
+        guidance = makeGuidance(at: date)
+        dispatchMotionEventIfNeeded()
+        session.finishedAt = date
+        session.enter(.ready, at: date)
+        store.save(session: session)
+        notificationService.clearCookingNotifications()
+        guidance = makeGuidance(at: date)
+        Task {
+            await liveActivityService.end(for: session, guidance: guidance)
         }
     }
 

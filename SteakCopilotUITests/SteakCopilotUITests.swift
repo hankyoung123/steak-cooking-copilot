@@ -8,6 +8,12 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["完美牛排"].exists)
         XCTAssertEqual(app.buttons["setup.primary"].label, "准备这块牛排")
         attachScreenshot(named: "setup-zh-Hans", app: app)
+
+        app.buttons["setup.primary"].tap()
+        XCTAssertTrue(app.buttons["session.exit"].waitForExistence(timeout: 3))
+        XCTAssertEqual(app.buttons["session.exit"].label, "退出")
+        XCTAssertEqual(app.buttons["session.skip"].label, "跳过")
+        attachScreenshot(named: "stage-controls-zh-Hans", app: app)
     }
 
     func testUnsupportedSystemLanguageFallsBackToEnglish() {
@@ -86,6 +92,45 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertFalse(evidence.sawFatCap)
         XCTAssertTrue(evidence.sawButter)
         XCTAssertTrue(app.staticTexts["FINISHING"].waitForExistence(timeout: 4))
+    }
+
+    func testStageControlsSkipEveryStageAndExitToSetup() {
+        let app = launchApp()
+        app.buttons["setup.primary"].tap()
+
+        XCTAssertTrue(app.buttons["prep.dry"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["session.exit"].exists)
+        XCTAssertTrue(app.buttons["session.skip"].exists)
+        attachScreenshot(named: "stage-controls-prep", app: app)
+
+        confirmSkip(in: app)
+        XCTAssertTrue(app.buttons["heat.ready"].waitForExistence(timeout: 3))
+
+        confirmSkip(in: app)
+        XCTAssertTrue(app.staticTexts["COOK"].waitForExistence(timeout: 3))
+        attachScreenshot(named: "stage-controls-cook", app: app)
+
+        confirmSkip(in: app)
+        XCTAssertTrue(app.staticTexts["FINISHING"].waitForExistence(timeout: 3))
+
+        confirmSkip(in: app)
+        XCTAssertTrue(app.buttons["ready.continue"].waitForExistence(timeout: 3))
+
+        confirmSkip(in: app)
+        XCTAssertTrue(app.buttons["eat.feedback"].waitForExistence(timeout: 3))
+
+        confirmSkip(in: app)
+        XCTAssertTrue(app.buttons["feedback.save"].waitForExistence(timeout: 3))
+
+        confirmSkip(in: app)
+        XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 3))
+
+        app.buttons["setup.primary"].tap()
+        XCTAssertTrue(app.buttons["session.exit"].waitForExistence(timeout: 3))
+        app.buttons["session.exit"].tap()
+        XCTAssertTrue(app.buttons["Exit Session"].waitForExistence(timeout: 3))
+        app.buttons["Exit Session"].tap()
+        XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 3))
     }
 
     private func launchApp(
@@ -172,6 +217,15 @@ final class SteakCopilotUITests: XCTestCase {
             .completed
         )
         element.tap()
+    }
+
+    private func confirmSkip(in app: XCUIApplication) {
+        let skip = app.buttons["session.skip"]
+        XCTAssertTrue(skip.waitForExistence(timeout: 3))
+        skip.tap()
+        let confirmation = app.buttons["Skip Stage"]
+        XCTAssertTrue(confirmation.waitForExistence(timeout: 3))
+        confirmation.tap()
     }
 
     private func attachScreenshot(

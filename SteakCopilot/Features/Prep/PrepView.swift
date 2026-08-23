@@ -15,6 +15,8 @@ struct PrepView: View {
             Text("Two quiet things\nbefore the heat.")
                 .font(.largeTitle.bold())
                 .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
 
             ZStack {
                 SteakVisual(configuration: controller.session.configuration)
@@ -79,7 +81,11 @@ private struct PrepStep: View {
                     .foregroundStyle(.secondary)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(title).font(.headline)
-                    Text(detail).font(.subheadline).foregroundStyle(.secondary)
+                    Text(detail)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
                 Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")

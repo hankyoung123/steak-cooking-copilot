@@ -4,14 +4,15 @@ Verified on 2026-08-23 with Xcode 26.2, Swift 6.2, and an iPhone 17 simulator ru
 
 ## Automated results
 
-- Full suite: **31/31 passed** in 187.806 seconds.
-- Unit and integration tests: **26/26 passed** across `CookingEngine`, `CookingSessionController`, calibration, localization, motion mapping, and application loading.
-- XCUITests: **5/5 passed**.
+- Full suite: **33/33 passed** in 228.108 seconds.
+- Unit and integration tests: **27/27 passed** across `CookingEngine`, `CookingSessionController`, calibration, localization, motion mapping, and application loading.
+- XCUITests: **6/6 passed**.
   - Case A: 3 cm Ribeye, Medium Rare, no thermometer; repeated flips, butter, take-out, honest estimated finish, Ready, Eat, Feedback, and fresh Setup.
   - Case B: 4 cm Strip, Medium Rare, manual thermometer; repeated flips, fat cap, butter/baste, temperature entry, and take-out.
   - Case C: 3 cm Tenderloin, Medium; repeated flips, no fat-cap step, butter, and finish.
   - Simplified Chinese follows the `zh-Hans` system language without layout clipping.
   - An unsupported system language falls back to English.
+  - Exit and Skip are available from Prep through Feedback; Skip traverses every stage and Exit returns to a fresh Setup session.
 - Debug simulator build: **passed**.
 - Release simulator build: **passed**. Xcode emitted only the expected signed Live Activity extension stripping note.
 - `git diff --check`: **passed**.
@@ -37,6 +38,7 @@ Verified on 2026-08-23 with Xcode 26.2, Swift 6.2, and an iPhone 17 simulator ru
 ## V1 Definition of Done
 
 - [x] Complete Setup → Prep → Heat → Cook → Finish → Ready → Eat → Feedback session.
+- [x] Every active stage exposes explicit Exit and Skip controls with confirmation; Cook warns the user to remove the steak before skipping.
 - [x] Cooking Engine and UI are decoupled: the Engine consumes domain facts and returns `CookingGuidance`.
 - [x] Motion System and Cooking Engine are decoupled: `MotionDirector` translates domain events into visual, haptic, and optional sound cues.
 - [x] FLIP signature motion has T−5 attention, centralized countdown feedback, one hero keyframe flip, and compact later flips.
@@ -65,6 +67,7 @@ Verified on 2026-08-23 with Xcode 26.2, Swift 6.2, and an iPhone 17 simulator ru
 
 - [Case A estimated Finish screen](screenshots/case-a-estimated-finish.png): inspected after layout correction; no overlap and no fabricated live temperature.
 - Setup, Cook, and Ready were also inspected interactively on the iPhone 17 simulator.
+- English and Simplified Chinese Prep screens were inspected with the stage controls visible; titles and supporting copy remain unclipped.
 - Runtime visuals use one photographic steak surface masked by SwiftUI shape plus three doneness cross-section assets; motion remains runtime-driven.
 
 ## Physical-device checks before App Store submission

@@ -163,6 +163,47 @@ final class CookingSessionControllerTests: XCTestCase {
         XCTAssertEqual(motion.cue.visual, .ready)
     }
 
+    func testSkippingEveryActiveStageAdvancesAndReturnsToFreshSetup() async {
+        let fixture = makeController(at: Date(timeIntervalSince1970: 80_000))
+        let controller = fixture.controller
+        var now = fixture.start
+        controller.finishSetup(at: now)
+        let originalSessionID = controller.session.id
+
+        XCTAssertEqual(controller.session.phase, .prep)
+
+        now.addTimeInterval(1)
+        await controller.skipCurrentStage(at: now)
+        XCTAssertEqual(controller.session.phase, .heat)
+
+        now.addTimeInterval(1)
+        await controller.skipCurrentStage(at: now)
+        XCTAssertEqual(controller.session.phase, .sear)
+
+        now.addTimeInterval(1)
+        await controller.skipCurrentStage(at: now)
+        XCTAssertEqual(controller.session.phase, .finishing)
+        XCTAssertEqual(controller.session.pulledAt, now)
+
+        now.addTimeInterval(1)
+        await controller.skipCurrentStage(at: now)
+        XCTAssertEqual(controller.session.phase, .ready)
+        XCTAssertEqual(controller.session.finishedAt, now)
+
+        now.addTimeInterval(1)
+        await controller.skipCurrentStage(at: now)
+        XCTAssertEqual(controller.session.phase, .eat)
+
+        now.addTimeInterval(1)
+        await controller.skipCurrentStage(at: now)
+        XCTAssertEqual(controller.session.phase, .feedback)
+
+        now.addTimeInterval(1)
+        await controller.skipCurrentStage(at: now)
+        XCTAssertEqual(controller.session.phase, .setup)
+        XCTAssertNotEqual(controller.session.id, originalSessionID)
+    }
+
     private func makeController(at start: Date) -> (controller: CookingSessionController, start: Date) {
         let suite = "CookingSessionControllerTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
