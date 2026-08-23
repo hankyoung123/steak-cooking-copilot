@@ -24,6 +24,26 @@ final class SteakCopilotUITests: XCTestCase {
         attachScreenshot(named: "setup-english-fallback", app: app)
     }
 
+    func testFiveDonenessLevelsAreAvailableAndSelectable() {
+        let app = launchApp()
+        let expected = [
+            "setup.doneness.rare",
+            "setup.doneness.mediumRare",
+            "setup.doneness.medium",
+            "setup.doneness.mediumWell",
+            "setup.doneness.wellDone"
+        ]
+
+        for identifier in expected {
+            XCTAssertTrue(app.buttons[identifier].exists)
+        }
+
+        let wellDone = app.buttons["setup.doneness.wellDone"]
+        wellDone.tap()
+        XCTAssertTrue(wellDone.isSelected)
+        attachScreenshot(named: "setup-five-doneness", app: app)
+    }
+
     func testCaseARibeyeWithoutThermometerCompletesEstimatedFlow() {
         let app = launchApp()
         startCooking(app)

@@ -145,24 +145,23 @@ struct SetupView: View {
             PrototypeSectionLabel(title: String(localized: "Doneness"))
                 .padding(.horizontal, 4)
 
-            HStack(spacing: 8) {
+            HStack(spacing: 5) {
                 ForEach(Doneness.allCases) { doneness in
                     Button {
                         configuration.doneness = doneness
                     } label: {
                         VStack(spacing: 6) {
-                            Image(donenessAssetName(for: doneness))
+                            Image(doneness.assetName)
                                 .resizable()
-                                .scaledToFill()
-                                .frame(height: 52)
-                                .clipShape(RoundedRectangle(cornerRadius: 9))
+                                .scaledToFit()
+                                .frame(height: 44)
                             Text(doneness.title)
                                 .font(.caption2.weight(.semibold))
                                 .multilineTextAlignment(.center)
                                 .lineLimit(2)
                         }
-                        .frame(maxWidth: .infinity, minHeight: 86)
-                        .padding(5)
+                        .frame(maxWidth: .infinity, minHeight: 82)
+                        .padding(4)
                         .background(theme.card, in: RoundedRectangle(cornerRadius: 13))
                         .overlay {
                             RoundedRectangle(cornerRadius: 13)
@@ -200,14 +199,6 @@ struct SetupView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
             }
-        }
-    }
-
-    private func donenessAssetName(for doneness: Doneness) -> String {
-        switch doneness {
-        case .rare: "DonenessRare"
-        case .mediumRare: "DonenessMediumRare"
-        case .medium: "DonenessMedium"
         }
     }
 

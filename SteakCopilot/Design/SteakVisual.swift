@@ -9,7 +9,7 @@ struct SteakVisual: View {
     var body: some View {
         Group {
             if sliced {
-                Image(donenessAssetName)
+                Image(configuration.doneness.assetName)
                     .resizable()
                     .scaledToFit()
                     .clipShape(RoundedRectangle(cornerRadius: 26))
@@ -51,14 +51,6 @@ struct SteakVisual: View {
 
     private var normalizedProgress: Double {
         min(max(cookedProgress, 0), 1)
-    }
-
-    private var donenessAssetName: String {
-        switch configuration.doneness {
-        case .rare: "DonenessRare"
-        case .mediumRare: "DonenessMediumRare"
-        case .medium: "DonenessMedium"
-        }
     }
 
     private var accessibilityDescription: String {

@@ -48,6 +48,7 @@
       }
     },
     "%lld" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -98,6 +99,7 @@
       }
     },
     "A drop of water should dance and evaporate." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -108,6 +110,7 @@
       }
     },
     "A dry surface builds a better crust." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -158,6 +161,7 @@
       }
     },
     "Basting" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -173,46 +177,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已加入黄油"
-          }
-        }
-      }
-    },
-    "CHECK TEMP" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "测量中心温度"
-          }
-        }
-      }
-    },
-    "COOK" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "煎制"
-          }
-        }
-      }
-    },
-    "CRUST" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "焦壳"
-          }
-        }
-      }
-    },
-    "CUT" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "部位"
           }
         }
       }
@@ -247,6 +211,16 @@
         }
       }
     },
+    "CHECK TEMP" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测量中心温度"
+          }
+        }
+      }
+    },
     "Continue to feedback?" : {
       "localizations" : {
         "zh-Hans" : {
@@ -277,7 +251,18 @@
         }
       }
     },
+    "COOK" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "煎制"
+          }
+        }
+      }
+    },
     "Cooking" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -297,16 +282,6 @@
         }
       }
     },
-    "Cut" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "部位"
-          }
-        }
-      }
-    },
     "Crust" : {
       "localizations" : {
         "zh-Hans" : {
@@ -317,12 +292,34 @@
         }
       }
     },
-    "DONENESS" : {
+    "CRUST" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "熟度"
+            "value" : "焦壳"
+          }
+        }
+      }
+    },
+    "Cut" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "部位"
+          }
+        }
+      }
+    },
+    "CUT" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "部位"
           }
         }
       }
@@ -357,6 +354,17 @@
         }
       }
     },
+    "DONENESS" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "熟度"
+          }
+        }
+      }
+    },
     "EAT" : {
       "localizations" : {
         "zh-Hans" : {
@@ -368,21 +376,12 @@
       }
     },
     "ENJOY" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "慢慢享用"
-          }
-        }
-      }
-    },
-    "ESTIMATED FINISH" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "预计完成"
           }
         }
       }
@@ -407,7 +406,18 @@
         }
       }
     },
+    "ESTIMATED FINISH" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预计完成"
+          }
+        }
+      }
+    },
     "Estimated finishing progress" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -428,6 +438,7 @@
       }
     },
     "Evenly, edge to edge." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -477,6 +488,17 @@
         }
       }
     },
+    "Fat cap" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "煎脂肪边"
+          }
+        }
+      }
+    },
     "FAT CAP" : {
       "localizations" : {
         "zh-Hans" : {
@@ -507,6 +529,16 @@
         }
       }
     },
+    "Finishing" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "余温完成中"
+          }
+        }
+      }
+    },
     "FINISHING" : {
       "localizations" : {
         "zh-Hans" : {
@@ -528,41 +560,12 @@
       }
     },
     "FLIP\nNOW" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "现在\n翻面"
-          }
-        }
-      }
-    },
-    "FLIP NOW" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "现在翻面"
-          }
-        }
-      }
-    },
-    "Fat cap" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "煎脂肪边"
-          }
-        }
-      }
-    },
-    "Finishing" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "余温完成中"
           }
         }
       }
@@ -573,6 +576,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "距离翻面"
+          }
+        }
+      }
+    },
+    "FLIP NOW" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现在翻面"
           }
         }
       }
@@ -608,6 +621,7 @@
       }
     },
     "Give the pan\ntime to get hot." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -648,6 +662,7 @@
       }
     },
     "Help the next steak." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -668,6 +683,7 @@
       }
     },
     "How did it turn out?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -717,16 +733,6 @@
         }
       }
     },
-    "LAST READING" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "最后读数"
-          }
-        }
-      }
-    },
     "Last reading" : {
       "localizations" : {
         "zh-Hans" : {
@@ -737,7 +743,18 @@
         }
       }
     },
+    "LAST READING" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最后读数"
+          }
+        }
+      }
+    },
     "Let the crust build until the next check." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -772,7 +789,7 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "七分熟"
+            "value" : "五分熟"
           }
         }
       }
@@ -782,7 +799,17 @@
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "五分熟"
+            "value" : "三分熟"
+          }
+        }
+      }
+    },
+    "Medium Well" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "七分熟"
           }
         }
       }
@@ -797,22 +824,23 @@
         }
       }
     },
-    "NEXT · %@" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "下一步 · %@"
-          }
-        }
-      }
-    },
     "New York Strip" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "纽约客牛排"
+          }
+        }
+      }
+    },
+    "NEXT · %@" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步 · %@"
           }
         }
       }
@@ -827,22 +855,22 @@
         }
       }
     },
-    "No thermometer reading recorded" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "未记录温度计读数"
-          }
-        }
-      }
-    },
     "No thermometer — continue" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "没有温度计—继续"
+          }
+        }
+      }
+    },
+    "No thermometer reading recorded" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未记录温度计读数"
           }
         }
       }
@@ -868,6 +896,7 @@
       }
     },
     "ONE LAST THING" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -908,41 +937,12 @@
       }
     },
     "Out of the pan.\nCarryover heat is finishing the center." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "已离锅。\n余温正在让中心完成。"
-          }
-        }
-      }
-    },
-    "PERFECT STEAK" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "完美牛排"
-          }
-        }
-      }
-    },
-    "PREP" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "准备"
-          }
-        }
-      }
-    },
-    "PULL AT" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建议出锅"
           }
         }
       }
@@ -978,6 +978,7 @@
       }
     },
     "Pat it completely dry" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1007,7 +1008,29 @@
         }
       }
     },
+    "PERFECT STEAK" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完美牛排"
+          }
+        }
+      }
+    },
+    "PREP" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "准备"
+          }
+        }
+      }
+    },
     "Prepare this steak" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1033,6 +1056,17 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "进度"
+          }
+        }
+      }
+    },
+    "PULL AT" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建议出锅"
           }
         }
       }
@@ -1067,22 +1101,22 @@
         }
       }
     },
+    "Rare" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一分熟"
+          }
+        }
+      }
+    },
     "READY" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "可以享用"
-          }
-        }
-      }
-    },
-    "Rare" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "三分熟"
           }
         }
       }
@@ -1127,47 +1161,8 @@
         }
       }
     },
-    "SEAR" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "煎制"
-          }
-        }
-      }
-    },
-    "SETUP" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "设置"
-          }
-        }
-      }
-    },
-    "STAND IT UP" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "立起牛排"
-          }
-        }
-      }
-    },
-    "STAND THE FAT CAP" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "立起煎脂肪边"
-          }
-        }
-      }
-    },
     "Salt both sides" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1188,6 +1183,7 @@
       }
     },
     "Save feedback" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1197,7 +1193,18 @@
         }
       }
     },
+    "SEAR" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "煎制"
+          }
+        }
+      }
+    },
     "Searing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1223,6 +1230,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "趁焦壳仍酥脆时上桌。"
+          }
+        }
+      }
+    },
+    "SETUP" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置"
           }
         }
       }
@@ -1268,11 +1285,22 @@
       }
     },
     "Slice across the grain and serve now." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "逆纹切片，趁热享用。"
+          }
+        }
+      }
+    },
+    "sliced" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已切片"
           }
         }
       }
@@ -1293,6 +1321,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "稍生"
+          }
+        }
+      }
+    },
+    "STAND IT UP" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立起牛排"
+          }
+        }
+      }
+    },
+    "STAND THE FAT CAP" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立起煎脂肪边"
           }
         }
       }
@@ -1328,6 +1376,7 @@
       }
     },
     "Start with the steak\nin front of you." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1368,41 +1417,12 @@
       }
     },
     "TAKE\nIT OUT" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "立即\n出锅"
-          }
-        }
-      }
-    },
-    "TAKE IT OUT" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "立即出锅"
-          }
-        }
-      }
-    },
-    "THICKNESS" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "厚度"
-          }
-        }
-      }
-    },
-    "TIME TO EAT" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "可以享用了"
           }
         }
       }
@@ -1417,7 +1437,18 @@
         }
       }
     },
+    "TAKE IT OUT" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即出锅"
+          }
+        }
+      }
+    },
     "Temperature" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1477,6 +1508,17 @@
         }
       }
     },
+    "THICKNESS" : {
+      "extractionState" : "stale",
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "厚度"
+          }
+        }
+      }
+    },
     "This helps improve next time." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1508,6 +1550,7 @@
       }
     },
     "Tilt the pan and spoon the foaming butter." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1537,7 +1580,18 @@
         }
       }
     },
+    "TIME TO EAT" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以享用了"
+          }
+        }
+      }
+    },
     "Time to eat." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1588,6 +1642,7 @@
       }
     },
     "Turn it over now." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1598,6 +1653,7 @@
       }
     },
     "Two quiet things\nbefore the heat." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1628,11 +1684,22 @@
       }
     },
     "Watch the pan, not a fake countdown." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "观察锅的状态，不使用虚假倒计时。"
+          }
+        }
+      }
+    },
+    "Well Done" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "全熟"
           }
         }
       }
@@ -1643,6 +1710,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "准备烹饪什么？"
+          }
+        }
+      }
+    },
+    "whole" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整块"
           }
         }
       }
@@ -1658,6 +1735,7 @@
       }
     },
     "You nailed the timing." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1673,26 +1751,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "当前进度将被清除，并返回设置界面。"
-          }
-        }
-      }
-    },
-    "sliced" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "已切片"
-          }
-        }
-      }
-    },
-    "whole" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "整块"
           }
         }
       }

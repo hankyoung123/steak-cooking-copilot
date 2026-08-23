@@ -4,6 +4,8 @@ enum Doneness: String, Codable, CaseIterable, Identifiable, Sendable {
     case rare
     case mediumRare
     case medium
+    case mediumWell
+    case wellDone
 
     var id: Self { self }
 
@@ -12,6 +14,18 @@ enum Doneness: String, Codable, CaseIterable, Identifiable, Sendable {
         case .rare: String(localized: "Rare")
         case .mediumRare: String(localized: "Medium Rare")
         case .medium: String(localized: "Medium")
+        case .mediumWell: String(localized: "Medium Well")
+        case .wellDone: String(localized: "Well Done")
+        }
+    }
+
+    var assetName: String {
+        switch self {
+        case .rare: "DonenessRare"
+        case .mediumRare: "DonenessMediumRare"
+        case .medium: "DonenessMedium"
+        case .mediumWell: "DonenessMediumWell"
+        case .wellDone: "DonenessWellDone"
         }
     }
 
@@ -20,6 +34,8 @@ enum Doneness: String, Codable, CaseIterable, Identifiable, Sendable {
         case .rare: 52
         case .mediumRare: 54
         case .medium: 60
+        case .mediumWell: 65
+        case .wellDone: 71
         }
     }
 
@@ -28,6 +44,8 @@ enum Doneness: String, Codable, CaseIterable, Identifiable, Sendable {
         case .rare: 49
         case .mediumRare: 52
         case .medium: 57
+        case .mediumWell: 62
+        case .wellDone: 68
         }
     }
 
@@ -36,6 +54,8 @@ enum Doneness: String, Codable, CaseIterable, Identifiable, Sendable {
         case .rare: 0.88
         case .mediumRare: 1
         case .medium: 1.14
+        case .mediumWell: 1.28
+        case .wellDone: 1.42
         }
     }
 }

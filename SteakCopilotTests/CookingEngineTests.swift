@@ -4,6 +4,39 @@ import XCTest
 final class CookingEngineTests: XCTestCase {
     private let engine = CookingEngine()
 
+    func testDonenessOffersFiveOrderedLevels() {
+        XCTAssertEqual(
+            Doneness.allCases,
+            [.rare, .mediumRare, .medium, .mediumWell, .wellDone]
+        )
+    }
+
+    func testDonenessTemperaturesAndCookingBudgetsIncreaseMonotonically() {
+        let levels = Doneness.allCases
+
+        for level in levels {
+            XCTAssertGreaterThan(
+                level.targetTemperatureC,
+                level.pullTemperatureC
+            )
+        }
+
+        for (lower, higher) in zip(levels, levels.dropFirst()) {
+            XCTAssertGreaterThan(
+                higher.targetTemperatureC,
+                lower.targetTemperatureC
+            )
+            XCTAssertGreaterThan(
+                higher.pullTemperatureC,
+                lower.pullTemperatureC
+            )
+            XCTAssertGreaterThan(
+                higher.cookingBudgetFactor,
+                lower.cookingBudgetFactor
+            )
+        }
+    }
+
     func testStandardSteakUsesThirtySecondFlipCycle() {
         let configuration = SteakConfiguration(
             cut: .ribeye,

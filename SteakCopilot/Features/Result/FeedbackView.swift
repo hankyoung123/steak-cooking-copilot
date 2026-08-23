@@ -72,10 +72,8 @@ struct FeedbackView: View {
             VStack(spacing: 6) {
                 Image(donenessAssetName(for: option))
                     .resizable()
-                    .scaledToFill()
+                    .scaledToFit()
                     .frame(height: 48)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                    .brightness(donenessBrightness(for: option))
                 Text(option.title)
                     .font(.system(.caption2, design: .rounded))
                     .multilineTextAlignment(.center)
@@ -129,19 +127,11 @@ struct FeedbackView: View {
 
     private func donenessAssetName(for option: DonenessFeedback) -> String {
         switch option {
-        case .tooRare: "DonenessRare"
-        case .slightlyRare, .perfect: "DonenessMediumRare"
-        case .slightlyDone, .tooDone: "DonenessMedium"
-        }
-    }
-
-    private func donenessBrightness(for option: DonenessFeedback) -> Double {
-        switch option {
-        case .tooRare: 0.06
-        case .slightlyRare: 0.03
-        case .perfect: 0
-        case .slightlyDone: -0.04
-        case .tooDone: -0.1
+        case .tooRare: Doneness.rare.assetName
+        case .slightlyRare: Doneness.mediumRare.assetName
+        case .perfect: Doneness.medium.assetName
+        case .slightlyDone: Doneness.mediumWell.assetName
+        case .tooDone: Doneness.wellDone.assetName
         }
     }
 
