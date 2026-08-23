@@ -14,15 +14,27 @@ struct CookingStageVisual: View {
 
     var body: some View {
         ZStack {
-            PanVisual(isCooking: true)
-                .frame(width: 315)
+            Image(action == .baste ? "BasteScene" : "CookPan")
+                .resizable()
+                .scaledToFill()
 
-            animatedSteak
-                .frame(width: 235)
-                .offset(y: 10)
+            LinearGradient(
+                colors: [.black.opacity(0.22), .clear, .black.opacity(0.45)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+
+            if action != .baste {
+                animatedSteak
+                    .frame(width: 225, height: 154)
+                    .scaleEffect(x: 1.08, y: 0.68)
+                    .rotationEffect(.degrees(-6))
+                    .offset(y: 78)
+            }
 
             CookingAccent(action: action, butterColor: butterColor)
         }
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .onChange(of: motion.sequence, handleMotionCue)
     }
 
@@ -71,44 +83,8 @@ private struct CookingAccent: View {
                         )
                 }
             }
-
-            if action == .baste {
-                BasteAccent()
-            }
         }
         .transition(.opacity)
         .accessibilityHidden(true)
-    }
-}
-
-private struct BasteAccent: View {
-    var body: some View {
-        ZStack {
-            ArcShape()
-                .stroke(
-                    .white.opacity(0.6),
-                    style: StrokeStyle(lineWidth: 5, lineCap: .round)
-                )
-                .frame(width: 130, height: 90)
-                .rotationEffect(.degrees(-18))
-                .offset(x: 44, y: -42)
-            Capsule()
-                .fill(.white.opacity(0.7))
-                .frame(width: 90, height: 10)
-                .rotationEffect(.degrees(-35))
-                .offset(x: 82, y: -78)
-        }
-    }
-}
-
-private struct ArcShape: Shape {
-    func path(in rect: CGRect) -> Path {
-        var path = Path()
-        path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
-        path.addQuadCurve(
-            to: CGPoint(x: rect.maxX, y: rect.maxY * 0.58),
-            control: CGPoint(x: rect.midX, y: rect.minY)
-        )
-        return path
     }
 }

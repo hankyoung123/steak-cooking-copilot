@@ -1,12 +1,13 @@
 import SwiftUI
 
 struct SessionStageControls: View {
+    @Environment(AppTheme.self) private var theme
     let flowStage: CookingFlowStage
     let onExit: () -> Void
     let onSkip: () -> Void
 
     var body: some View {
-        HStack {
+        HStack(spacing: 8) {
             controlButton(
                 title: String(localized: "Exit"),
                 systemImage: "xmark",
@@ -14,17 +15,21 @@ struct SessionStageControls: View {
                 action: onExit
             )
 
-            Spacer()
+            Spacer(minLength: 0)
 
-            controlButton(
+            StageTitle(stage: flowStage)
+                .frame(maxWidth: .infinity)
+
+            Spacer(minLength: 0)
+
+            skipButton(
                 title: String(localized: "Skip"),
-                systemImage: "forward.end",
                 identifier: "session.skip",
                 action: onSkip
             )
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
     }
 
     private func controlButton(
@@ -34,20 +39,35 @@ struct SessionStageControls: View {
         action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            Label(title, systemImage: systemImage)
+            Image(systemName: systemImage)
                 .font(.subheadline.weight(.semibold))
-                .padding(.horizontal, 13)
-                .frame(minHeight: 36)
+                .frame(width: 38, height: 38)
                 .background(
-                    .white.opacity(flowStage == .cook ? 0.1 : 0.48),
-                    in: Capsule()
+                    .white.opacity(flowStage == .cook ? 0.10 : 0.58),
+                    in: Circle()
                 )
                 .overlay {
-                    Capsule()
+                    Circle()
                         .stroke(.primary.opacity(0.08), lineWidth: 1)
                 }
         }
         .buttonStyle(.plain)
+        .frame(width: 62, alignment: .leading)
+        .accessibilityLabel(title)
         .accessibilityIdentifier(identifier)
+    }
+
+    private func skipButton(
+        title: String,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(title, action: action)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(flowStage == .cook ? .white.opacity(0.8) : theme.ember)
+            .frame(width: 62, alignment: .trailing)
+            .frame(minHeight: 38)
+            .buttonStyle(.plain)
+            .accessibilityIdentifier(identifier)
     }
 }

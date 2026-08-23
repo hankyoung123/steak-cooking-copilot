@@ -1,121 +1,122 @@
 import SwiftUI
 
 struct PrepView: View {
+    @Environment(AppTheme.self) private var theme
     let controller: CookingSessionController
     @State private var dried = false
     @State private var salted = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 26) {
-            Spacer(minLength: 18)
+        ScrollView {
+            VStack(spacing: 14) {
+                Text("Let's prep your steak")
+                    .font(.title2.bold())
+                    .padding(.top, 10)
+                    .padding(.bottom, 4)
 
-            Text("PREP")
-                .quietEyebrowStyle(color: .primary)
-            Text("Two quiet things\nbefore the heat.")
-                .font(.largeTitle.bold())
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-
-            ZStack {
-                SteakVisual(configuration: controller.session.configuration)
-                    .saturation(dried ? 0.78 : 1)
-                    .brightness(dried ? -0.03 : 0.08)
-                    .animation(.easeOut(duration: reduceMotion ? 0.15 : 0.5), value: dried)
-
-                if salted {
-                    SaltFeedback(reduceMotion: reduceMotion)
-                        .allowsHitTesting(false)
-                }
-            }
-            .frame(height: 200)
-            .padding(.horizontal, 38)
-
-            VStack(spacing: 12) {
-                PrepStep(
-                    number: "01",
-                    title: String(localized: "Pat it completely dry"),
-                    detail: String(localized: "A dry surface builds a better crust."),
+                PrepPhotoStep(
+                    imageName: "PrepDry",
+                    systemImage: "drop",
+                    step: String(localized: "1. DRY"),
+                    detail: String(localized: "Pat both sides until very dry."),
                     isComplete: dried
-                ) { dried = true }
+                ) { dried.toggle() }
                 .accessibilityIdentifier("prep.dry")
 
-                PrepStep(
-                    number: "02",
-                    title: String(localized: "Salt both sides"),
-                    detail: String(localized: "Evenly, edge to edge."),
+                PrepPhotoStep(
+                    imageName: "PrepSalt",
+                    systemImage: "saltshaker",
+                    step: String(localized: "2. SALT"),
+                    detail: String(localized: "Season both sides generously."),
                     isComplete: salted
-                ) { salted = true }
+                ) { salted.toggle() }
                 .accessibilityIdentifier("prep.salt")
-            }
 
-            Spacer()
+                PrototypeCard(padding: 14) {
+                    HStack(alignment: .top, spacing: 13) {
+                        Image(systemName: "snowflake")
+                            .font(.title2)
+                            .foregroundStyle(theme.butter)
+                            .frame(width: 28)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Optional: Dry brine")
+                                .font(.subheadline.weight(.semibold))
+                            Text("For best results, season and refrigerate uncovered for at least 45 minutes.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                }
 
-            PrimaryActionButton(
-                title: String(localized: "Heat the pan"),
-                icon: "flame.fill",
-                isEnabled: dried && salted
-            ) {
-                controller.finishPrep()
+                PrimaryActionButton(
+                    title: String(localized: "I'm ready"),
+                    isEnabled: dried && salted
+                ) {
+                    controller.finishPrep()
+                }
+                .accessibilityIdentifier("prep.continue")
+                .padding(.top, 4)
             }
-            .accessibilityIdentifier("prep.continue")
+            .padding(.horizontal, 16)
+            .padding(.bottom, 24)
         }
-        .padding(.horizontal, 22)
-        .padding(.bottom, 24)
+        .scrollIndicators(.hidden)
     }
 }
 
-private struct PrepStep: View {
-    let number: String
-    let title: String
+private struct PrepPhotoStep: View {
+    @Environment(AppTheme.self) private var theme
+    let imageName: String
+    let systemImage: String
+    let step: String
     let detail: String
     let isComplete: Bool
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 14) {
-                Text(number)
-                    .font(.caption.monospacedDigit().weight(.bold))
-                    .foregroundStyle(.secondary)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(title).font(.headline)
+            HStack(spacing: 0) {
+                Image(imageName)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 168, height: 148)
+                    .clipped()
+
+                VStack(alignment: .leading, spacing: 9) {
+                    Image(systemName: systemImage)
+                        .font(.title3)
+                    Text(step)
+                        .font(.headline)
                     Text(detail)
-                        .font(.subheadline)
+                        .font(.caption)
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    HStack {
+                        Spacer()
+                        Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
+                            .font(.title3)
+                            .foregroundStyle(isComplete ? theme.ember : .secondary)
+                    }
                 }
-                Spacer()
-                Image(systemName: isComplete ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
-                    .foregroundStyle(isComplete ? .green : .secondary)
+                .padding(13)
+                .frame(maxWidth: .infinity, minHeight: 148, alignment: .topLeading)
             }
-            .padding(16)
-            .background(.white.opacity(0.52), in: RoundedRectangle(cornerRadius: 20))
+            .background(theme.card)
+            .clipShape(RoundedRectangle(cornerRadius: 17, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 17, style: .continuous)
+                    .stroke(
+                        isComplete ? theme.ember.opacity(0.55) : .black.opacity(0.045),
+                        lineWidth: isComplete ? 1.5 : 1
+                    )
+            }
+            .shadow(color: .black.opacity(0.055), radius: 12, y: 5)
         }
         .buttonStyle(.plain)
-    }
-}
-
-private struct SaltFeedback: View {
-    let reduceMotion: Bool
-    @State private var fallen = false
-
-    var body: some View {
-        ForEach(0..<14, id: \.self) { index in
-            Circle()
-                .fill(.white)
-                .frame(width: 3, height: 3)
-                .offset(
-                    x: CGFloat((index * 29) % 150) - 75,
-                    y: fallen || reduceMotion ? CGFloat((index * 17) % 70) - 15 : -100
-                )
-                .opacity(fallen || reduceMotion ? 0.76 : 0)
-        }
-        .onAppear {
-            withAnimation(.easeIn(duration: 0.72)) { fallen = true }
-        }
+        .accessibilityAddTraits(isComplete ? .isSelected : [])
     }
 }

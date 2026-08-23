@@ -1,46 +1,104 @@
+import Charts
 import SwiftUI
 
 struct FinishView: View {
-    let controller: CookingSessionController
     @Environment(AppTheme.self) private var theme
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    let controller: CookingSessionController
+    @State private var showsExplanation = false
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
-            VStack(spacing: 20) {
-                Text("FINISHING")
-                    .quietEyebrowStyle(color: theme.ink)
-                    .padding(.top, 22)
+            ScrollView {
+                VStack(spacing: 16) {
+                    VStack(spacing: 5) {
+                        Text("Finishing")
+                            .font(.title2.bold())
+                        Text("The steak is still cooking.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 10)
 
-                Text("Out of the pan.\nCarryover heat is finishing the center.")
-                    .font(.title.bold())
-                    .multilineTextAlignment(.center)
+                    readingSummary
 
-                SteakVisual(
-                    configuration: controller.session.configuration,
-                    cookedProgress: 1
-                )
-                .frame(height: 170)
-                .padding(.horizontal, 48)
-                .padding(.bottom, 14)
-                .scaleEffect(reduceMotion ? 1 : breathingScale(at: context.date))
+                    PrototypeCard(padding: 14) {
+                        Chart(chartPoints) { point in
+                            AreaMark(
+                                x: .value("Time", point.minute),
+                                y: .value("Progress", point.value)
+                            )
+                            .foregroundStyle(theme.ember.opacity(0.09))
 
-                readingSummary
+                            LineMark(
+                                x: .value("Time", point.minute),
+                                y: .value("Progress", point.value)
+                            )
+                            .foregroundStyle(theme.ember)
+                            .lineStyle(StrokeStyle(lineWidth: 2.5, lineCap: .round))
 
-                ProgressView(value: finishingProgress(at: context.date))
-                    .tint(theme.ember)
-                    .padding(.horizontal, 36)
-                    .accessibilityLabel("Estimated finishing progress")
+                            PointMark(
+                                x: .value("Time", point.minute),
+                                y: .value("Progress", point.value)
+                            )
+                            .foregroundStyle(theme.ember)
+                            .symbolSize(20)
+                        }
+                        .chartXAxisLabel("Estimated carryover")
+                        .chartYScale(domain: chartDomain)
+                        .frame(height: 190)
+                    }
 
-                Spacer()
+                    PrototypeCard(padding: 14) {
+                        HStack(alignment: .top, spacing: 13) {
+                            Image(systemName: "frying.pan")
+                                .font(.title2)
+                                .foregroundStyle(theme.butter)
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Rest on a rack or plate.")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("Tent loosely with foil if needed.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 0)
+                        }
+                    }
 
-                Text("This is an estimate, not a live temperature measurement.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .padding(.bottom, 24)
+                    Button {
+                        withAnimation(.easeOut(duration: 0.2)) {
+                            showsExplanation.toggle()
+                        }
+                    } label: {
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack {
+                                Text("Why finishing matters?")
+                                    .font(.subheadline.weight(.semibold))
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .rotationEffect(.degrees(showsExplanation ? 90 : 0))
+                            }
+                            if showsExplanation {
+                                Text("Heat keeps moving toward the center after the steak leaves the pan.")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .multilineTextAlignment(.leading)
+                            }
+                        }
+                        .padding(14)
+                        .background(theme.porcelainDeep.opacity(0.55), in: RoundedRectangle(cornerRadius: 16))
+                    }
+                    .buttonStyle(.plain)
+
+                    Text("This is an estimate, not a live temperature measurement.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.top, 2)
+                }
+                .padding(.horizontal, 16)
+                .padding(.bottom, 24)
             }
-            .padding(.horizontal, 22)
+            .scrollIndicators(.hidden)
         }
         .task(id: controller.session.nextActionAt) {
             await refreshAtFinishBoundary()
@@ -50,28 +108,51 @@ struct FinishView: View {
     @ViewBuilder
     private var readingSummary: some View {
         if let reading = controller.guidance.lastManualTemperatureC {
-            VStack(spacing: 7) {
+            VStack(spacing: 4) {
                 Text("LAST READING")
                     .quietEyebrowStyle(color: theme.ink)
                 Text("\(reading, specifier: "%.0f")°C")
-                    .font(.system(size: 58, weight: .medium, design: .rounded).monospacedDigit())
+                    .font(.system(size: 44, weight: .semibold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(theme.ember)
                 Text("Expected carryover +1–3°C · Estimated")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.caption.weight(.semibold))
                     .foregroundStyle(theme.ember)
             }
             .accessibilityElement(children: .combine)
         } else {
-            VStack(spacing: 7) {
+            VStack(spacing: 4) {
                 Text("ESTIMATED FINISH")
                     .quietEyebrowStyle(color: theme.ink)
                 Text(estimatedRangeText)
-                    .font(.system(size: 48, weight: .medium, design: .rounded).monospacedDigit())
+                    .font(.system(size: 42, weight: .semibold, design: .rounded).monospacedDigit())
+                    .foregroundStyle(theme.ember)
                 Text("No thermometer reading recorded")
-                    .font(.subheadline)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
             .accessibilityElement(children: .combine)
         }
+    }
+
+    private var chartPoints: [CarryoverPoint] {
+        let reading = controller.guidance.lastManualTemperatureC
+        return (0...6).map { index in
+            let progress = Double(index) / 6
+            let value = reading.map { $0 + 2 * pow(progress, 1.35) }
+                ?? progress * 100
+            return CarryoverPoint(minute: progress * finishMinutes, value: value)
+        }
+    }
+
+    private var chartDomain: ClosedRange<Double> {
+        if let reading = controller.guidance.lastManualTemperatureC {
+            return (reading - 0.5)...(reading + 2.5)
+        }
+        return 0...100
+    }
+
+    private var finishMinutes: Double {
+        max(1, ceil(controller.guidance.finishingEstimate.upperBound / 60))
     }
 
     private var estimatedRangeText: String {
@@ -83,18 +164,6 @@ struct FinishView: View {
             Int64(lower),
             Int64(upper)
         )
-    }
-
-    private func finishingProgress(at date: Date) -> Double {
-        guard let actionDate = controller.session.nextActionAt else { return 0 }
-        let duration = actionDate.timeIntervalSince(controller.session.phaseStartedAt)
-        guard duration > 0 else { return 1 }
-        return min(max(date.timeIntervalSince(controller.session.phaseStartedAt) / duration, 0), 1)
-    }
-
-    private func breathingScale(at date: Date) -> CGFloat {
-        let phase = date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 4) / 4
-        return 1 + 0.015 * sin(phase * .pi * 2)
     }
 
     private func refreshAtFinishBoundary() async {
@@ -110,4 +179,11 @@ struct FinishView: View {
         guard !Task.isCancelled else { return }
         controller.refresh(at: .now)
     }
+}
+
+private struct CarryoverPoint: Identifiable {
+    let minute: Double
+    let value: Double
+
+    var id: Double { minute }
 }

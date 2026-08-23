@@ -1,47 +1,52 @@
 import SwiftUI
 
 struct HeatView: View {
+    @Environment(AppTheme.self) private var theme
     let controller: CookingSessionController
 
     var body: some View {
-        VStack(spacing: 22) {
-            Spacer(minLength: 24)
-
-            Text("HEAT")
-                .quietEyebrowStyle(color: .primary)
-            Text("Give the pan\ntime to get hot.")
-                .font(.largeTitle.bold())
-                .multilineTextAlignment(.center)
-            Text("Watch the pan, not a fake countdown.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            ZStack {
-                Circle()
-                    .fill(Color.orange.opacity(0.12))
-                    .frame(width: 290, height: 290)
-                    .blur(radius: 24)
-                PanVisual(isHeating: true)
-                    .frame(width: 270)
+        VStack(spacing: 12) {
+            VStack(spacing: 5) {
+                Text("Heat the pan")
+                    .font(.title2.bold())
+                Text("Medium-high heat")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
-            .frame(maxHeight: .infinity)
+            .padding(.top, 10)
 
-            VStack(spacing: 9) {
-                Label("A drop of water should dance and evaporate.", systemImage: "drop.fill")
-                    .font(.footnote)
+            Image("HotPan")
+                .resizable()
+                .scaledToFit()
+                .frame(maxWidth: .infinity)
+                .frame(maxHeight: 390)
+                .accessibilityHidden(true)
+
+            VStack(spacing: 12) {
+                Image(systemName: "flame")
+                    .font(.title2)
+                    .foregroundStyle(theme.ember)
+                Text("Wait until the pan is hot.")
+                    .font(.headline)
+                Text("A few drops of water should sizzle and dance.")
+                    .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-
-                PrimaryActionButton(
-                    title: String(localized: "Pan is ready"),
-                    icon: "flame.fill"
-                ) {
-                    controller.panIsReady()
-                }
-                .accessibilityIdentifier("heat.ready")
             }
+
+            Spacer(minLength: 8)
+
+            PrimaryActionButton(title: String(localized: "Pan is ready")) {
+                controller.panIsReady()
+            }
+            .accessibilityIdentifier("heat.ready")
+
+            Text("Not ready yet")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(theme.ember)
+                .padding(.top, 2)
         }
-        .padding(.horizontal, 22)
-        .padding(.bottom, 24)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 16)
     }
 }

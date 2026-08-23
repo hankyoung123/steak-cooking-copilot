@@ -15,11 +15,11 @@ final class LocalizationTests: XCTestCase {
 
         XCTAssertEqual(
             bundle.localizedString(
-                forKey: "Prepare this steak",
+                forKey: "Start Cooking",
                 value: nil,
                 table: nil
             ),
-            "准备这块牛排"
+            "开始烹饪"
         )
         XCTAssertEqual(
             bundle.localizedString(

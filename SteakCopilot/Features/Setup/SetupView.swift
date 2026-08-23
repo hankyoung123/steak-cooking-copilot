@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct SetupView: View {
+    @Environment(AppTheme.self) private var theme
     let controller: CookingSessionController
     @State private var configuration: SteakConfiguration
-    @Namespace private var cutSelection
 
     init(controller: CookingSessionController) {
         self.controller = controller
@@ -12,36 +12,40 @@ struct SetupView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 26) {
-                VStack(spacing: 8) {
-                    Text("PERFECT STEAK")
-                        .quietEyebrowStyle(color: .primary)
-                    Text("Start with the steak\nin front of you.")
-                        .font(.largeTitle.bold())
-                        .multilineTextAlignment(.center)
+            VStack(spacing: 18) {
+                setupHeader
+
+                VStack(spacing: 7) {
+                    Text("What are we cooking?")
+                        .font(.title2.bold())
+                    Text(configuration.cut.title)
+                        .font(.headline)
+                        .foregroundStyle(theme.ember)
                 }
-                .padding(.top, 18)
 
-                SteakVisual(configuration: configuration)
-                    .frame(height: 180 + configuration.thicknessCM * 12)
-                    .padding(.horizontal, 34)
+                cutPicker
+
+                Image("RawSteak")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 210)
+                    .accessibilityHidden(true)
                     .contentTransition(.opacity)
-                    .animation(.spring(duration: 0.38, bounce: 0.12), value: configuration)
+                    .animation(.easeOut(duration: 0.2), value: configuration.cut)
 
-                configurationControls
+                thicknessControl
+                donenessControl
+                cookingMethod
 
-                PrimaryActionButton(
-                    title: String(localized: "Prepare this steak"),
-                    icon: "arrow.right"
-                ) {
+                PrimaryActionButton(title: String(localized: "Start Cooking")) {
                     controller.updateConfiguration(configuration)
                     controller.finishSetup()
                 }
                 .accessibilityIdentifier("setup.primary")
-                .padding(.top, 4)
             }
-            .padding(.horizontal, 22)
-            .padding(.bottom, 32)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 28)
         }
         .scrollIndicators(.hidden)
         .onChange(of: configuration) { _, value in
@@ -49,103 +53,153 @@ struct SetupView: View {
         }
     }
 
-    private var configurationControls: some View {
-        VStack(spacing: 22) {
-            controlSection(title: String(localized: "CUT")) {
-                HStack(spacing: 8) {
+    private var setupHeader: some View {
+        HStack {
+            Color.clear.frame(width: 40, height: 40)
+            Spacer()
+            StageTitle(stage: .setup)
+            Spacer()
+            Menu {
+                Picker("Cut", selection: $configuration.cut) {
                     ForEach(SteakCut.allCases) { cut in
-                        Button {
-                            configuration.cut = cut
-                        } label: {
-                            Text(cut.title)
-                                .font(.subheadline.weight(.semibold))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.76)
-                                .padding(.horizontal, 12)
-                                .frame(maxWidth: .infinity, minHeight: 44)
-                                .background {
-                                    if configuration.cut == cut {
-                                        Capsule()
-                                            .fill(.black.opacity(0.9))
-                                            .matchedGeometryEffect(id: "cut", in: cutSelection)
-                                    }
-                                }
-                                .foregroundStyle(configuration.cut == cut ? .white : .primary)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("setup.cut.\(cut.rawValue)")
-                        .accessibilityAddTraits(configuration.cut == cut ? .isSelected : [])
+                        Text(cut.title).tag(cut)
                     }
                 }
-                .padding(4)
-                .background(.black.opacity(0.055), in: Capsule())
+            } label: {
+                Image(systemName: "slider.horizontal.3")
+                    .frame(width: 38, height: 38)
             }
+            .buttonStyle(.bordered)
+            .buttonBorderShape(.circle)
+            .accessibilityLabel("Cooking preferences")
+        }
+        .padding(.top, 8)
+    }
 
-            controlSection(title: String(localized: "THICKNESS")) {
-                HStack(spacing: 16) {
-                    Slider(value: $configuration.thicknessCM, in: 2...5, step: 0.5)
-                        .tint(.brown)
-                        .accessibilityLabel("Steak thickness")
-                        .accessibilityIdentifier("setup.thickness")
-                    Text(thicknessText)
-                        .font(.headline.monospacedDigit())
-                        .frame(width: 70, alignment: .trailing)
+    private var cutPicker: some View {
+        HStack(spacing: 7) {
+            ForEach(SteakCut.allCases) { cut in
+                Button {
+                    configuration.cut = cut
+                } label: {
+                    Text(cut.title)
+                        .font(.caption.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.72)
+                        .frame(maxWidth: .infinity, minHeight: 34)
+                        .foregroundStyle(configuration.cut == cut ? .white : .primary)
+                        .background(
+                            configuration.cut == cut
+                                ? theme.ember
+                                : theme.card,
+                            in: Capsule()
+                        )
                 }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("setup.cut.\(cut.rawValue)")
+                .accessibilityAddTraits(configuration.cut == cut ? .isSelected : [])
+            }
+        }
+    }
+
+    private var thicknessControl: some View {
+        VStack(spacing: 10) {
+            VStack(spacing: 2) {
+                Text("Thickness")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Text(thicknessText)
+                    .font(.title3.bold().monospacedDigit())
             }
 
-            controlSection(title: String(localized: "DONENESS")) {
-                HStack(spacing: 8) {
-                    ForEach(Doneness.allCases) { doneness in
-                        Button {
-                            configuration.doneness = doneness
-                        } label: {
-                            VStack(spacing: 7) {
-                                Image(donenessAssetName(for: doneness))
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(height: 72)
-                                    .clipShape(RoundedRectangle(cornerRadius: 14))
-                                Text(doneness.title)
-                                    .font(.caption.weight(.semibold))
-                                    .multilineTextAlignment(.center)
-                            }
-                            .frame(maxWidth: .infinity, minHeight: 108)
-                            .padding(5)
-                            .background(
-                                RoundedRectangle(cornerRadius: 18)
-                                    .fill(
-                                        configuration.doneness == doneness
-                                            ? .white.opacity(0.9)
-                                            : .white.opacity(0.24)
-                                    )
-                            )
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 18)
-                                    .stroke(
-                                        configuration.doneness == doneness
-                                            ? .black.opacity(0.82)
-                                            : .clear,
-                                        lineWidth: 2
-                                    )
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("setup.doneness.\(doneness.rawValue)")
-                        .accessibilityAddTraits(configuration.doneness == doneness ? .isSelected : [])
-                    }
+            HStack(spacing: 12) {
+                thicknessButton(systemImage: "minus") {
+                    configuration.thicknessCM = max(2, configuration.thicknessCM - 0.5)
+                }
+                Slider(value: $configuration.thicknessCM, in: 2...5, step: 0.5)
+                    .tint(theme.ember)
+                    .accessibilityLabel("Steak thickness")
+                    .accessibilityIdentifier("setup.thickness")
+                thicknessButton(systemImage: "plus") {
+                    configuration.thicknessCM = min(5, configuration.thicknessCM + 0.5)
                 }
             }
         }
     }
 
-    private func controlSection<Content: View>(
-        title: String,
-        @ViewBuilder content: () -> Content
+    private func thicknessButton(
+        systemImage: String,
+        action: @escaping () -> Void
     ) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(title)
-                .quietEyebrowStyle(color: .primary)
-            content()
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.caption.weight(.bold))
+                .frame(width: 34, height: 34)
+        }
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.circle)
+    }
+
+    private var donenessControl: some View {
+        VStack(spacing: 9) {
+            PrototypeSectionLabel(title: String(localized: "Doneness"))
+                .padding(.horizontal, 4)
+
+            HStack(spacing: 8) {
+                ForEach(Doneness.allCases) { doneness in
+                    Button {
+                        configuration.doneness = doneness
+                    } label: {
+                        VStack(spacing: 6) {
+                            Image(donenessAssetName(for: doneness))
+                                .resizable()
+                                .scaledToFill()
+                                .frame(height: 52)
+                                .clipShape(RoundedRectangle(cornerRadius: 9))
+                            Text(doneness.title)
+                                .font(.caption2.weight(.semibold))
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 86)
+                        .padding(5)
+                        .background(theme.card, in: RoundedRectangle(cornerRadius: 13))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 13)
+                                .stroke(
+                                    configuration.doneness == doneness
+                                        ? theme.ember
+                                        : .black.opacity(0.05),
+                                    lineWidth: configuration.doneness == doneness ? 1.5 : 1
+                                )
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("setup.doneness.\(doneness.rawValue)")
+                    .accessibilityAddTraits(configuration.doneness == doneness ? .isSelected : [])
+                }
+            }
+        }
+    }
+
+    private var cookingMethod: some View {
+        PrototypeCard(padding: 13) {
+            HStack(spacing: 12) {
+                Image(systemName: "frying.pan")
+                    .font(.title3)
+                    .foregroundStyle(theme.ember)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("How will you cook?")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Text("Pan-sear")
+                        .font(.subheadline.weight(.semibold))
+                }
+                Spacer()
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 

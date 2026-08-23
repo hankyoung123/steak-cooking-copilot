@@ -7,7 +7,10 @@ struct CookView: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
-            content(at: context.date)
+            GeometryReader { proxy in
+                content(at: context.date)
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+            }
         }
         .task(id: controller.session.nextActionAt) {
             await refreshAtKeyBoundaries()
@@ -16,30 +19,37 @@ struct CookView: View {
 
     private func content(at date: Date) -> some View {
         let remaining = remainingTime(at: date)
-        return VStack(spacing: 0) {
-            CookingHeader(
-                phase: controller.session.phase,
-                pullTemperatureC: controller.guidance.pullTemperatureC,
-                color: theme.cream
-            )
+        return VStack(spacing: 10) {
+            ZStack {
+                CookingStageVisual(
+                    configuration: controller.session.configuration,
+                    cookedProgress: overallCookedProgress,
+                    showsButter: controller.session.butterAddedAt != nil,
+                    action: controller.guidance.currentAction,
+                    motion: controller.motionDirector,
+                    butterColor: theme.butter
+                )
 
-            Spacer(minLength: 12)
+                VStack(spacing: 0) {
+                    CookingActionReadout(
+                        guidance: controller.guidance,
+                        remainingTime: remaining,
+                        secondaryColor: .white.opacity(0.72)
+                    )
+                    .padding(.top, 20)
 
-            CookingStageVisual(
-                configuration: controller.session.configuration,
-                cookedProgress: overallCookedProgress,
-                showsButter: controller.session.butterAddedAt != nil,
-                action: controller.guidance.currentAction,
-                motion: controller.motionDirector,
-                butterColor: theme.butter
-            )
-            .frame(height: 350)
+                    Spacer()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(minHeight: 430)
 
-            CookingActionReadout(
-                guidance: controller.guidance,
-                remainingTime: remaining,
-                secondaryColor: theme.cream.opacity(0.6)
+            CookTemperatureRail(
+                progress: controller.guidance.estimatedProgress,
+                lastReading: controller.guidance.lastManualTemperatureC,
+                pullTemperature: controller.guidance.pullTemperatureC
             )
+            .padding(.horizontal, 16)
 
             if controller.guidance.currentAction == .checkTemperature {
                 ManualTemperatureControl(
@@ -48,10 +58,9 @@ struct CookView: View {
                     accentColor: theme.butter,
                     onSubmit: { recordTemperature(at: date) }
                 )
-                .transition(.opacity)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+                .padding(.horizontal, 16)
             }
-
-            Spacer(minLength: 18)
 
             if shouldShowConfirmButton {
                 PrimaryActionButton(
@@ -60,17 +69,16 @@ struct CookView: View {
                         ? "arrow.up"
                         : "checkmark",
                     isEnabled: remaining <= 0,
-                    lightOnDark: true,
+                    lightOnDark: false,
                     action: { confirmAction(at: date) }
                 )
                 .accessibilityIdentifier("cook.confirm")
                 .transition(.move(edge: .bottom).combined(with: .opacity))
+                .padding(.horizontal, 16)
             }
         }
-        .padding(.horizontal, 22)
-        .padding(.top, 18)
-        .padding(.bottom, 22)
-        .foregroundStyle(theme.cream)
+        .padding(.bottom, 12)
+        .foregroundStyle(theme.porcelain)
         .animation(
             .easeOut(duration: MotionTiming.responsive),
             value: controller.guidance.currentAction
@@ -141,37 +149,61 @@ struct CookView: View {
     }
 }
 
-private struct CookingHeader: View {
-    let phase: CookingPhase
-    let pullTemperatureC: Double
-    let color: Color
+private struct CookTemperatureRail: View {
+    @Environment(AppTheme.self) private var theme
+    let progress: Double
+    let lastReading: Double?
+    let pullTemperature: Double
 
     var body: some View {
-        HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text("COOK")
-                    .quietEyebrowStyle(color: color)
-                Text(phaseTitle)
-                    .font(.headline)
+        VStack(spacing: 7) {
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(leftValue)
+                        .font(.subheadline.bold().monospacedDigit())
+                    Text(leftLabel)
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.58))
+                }
+                Spacer()
+                Image(systemName: "thermometer.medium")
+                    .font(.caption)
+                    .foregroundStyle(theme.emberBright)
+                Spacer()
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text("\(pullTemperature, specifier: "%.0f")°C")
+                        .font(.subheadline.bold().monospacedDigit())
+                    Text("Pull target")
+                        .font(.caption2)
+                        .foregroundStyle(.white.opacity(0.58))
+                }
             }
-            Spacer()
-            VStack(alignment: .trailing, spacing: 2) {
-                Text("PULL AT")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(color.opacity(0.5))
-                Text("\(pullTemperatureC, specifier: "%.0f")°C")
-                    .font(.headline.monospacedDigit())
+
+            GeometryReader { proxy in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(.white.opacity(0.22))
+                    Capsule()
+                        .fill(theme.emberBright)
+                        .frame(width: proxy.size.width * min(max(progress, 0.04), 1))
+                }
             }
+            .frame(height: 6)
         }
+        .padding(12)
+        .background(.black.opacity(0.34), in: RoundedRectangle(cornerRadius: 14))
+        .accessibilityElement(children: .combine)
     }
 
-    private var phaseTitle: String {
-        switch phase {
-        case .sear: String(localized: "Searing")
-        case .fatCap: String(localized: "Fat cap")
-        case .baste: String(localized: "Basting")
-        case .checkTemperature: String(localized: "Temperature")
-        default: String(localized: "Cooking")
+    private var leftValue: String {
+        if let lastReading {
+            return String(format: "%.0f°C", lastReading)
         }
+        return String(format: "%.0f%%", min(max(progress, 0), 1) * 100)
+    }
+
+    private var leftLabel: String {
+        lastReading == nil
+            ? String(localized: "Estimated")
+            : String(localized: "Last reading")
     }
 }
