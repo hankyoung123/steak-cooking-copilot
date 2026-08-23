@@ -13,6 +13,7 @@ struct CookingStore {
         static let session = "steak.session.v1"
         static let calibrations = "steak.calibrations.v2"
         static let feedback = "steak.feedback.v1"
+        static let setupPreferences = "steak.setup.preferences.v1"
     }
 
     private let defaults: UserDefaults
@@ -60,6 +61,23 @@ struct CookingStore {
         var records = loadFeedback()
         records.append(feedback)
         encode(records, forKey: Key.feedback)
+    }
+
+    func loadSetupPreferences(for cut: SteakCut) -> SteakSetupPreferences {
+        let saved = decode(
+            [SteakCut: SteakSetupPreferences].self,
+            forKey: Key.setupPreferences
+        ) ?? [:]
+        return saved[cut] ?? .recommended(for: cut)
+    }
+
+    func save(setupPreferences: SteakSetupPreferences) {
+        var saved = decode(
+            [SteakCut: SteakSetupPreferences].self,
+            forKey: Key.setupPreferences
+        ) ?? [:]
+        saved[setupPreferences.configuration.cut] = setupPreferences
+        encode(saved, forKey: Key.setupPreferences)
     }
 
     private func encode<T: Encodable>(_ value: T, forKey key: String) {

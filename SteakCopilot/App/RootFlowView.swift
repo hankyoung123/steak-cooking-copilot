@@ -14,21 +14,23 @@ struct RootFlowView: View {
             Group {
                 switch controller.flowStage {
                 case .setup:
-                    SetupView(controller: controller)
+                    CookingHomeView(controller: controller)
                 case .prep:
-                    PrepView(controller: controller)
+                    sessionView
                 case .heat:
-                    HeatView(controller: controller)
+                    sessionView
                 case .cook:
-                    CookView(controller: controller)
+                    sessionView
                 case .finish:
-                    FinishView(controller: controller)
+                    sessionView
                 case .eat:
-                    EatView(controller: controller)
+                    resultView
                 case .feedback:
-                    FeedbackView(controller: controller)
+                    resultView
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
             .id(controller.flowStage)
             .transition(stageTransition)
         }
@@ -37,22 +39,33 @@ struct RootFlowView: View {
             .easeInOut(duration: MotionTiming.stageTransition),
             value: controller.flowStage
         )
-        .preferredColorScheme(controller.flowStage == .cook ? .dark : .light)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if controller.flowStage != .setup {
-                SessionStageControls(
-                    flowStage: controller.flowStage,
-                    onExit: { pendingControl = .exit },
-                    onSkip: { pendingControl = .skip }
-                )
-            }
-        }
+        .preferredColorScheme(
+            [.prep, .heat, .cook, .finish].contains(controller.flowStage)
+                ? .dark
+                : .light
+        )
         .alert(item: $pendingControl, content: controlAlert)
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 controller.refresh(at: .now)
             }
         }
+    }
+
+    private var sessionView: some View {
+        CookingSessionView(
+            controller: controller,
+            onExit: { pendingControl = .exit },
+            onSkip: { pendingControl = .skip }
+        )
+    }
+
+    private var resultView: some View {
+        CookingResultView(
+            controller: controller,
+            onExit: { pendingControl = .exit },
+            onSkip: { pendingControl = .skip }
+        )
     }
 
     private func controlAlert(

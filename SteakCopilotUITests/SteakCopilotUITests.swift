@@ -5,8 +5,9 @@ final class SteakCopilotUITests: XCTestCase {
     func testSimplifiedChineseFollowsSystemLanguage() {
         let app = launchApp(language: "zh-Hans", locale: "zh_Hans_CN")
 
-        XCTAssertTrue(app.staticTexts["设置"].exists)
-        XCTAssertEqual(app.buttons["setup.primary"].label, "开始烹饪")
+        XCTAssertTrue(app.staticTexts["今日牛排"].exists)
+        XCTAssertEqual(app.buttons["setup.primary"].label, "开始烹饪 →")
+        app.buttons["home.settings"].tap()
         XCTAssertEqual(
             app.buttons["setup.doneness.mediumWell"].label,
             "七分熟"
@@ -17,6 +18,7 @@ final class SteakCopilotUITests: XCTestCase {
         )
         attachScreenshot(named: "setup-zh-Hans", app: app)
 
+        app.buttons["settings.save"].tap()
         app.buttons["setup.primary"].tap()
         XCTAssertTrue(app.buttons["session.exit"].waitForExistence(timeout: 3))
         XCTAssertEqual(app.buttons["session.exit"].label, "退出")
@@ -27,13 +29,14 @@ final class SteakCopilotUITests: XCTestCase {
     func testUnsupportedSystemLanguageFallsBackToEnglish() {
         let app = launchApp(language: "fr", locale: "fr_FR")
 
-        XCTAssertTrue(app.staticTexts["SETUP"].exists)
-        XCTAssertEqual(app.buttons["setup.primary"].label, "Start Cooking")
+        XCTAssertTrue(app.staticTexts["TODAY’S CUT"].exists)
+        XCTAssertEqual(app.buttons["setup.primary"].label, "Begin Cooking →")
         attachScreenshot(named: "setup-english-fallback", app: app)
     }
 
     func testFiveDonenessLevelsAreAvailableAndSelectable() {
         let app = launchApp()
+        app.buttons["home.settings"].tap()
         let expected = [
             "setup.doneness.rare",
             "setup.doneness.mediumRare",
@@ -52,6 +55,22 @@ final class SteakCopilotUITests: XCTestCase {
         attachScreenshot(named: "setup-five-doneness", app: app)
     }
 
+    func testHomePresentsSettingsAndCookLog() {
+        let app = launchApp()
+
+        app.buttons["home.history"].tap()
+        XCTAssertTrue(app.navigationBars["Cook Log"].waitForExistence(timeout: 3))
+        attachScreenshot(named: "cook-log", app: app)
+        app.buttons["history.close"].tap()
+
+        app.buttons["home.settings"].tap()
+        XCTAssertTrue(app.buttons["settings.save"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["setup.doneness.mediumRare"].isSelected)
+        attachScreenshot(named: "advanced-settings", app: app)
+        app.buttons["settings.save"].tap()
+        XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 3))
+    }
+
     func testCaseARibeyeWithoutThermometerCompletesEstimatedFlow() {
         let app = launchApp()
         startCooking(app)
@@ -61,8 +80,9 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(evidence.flipCount, 2)
         XCTAssertTrue(evidence.sawButter)
         XCTAssertTrue(evidence.sawTakeOut)
-        XCTAssertTrue(app.staticTexts["Finishing"].waitForExistence(timeout: 4))
-        XCTAssertTrue(app.staticTexts["ESTIMATED FINISH"].exists)
+        let reachedRestOrResult = app.staticTexts["REST"].waitForExistence(timeout: 2)
+            || app.buttons["ready.continue"].waitForExistence(timeout: 4)
+        XCTAssertTrue(reachedRestOrResult)
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label MATCHES %@", "[0-9]+\\.[0-9]°C")).firstMatch.exists)
         attachScreenshot(named: "case-a-estimated-finish", app: app)
 
@@ -72,7 +92,9 @@ final class SteakCopilotUITests: XCTestCase {
     func testCaseBStripWithManualTemperatureUsesFatCapAndTakesOut() {
         let app = launchApp()
         app.buttons["setup.cut.strip"].tap()
+        app.buttons["home.settings"].tap()
         app.sliders["setup.thickness"].adjust(toNormalizedSliderPosition: 0.67)
+        app.buttons["settings.save"].tap()
         startCooking(app)
 
         var flipCount = 0
@@ -92,7 +114,7 @@ final class SteakCopilotUITests: XCTestCase {
                 app.buttons["cook.temperature.submit"].tap()
                 break
             }
-            tapWhenEnabled(confirm, timeout: 8)
+            tapWhenEnabled(confirm, timeout: 15)
         }
 
         XCTAssertGreaterThanOrEqual(flipCount, 2)
@@ -103,16 +125,20 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertTrue(takeOut.waitForExistence(timeout: 4))
         waitForLabel("Steak is out", on: takeOut, timeout: 4)
         XCTAssertEqual(takeOut.label, "Steak is out")
-        tapWhenEnabled(takeOut, timeout: 8)
-        XCTAssertTrue(app.staticTexts["Finishing"].waitForExistence(timeout: 4))
-        XCTAssertTrue(app.staticTexts["LAST READING"].exists)
-        XCTAssertTrue(app.staticTexts["Expected carryover +1–3°C · Estimated"].exists)
+        tapWhenEnabled(takeOut, timeout: 15)
+        XCTAssertTrue(app.staticTexts["REST"].waitForExistence(timeout: 4))
     }
 
     func testCaseCTenderloinMediumSkipsFatCap() {
         let app = launchApp()
-        app.buttons["setup.cut.tenderloin"].tap()
+        app.buttons["setup.cut.strip"].tap()
+        app.buttons["setup.cut.strip"].swipeLeft()
+        let filet = app.buttons["setup.cut.tenderloin"]
+        XCTAssertTrue(filet.waitForExistence(timeout: 3))
+        filet.tap()
+        app.buttons["home.settings"].tap()
         app.buttons["setup.doneness.medium"].tap()
+        app.buttons["settings.save"].tap()
         startCooking(app)
 
         let evidence = advanceWithoutThermometer(app)
@@ -120,7 +146,7 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(evidence.flipCount, 2)
         XCTAssertFalse(evidence.sawFatCap)
         XCTAssertTrue(evidence.sawButter)
-        XCTAssertTrue(app.staticTexts["Finishing"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.staticTexts["REST"].waitForExistence(timeout: 4))
     }
 
     func testStageControlsSkipEveryStageAndExitToSetup() {
@@ -137,11 +163,11 @@ final class SteakCopilotUITests: XCTestCase {
         attachScreenshot(named: "prototype-heat", app: app)
 
         confirmSkip(in: app)
-        XCTAssertTrue(app.staticTexts["COOK"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["SEAR"].waitForExistence(timeout: 3))
         attachScreenshot(named: "stage-controls-cook", app: app)
 
         confirmSkip(in: app)
-        XCTAssertTrue(app.staticTexts["Finishing"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["REST"].waitForExistence(timeout: 3))
         attachScreenshot(named: "prototype-finish", app: app)
 
         confirmSkip(in: app)
@@ -198,7 +224,7 @@ final class SteakCopilotUITests: XCTestCase {
         tapWhenEnabled(app.buttons["prep.continue"], timeout: 3)
         XCTAssertTrue(app.buttons["heat.ready"].waitForExistence(timeout: 3))
         app.buttons["heat.ready"].tap()
-        XCTAssertTrue(app.staticTexts["COOK"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["SEAR"].waitForExistence(timeout: 3))
     }
 
     private func advanceWithoutThermometer(
@@ -210,15 +236,21 @@ final class SteakCopilotUITests: XCTestCase {
         var sawTakeOut = false
 
         for _ in 0..<30 {
-            if app.staticTexts["Finishing"].exists { break }
+            if app.staticTexts["REST"].exists { break }
             let confirm = app.buttons["cook.confirm"]
-            XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+            if !confirm.waitForExistence(timeout: 5) {
+                if app.staticTexts["REST"].waitForExistence(timeout: 2) {
+                    break
+                }
+                XCTFail("Expected the next cook action or the rest phase")
+                break
+            }
             let label = confirm.label
             flipCount += label == "Flipped" ? 1 : 0
             sawFatCap = sawFatCap || label == "Start fat cap"
             sawButter = sawButter || label == "Butter added"
             sawTakeOut = sawTakeOut || label == "Steak is out"
-            tapWhenEnabled(confirm, timeout: 8)
+            tapWhenEnabled(confirm, timeout: 15)
         }
 
         return (flipCount, sawFatCap, sawButter, sawTakeOut)

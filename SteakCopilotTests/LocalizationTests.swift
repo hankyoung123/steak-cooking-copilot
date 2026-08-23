@@ -79,6 +79,30 @@ final class LocalizationTests: XCTestCase {
         )
         XCTAssertEqual(
             bundle.localizedString(
+                forKey: "Begin Cooking →",
+                value: nil,
+                table: nil
+            ),
+            "开始烹饪 →"
+        )
+        XCTAssertEqual(
+            bundle.localizedString(
+                forKey: "Fine-tune settings",
+                value: nil,
+                table: nil
+            ),
+            "精调设置"
+        )
+        XCTAssertEqual(
+            bundle.localizedString(
+                forKey: "View Cook Log",
+                value: nil,
+                table: nil
+            ),
+            "查看烹饪记录"
+        )
+        XCTAssertEqual(
+            bundle.localizedString(
                 forKey: "CFBundleDisplayName",
                 value: nil,
                 table: "InfoPlist"

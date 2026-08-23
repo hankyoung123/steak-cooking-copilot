@@ -62,6 +62,21 @@ final class CookingSessionController {
         persistAndRefresh(at: .now)
     }
 
+    func setupPreferences(for cut: SteakCut) -> SteakSetupPreferences {
+        store.loadSetupPreferences(for: cut)
+    }
+
+    func updateSetupPreferences(_ preferences: SteakSetupPreferences) {
+        guard session.phase == .setup else { return }
+        session.configuration = preferences.configuration
+        store.save(setupPreferences: preferences)
+        persistAndRefresh(at: .now)
+    }
+
+    var cookHistory: [FeedbackRecord] {
+        store.loadFeedback().sorted { $0.date > $1.date }
+    }
+
     func finishSetup(at date: Date = .now) {
         session.enter(.prep, at: date)
         persistAndRefresh(at: date)
@@ -193,6 +208,14 @@ final class CookingSessionController {
             crust: crust
         )
         store.append(feedback: record)
+        store.save(
+            setupPreferences: SteakSetupPreferences(
+                configuration: session.configuration,
+                startingCondition: store
+                    .loadSetupPreferences(for: session.configuration.cut)
+                    .startingCondition
+            )
+        )
         let calibrationKey = CalibrationKey(configuration: session.configuration)
         let updatedCalibration = currentCalibration.applying(
             doneness: doneness,

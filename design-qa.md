@@ -1,62 +1,50 @@
-# Design QA — Prototype-led cooking flow redesign
+# Design QA — Editorial cooking experience
 
 ## Inputs
 
-- Reference: `/Users/hankyoung/Downloads/ChatGPT Image 2026年8月23日 12_35_58.png` (1024 × 1536 composite)
-- Runtime: iPhone 17 Simulator on iOS 26.2
-- Native captures: 1206 × 2622 test attachments, plus a 368 × 800 optimized Cook capture
-- Combined comparison canvases:
-  - `.derivedData/PrototypeDesignQA-20260823/compare-setup-prep-heat.png`
-  - `.derivedData/PrototypeDesignQA-20260823/compare-cook-flip-final.png`
-  - `.derivedData/PrototypeDesignQA-20260823/compare-finish-eat-feedback.png`
+- Visual source of truth: `/Users/hankyoung/Downloads/ChatGPT Image 2026年8月23日 12_35_58.png` (1024 × 1536 composite)
+- Runtime: iPhone 17 Simulator, iOS 26.2
+- Primary native viewport: 402 × 874 points (1206 × 2622 screenshot at 3×)
+- Compact viewport: iPhone 16e, 390 × 844 points (1170 × 2532 screenshot at 3×)
+- Same-input comparison canvas: `docs/verification/screenshots/editorial/reference-comparison.png`
 
-The reference is a framed nine-screen composition rather than raw device screenshots. Comparisons therefore use app-owned content, hierarchy, spacing rhythm, color, imagery, and matching flow states; the simulator status bar and safe areas remain native.
+The supplied reference is a nine-screen presentation board rather than raw device captures. The comparison canvas places that board beside six native captures at the same visual scale, covering Home, settings, Prep, Cook, Result, and Feedback. Native status bars and safe areas intentionally remain system-owned.
 
 ## Required surfaces
 
 | Surface | Evidence | Result |
 | --- | --- | --- |
-| Setup | English and Simplified Chinese five-doneness setup captures | Passed |
-| Prep | `stage-controls-prep` capture | Passed |
-| Heat | `prototype-heat` capture | Passed |
-| Cook | final 368 × 800 Cook capture and combined Flip comparison | Passed |
-| Finish | estimated-finish and stage-flow captures | Passed |
-| Ready / Eat | `prototype-ready` and `prototype-eat` captures | Passed |
-| Feedback | `prototype-feedback` capture | Passed |
-| Exit / Skip | every non-Setup stage plus return-to-Setup UI test | Passed |
-| English / Simplified Chinese | locale-specific UI tests and screenshots | Passed |
+| Home | `home-en.png`, `home-compact-en.png` | Passed |
+| Advanced settings | `advanced-settings.png` | Passed |
+| Cook Log | `cook-log.png` | Passed |
+| Prep / Heat | `session-prep-final.png`, `session-preheat-final.png` | Passed |
+| Sear / Baste / Rest | `session-sear-final.png`, `session-rest-final.png` and full stage UI test | Passed |
+| Result / Feedback | `result-ready-final.png`, `result-feedback-final.png` | Passed |
+| Exit / Skip | every active stage plus return-to-Home UI test | Passed |
+| English / Simplified Chinese | locale-specific localization and UI tests | Passed |
 
-## Iterations
+## Interaction audit
 
-### Iteration 1
+- Native steak carousel pages between Ribeye, Strip, and Filet, keeps adjacent content visible, updates the plan, and provides selection haptics.
+- One settings sheet owns doneness, thickness, starting temperature, and cooking estimate inputs; preferences persist independently per cut.
+- The cooking journey remains one view shell whose visual state changes across Prep, Heat, Sear, Flip, Baste, Check, and Rest.
+- Every active phase exposes Exit and Skip. Both destructive exits and stage skips require confirmation.
+- Result actions support feedback, save-and-cook-again, cook again, and Cook Log navigation.
+- UI automation exercised all primary controls. Simulator/XCTest logs showed no app crash or layout failure.
 
-- P1: Cook temperature rail text and primary action extended beyond the horizontal safe margin.
-- Fix: constrained Cook content to the available geometry and applied explicit 16-point horizontal margins.
-- Verification: final Cook captures show complete values, rail, and rounded action button inside the viewport.
+## Visual iterations
 
-### Iteration 2
-
-- P2: the animated whole-steak layer read too tall compared with the reference's pan perspective.
-- Fix: constrained and compressed the runtime steak layer vertically while preserving the existing event-driven flip motion.
-- Verification: final combined Cook comparison shows a low, horizontal steak silhouette centered in the pan with no clipping.
-
-### Iteration 3
-
-- P1: Setup originally exposed only three doneness levels and reused synthetic image variants.
-- Fix: expanded the shared domain model to five ordered levels and installed the five supplied transparent steak cross-section assets from Rare through Well Done.
-- Verification: English and Simplified Chinese iPhone 17 captures show all five assets, readable two-line labels, correct red-to-brown progression, and working selection outlines without clipping the primary action.
-
-### Deliberate product differences
-
-- Finish displays an explicitly labeled estimate when no thermometer reading exists. It does not copy the reference's precise live temperature, because the Cooking Engine has no sensor measurement to support that claim.
-- Setup now exposes five doneness levels, and Feedback uses the same five supplied assets for its relative calibration scale.
-- Seven progress marks represent the app's real Setup → Prep → Heat → Cook → Finish → Eat → Feedback flow.
+1. The first unified-session pass allowed content to extend beyond the horizontal viewport. The shell now constrains and clips its visual layers to the available geometry; all controls remain inside safe margins.
+2. The Cook scene initially showed an empty pan, then an obviously rectangular texture crop. The final scene masks a high-resolution cooked surface with the selected cut's transparent silhouette and sizes it to the pan perspective.
+3. Result originally risked presenting a target as a measured final temperature. It now labels unmeasured values as `TARGET TEMP`; `FINAL TEMP` appears only when an actual reading exists.
+4. Compact-device capture verified that the Home summary and primary action remain visible without shrinking the food hero or creating nested cards.
 
 ## Final audit
 
-- No unresolved P0, P1, or P2 visual defects.
-- No cropped imagery, broken safe-area layout, inaccessible primary actions, or dead core controls observed.
-- Food remains the dominant visual element; Cook uses the requested focused dark mode and the other stages return to warm porcelain.
-- Final automated result: 36 passed, 0 failed, 0 skipped.
+- Warm ivory Preparation/Result surfaces and near-black Cooking surfaces match the source's two-mode visual language.
+- Food remains the dominant visual element; typography, spacing, red action color, warm gold telemetry, and sparse controls are consistent across the journey.
+- No unresolved P0, P1, or P2 defects, cropped primary actions, broken safe areas, placeholder imagery, or dead core controls remain.
+- Five supplied doneness assets are used consistently in settings and feedback.
+- Release simulator build succeeded and the current full automated suite passes.
 
 Final result: passed

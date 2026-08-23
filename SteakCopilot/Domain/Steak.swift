@@ -16,7 +16,7 @@ enum SteakCut: String, Codable, CaseIterable, Identifiable, Sendable {
         switch self {
         case .ribeye: String(localized: "Ribeye")
         case .strip: String(localized: "New York Strip")
-        case .tenderloin: String(localized: "Tenderloin")
+        case .tenderloin: String(localized: "Filet")
         }
     }
 
@@ -28,6 +28,28 @@ enum SteakCut: String, Codable, CaseIterable, Identifiable, Sendable {
             SteakCutProfile(needsFatCap: true, fatCapDuration: 40)
         case .tenderloin:
             SteakCutProfile(needsFatCap: false, fatCapDuration: nil)
+        }
+    }
+
+    var heroAssetName: String {
+        switch self {
+        case .ribeye: "RawRibeye"
+        case .strip: "RawStrip"
+        case .tenderloin: "RawFilet"
+        }
+    }
+}
+
+enum StartingCondition: String, Codable, CaseIterable, Identifiable, Sendable {
+    case fridge
+    case room
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .fridge: String(localized: "Fridge cold")
+        case .room: String(localized: "Room temperature")
         }
     }
 }
@@ -53,5 +75,21 @@ struct SteakConfiguration: Codable, Equatable, Sendable {
 
     var thicknessBucket: ThicknessBucket {
         ThicknessBucket(thicknessCM: thicknessCM)
+    }
+}
+
+struct SteakSetupPreferences: Codable, Equatable, Sendable {
+    var configuration: SteakConfiguration
+    var startingCondition: StartingCondition
+
+    static func recommended(for cut: SteakCut) -> SteakSetupPreferences {
+        SteakSetupPreferences(
+            configuration: SteakConfiguration(
+                cut: cut,
+                thicknessCM: cut == .tenderloin ? 4 : 3,
+                doneness: .mediumRare
+            ),
+            startingCondition: .fridge
+        )
     }
 }

@@ -17,8 +17,19 @@ struct SessionStageControls: View {
 
             Spacer(minLength: 0)
 
-            StageTitle(stage: flowStage)
-                .frame(maxWidth: .infinity)
+            HStack(spacing: 4) {
+                ForEach(CookingFlowStage.ordered.indices, id: \.self) { index in
+                    Rectangle()
+                        .fill(
+                            index <= flowStage.index
+                                ? (isDark ? theme.butter : theme.ember)
+                                : Color.secondary.opacity(0.22)
+                        )
+                        .frame(width: index == flowStage.index ? 18 : 6, height: 2)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .accessibilityLabel(flowStage.title)
 
             Spacer(minLength: 0)
 
@@ -43,7 +54,7 @@ struct SessionStageControls: View {
                 .font(.subheadline.weight(.semibold))
                 .frame(width: 38, height: 38)
                 .background(
-                    .white.opacity(flowStage == .cook ? 0.10 : 0.58),
+                    .white.opacity(isDark ? 0.10 : 0.58),
                     in: Circle()
                 )
                 .overlay {
@@ -64,10 +75,14 @@ struct SessionStageControls: View {
     ) -> some View {
         Button(title, action: action)
             .font(.footnote.weight(.semibold))
-            .foregroundStyle(flowStage == .cook ? .white.opacity(0.8) : theme.ember)
+            .foregroundStyle(isDark ? .white.opacity(0.8) : theme.ember)
             .frame(width: 62, alignment: .trailing)
             .frame(minHeight: 38)
             .buttonStyle(.plain)
             .accessibilityIdentifier(identifier)
+    }
+
+    private var isDark: Bool {
+        [.prep, .heat, .cook, .finish].contains(flowStage)
     }
 }
