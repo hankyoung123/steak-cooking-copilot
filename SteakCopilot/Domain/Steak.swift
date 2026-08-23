@@ -14,9 +14,9 @@ enum SteakCut: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .ribeye: "Ribeye"
-        case .strip: "New York Strip"
-        case .tenderloin: "Tenderloin"
+        case .ribeye: String(localized: "Ribeye")
+        case .strip: String(localized: "New York Strip")
+        case .tenderloin: String(localized: "Tenderloin")
         }
     }
 

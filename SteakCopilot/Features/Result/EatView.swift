@@ -10,10 +10,18 @@ struct EatView: View {
         VStack(spacing: 24) {
             Spacer(minLength: 28)
 
-            Text(controller.session.phase == .ready ? "READY" : "ENJOY")
+            Text(
+                controller.session.phase == .ready
+                    ? String(localized: "READY")
+                    : String(localized: "ENJOY")
+            )
                 .quietEyebrowStyle(color: theme.ink)
 
-            Text(controller.session.phase == .ready ? "You nailed the timing." : "Time to eat.")
+            Text(
+                controller.session.phase == .ready
+                    ? String(localized: "You nailed the timing.")
+                    : String(localized: "Time to eat.")
+            )
                 .font(.largeTitle.bold())
                 .multilineTextAlignment(.center)
 
@@ -56,7 +64,9 @@ struct EatView: View {
             Spacer()
 
             PrimaryActionButton(
-                title: controller.session.phase == .ready ? "Time to eat" : "How did it turn out?",
+                title: controller.session.phase == .ready
+                    ? String(localized: "Time to eat")
+                    : String(localized: "How did it turn out?"),
                 icon: controller.session.phase == .ready ? "fork.knife" : "arrow.right"
             ) {
                 controller.confirmCurrentAction()

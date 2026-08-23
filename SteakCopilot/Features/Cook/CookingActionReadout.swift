@@ -18,7 +18,7 @@ struct CookingActionReadout: View {
                         .monospacedDigit()
                     )
                     .contentTransition(.numericText(countsDown: true))
-                    .accessibilityLabel("\(Int(ceil(remainingTime))) seconds")
+                    .accessibilityLabel(countdownAccessibilityLabel)
             }
 
             Text(headline)
@@ -40,7 +40,12 @@ struct CookingActionReadout: View {
                 .multilineTextAlignment(.center)
 
             if let nextAction = guidance.nextAction, remainingTime > 0 {
-                Text("NEXT · \(nextAction.title)")
+                Text(
+                    String(
+                        format: String(localized: "NEXT · %@"),
+                        nextAction.title
+                    )
+                )
                     .font(.caption.weight(.bold))
                     .tracking(1.4)
                     .foregroundStyle(secondaryColor)
@@ -55,22 +60,33 @@ struct CookingActionReadout: View {
     }
 
     private var headline: String {
-        if case .flipNow = guidance.event { return "FLIP\nNOW" }
-        if guidance.event == .pullNow { return "TAKE\nIT OUT" }
+        if case .flipNow = guidance.event {
+            return String(localized: "FLIP\nNOW")
+        }
+        if guidance.event == .pullNow {
+            return String(localized: "TAKE\nIT OUT")
+        }
         return guidance.currentAction.title
     }
 
     private var detail: String {
         switch guidance.currentAction {
-        case .wait: "Let the crust build until the next check."
-        case .flip: "Turn it over now."
-        case .standFatCap: "Hold the fat edge against the pan."
-        case .addButter: "Add butter, garlic, and herbs if you like."
-        case .baste: "Tilt the pan and spoon the foaming butter."
-        case .checkTemperature: "Probe through the side toward the center."
-        case .takeOut: "Carryover heat will finish the center."
+        case .wait: String(localized: "Let the crust build until the next check.")
+        case .flip: String(localized: "Turn it over now.")
+        case .standFatCap: String(localized: "Hold the fat edge against the pan.")
+        case .addButter: String(localized: "Add butter, garlic, and herbs if you like.")
+        case .baste: String(localized: "Tilt the pan and spoon the foaming butter.")
+        case .checkTemperature: String(localized: "Probe through the side toward the center.")
+        case .takeOut: String(localized: "Carryover heat will finish the center.")
         case .waitForFinish, .eat: ""
         }
+    }
+
+    private var countdownAccessibilityLabel: String {
+        String(
+            format: String(localized: "%lld seconds"),
+            Int64(ceil(remainingTime))
+        )
     }
 
     private var isFlipAttention: Bool {

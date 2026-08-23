@@ -72,8 +72,8 @@ final class LiveActivityService: CookingLiveActivityServing {
         }
         guard let activity else { return }
         let final = SteakActivityAttributes.ContentState(
-            phaseTitle: "READY",
-            actionTitle: "TIME TO EAT",
+            phaseTitle: String(localized: "READY"),
+            actionTitle: String(localized: "TIME TO EAT"),
             actionDate: nil,
             isUrgent: false
         )
@@ -107,13 +107,13 @@ final class LiveActivityService: CookingLiveActivityServing {
 
     private func phaseTitle(for phase: CookingPhase) -> String {
         switch phase {
-        case .sear: "SEAR"
-        case .fatCap: "FAT CAP"
-        case .baste: "BASTE"
-        case .checkTemperature: "CHECK TEMP"
-        case .finishing: "FINISH"
-        case .ready: "READY"
-        default: "COOK"
+        case .sear: String(localized: "SEAR")
+        case .fatCap: String(localized: "FAT CAP")
+        case .baste: String(localized: "BASTE")
+        case .checkTemperature: String(localized: "CHECK TEMP")
+        case .finishing: String(localized: "FINISH")
+        case .ready: String(localized: "READY")
+        default: String(localized: "COOK")
         }
     }
 }

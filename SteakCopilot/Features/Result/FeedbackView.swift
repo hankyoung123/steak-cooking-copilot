@@ -24,7 +24,7 @@ struct FeedbackView: View {
                 .frame(height: 170)
                 .padding(.horizontal, 22)
 
-                feedbackSection(title: "DONENESS") {
+                feedbackSection(title: String(localized: "DONENESS")) {
                     ForEach(DonenessFeedback.allCases) { option in
                         feedbackButton(
                             title: option.title,
@@ -33,7 +33,7 @@ struct FeedbackView: View {
                     }
                 }
 
-                feedbackSection(title: "CRUST") {
+                feedbackSection(title: String(localized: "CRUST")) {
                     ForEach(CrustFeedback.allCases) { option in
                         feedbackButton(
                             title: option.title,
@@ -42,7 +42,10 @@ struct FeedbackView: View {
                     }
                 }
 
-                PrimaryActionButton(title: "Save feedback", icon: "checkmark") {
+                PrimaryActionButton(
+                    title: String(localized: "Save feedback"),
+                    icon: "checkmark"
+                ) {
                     controller.submitFeedback(doneness: doneness, crust: crust)
                 }
                 .accessibilityIdentifier("feedback.save")

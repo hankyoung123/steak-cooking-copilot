@@ -62,8 +62,19 @@ struct SteakVisual: View {
     }
 
     private var accessibilityDescription: String {
-        let state = sliced ? "sliced" : "whole"
-        return "\(state) \(configuration.thicknessCM.formatted(.number.precision(.fractionLength(1)))) centimeter \(configuration.cut.title), \(configuration.doneness.title)"
+        let state = sliced
+            ? String(localized: "sliced")
+            : String(localized: "whole")
+        let thickness = configuration.thicknessCM.formatted(
+            .number.precision(.fractionLength(1))
+        )
+        return String(
+            format: String(localized: "%@ %@ centimeter %@, %@"),
+            state,
+            thickness,
+            configuration.cut.title,
+            configuration.doneness.title
+        )
     }
 }
 

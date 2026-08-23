@@ -9,9 +9,9 @@ enum Doneness: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .rare: "Rare"
-        case .mediumRare: "Medium Rare"
-        case .medium: "Medium"
+        case .rare: String(localized: "Rare")
+        case .mediumRare: String(localized: "Medium Rare")
+        case .medium: String(localized: "Medium")
         }
     }
 
@@ -51,11 +51,11 @@ enum DonenessFeedback: Int, Codable, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .tooRare: "Too rare"
-        case .slightlyRare: "Slightly rare"
-        case .perfect: "Perfect"
-        case .slightlyDone: "Slightly done"
-        case .tooDone: "Too done"
+        case .tooRare: String(localized: "Too rare")
+        case .slightlyRare: String(localized: "Slightly rare")
+        case .perfect: String(localized: "Perfect")
+        case .slightlyDone: String(localized: "Slightly done")
+        case .tooDone: String(localized: "Too done")
         }
     }
 }
@@ -69,9 +69,9 @@ enum CrustFeedback: Int, Codable, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .tooLight: "Too light"
-        case .perfect: "Perfect"
-        case .tooDark: "Too dark"
+        case .tooLight: String(localized: "Too light")
+        case .perfect: String(localized: "Perfect")
+        case .tooDark: String(localized: "Too dark")
         }
     }
 }

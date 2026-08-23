@@ -33,16 +33,16 @@ struct PrepView: View {
             VStack(spacing: 12) {
                 PrepStep(
                     number: "01",
-                    title: "Pat it completely dry",
-                    detail: "A dry surface builds a better crust.",
+                    title: String(localized: "Pat it completely dry"),
+                    detail: String(localized: "A dry surface builds a better crust."),
                     isComplete: dried
                 ) { dried = true }
                 .accessibilityIdentifier("prep.dry")
 
                 PrepStep(
                     number: "02",
-                    title: "Salt both sides",
-                    detail: "Evenly, edge to edge.",
+                    title: String(localized: "Salt both sides"),
+                    detail: String(localized: "Evenly, edge to edge."),
                     isComplete: salted
                 ) { salted = true }
                 .accessibilityIdentifier("prep.salt")
@@ -51,7 +51,7 @@ struct PrepView: View {
             Spacer()
 
             PrimaryActionButton(
-                title: "Heat the pan",
+                title: String(localized: "Heat the pan"),
                 icon: "flame.fill",
                 isEnabled: dried && salted
             ) {

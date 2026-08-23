@@ -78,7 +78,11 @@ struct FinishView: View {
         let range = controller.guidance.finishingEstimate
         let lower = max(1, Int(ceil(range.lowerBound / 60)))
         let upper = max(lower + 1, Int(ceil(range.upperBound / 60)))
-        return "\(lower)–\(upper) min"
+        return String(
+            format: String(localized: "%lld–%lld min"),
+            Int64(lower),
+            Int64(upper)
+        )
     }
 
     private func finishingProgress(at date: Date) -> Double {

@@ -56,22 +56,28 @@ final class NotificationService: CookingNotificationServing {
 
     private func notificationTitle(for action: CookingAction) -> String {
         switch action {
-        case .flip: "FLIP NOW"
-        case .standFatCap: "STAND THE FAT CAP"
-        case .addButter: "ADD BUTTER"
-        case .baste: "BASTE"
-        case .checkTemperature: "CHECK TEMP"
-        case .takeOut: "TAKE IT OUT"
-        case .eat: "READY"
-        default: "Steak needs you"
+        case .flip: String(localized: "FLIP NOW")
+        case .standFatCap: String(localized: "STAND THE FAT CAP")
+        case .addButter: String(localized: "ADD BUTTER")
+        case .baste: String(localized: "BASTE")
+        case .checkTemperature: String(localized: "CHECK TEMP")
+        case .takeOut: String(localized: "TAKE IT OUT")
+        case .eat: String(localized: "READY")
+        default: String(localized: "Steak needs you")
         }
     }
 
     private func notificationBody(for action: CookingAction, target: Double) -> String {
         switch action {
-        case .checkTemperature: "Pull at about \(target.formatted(.number.precision(.fractionLength(0))))°C."
-        case .eat: "Estimated finishing time is complete. Time to eat."
-        default: "Open Perfect Steak for the next step."
+        case .checkTemperature:
+            String(
+                format: String(localized: "Pull at about %@°C."),
+                target.formatted(.number.precision(.fractionLength(0)))
+            )
+        case .eat:
+            String(localized: "Estimated finishing time is complete. Time to eat.")
+        default:
+            String(localized: "Open Perfect Steak for the next step.")
         }
     }
 }

@@ -65,15 +65,15 @@ enum CookingAction: String, Equatable, Sendable {
 
     var title: String {
         switch self {
-        case .wait: "KEEP COOKING"
-        case .flip: "FLIP"
-        case .standFatCap: "STAND IT UP"
-        case .addButter: "ADD BUTTER"
-        case .baste: "BASTE"
-        case .checkTemperature: "CHECK TEMP"
-        case .takeOut: "TAKE IT OUT"
-        case .waitForFinish: "FINISHING"
-        case .eat: "TIME TO EAT"
+        case .wait: String(localized: "KEEP COOKING")
+        case .flip: String(localized: "FLIP")
+        case .standFatCap: String(localized: "STAND IT UP")
+        case .addButter: String(localized: "ADD BUTTER")
+        case .baste: String(localized: "BASTE")
+        case .checkTemperature: String(localized: "CHECK TEMP")
+        case .takeOut: String(localized: "TAKE IT OUT")
+        case .waitForFinish: String(localized: "FINISHING")
+        case .eat: String(localized: "TIME TO EAT")
         }
     }
 }

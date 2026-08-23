@@ -30,7 +30,10 @@ struct SetupView: View {
 
                 configurationControls
 
-                PrimaryActionButton(title: "Prepare this steak", icon: "arrow.right") {
+                PrimaryActionButton(
+                    title: String(localized: "Prepare this steak"),
+                    icon: "arrow.right"
+                ) {
                     controller.updateConfiguration(configuration)
                     controller.finishSetup()
                 }
@@ -48,7 +51,7 @@ struct SetupView: View {
 
     private var configurationControls: some View {
         VStack(spacing: 22) {
-            controlSection(title: "CUT") {
+            controlSection(title: String(localized: "CUT")) {
                 HStack(spacing: 8) {
                     ForEach(SteakCut.allCases) { cut in
                         Button {
@@ -78,19 +81,19 @@ struct SetupView: View {
                 .background(.black.opacity(0.055), in: Capsule())
             }
 
-            controlSection(title: "THICKNESS") {
+            controlSection(title: String(localized: "THICKNESS")) {
                 HStack(spacing: 16) {
                     Slider(value: $configuration.thicknessCM, in: 2...5, step: 0.5)
                         .tint(.brown)
                         .accessibilityLabel("Steak thickness")
                         .accessibilityIdentifier("setup.thickness")
-                    Text("\(configuration.thicknessCM, specifier: "%.1f") cm")
+                    Text(thicknessText)
                         .font(.headline.monospacedDigit())
                         .frame(width: 70, alignment: .trailing)
                 }
             }
 
-            controlSection(title: "DONENESS") {
+            controlSection(title: String(localized: "DONENESS")) {
                 HStack(spacing: 8) {
                     ForEach(Doneness.allCases) { doneness in
                         Button {
@@ -152,5 +155,12 @@ struct SetupView: View {
         case .mediumRare: "DonenessMediumRare"
         case .medium: "DonenessMedium"
         }
+    }
+
+    private var thicknessText: String {
+        String(
+            format: String(localized: "%.1f cm"),
+            configuration.thicknessCM
+        )
     }
 }

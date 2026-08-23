@@ -1,0 +1,1006 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "%@ %@ centimeter %@, %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%1$@，%2$@ 厘米，%3$@，%4$@"
+          }
+        }
+      }
+    },
+    "%.1f cm" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%.1f 厘米"
+          }
+        }
+      }
+    },
+    "%lld seconds" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld 秒"
+          }
+        }
+      }
+    },
+    "%lld–%lld min" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%lld–%lld 分钟"
+          }
+        }
+      }
+    },
+    "A dry surface builds a better crust." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "表面越干，焦香外壳越好。"
+          }
+        }
+      }
+    },
+    "A drop of water should dance and evaporate." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "一滴水应该在锅中跳动并蒸发。"
+          }
+        }
+      }
+    },
+    "ADD BUTTER" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "加入黄油"
+          }
+        }
+      }
+    },
+    "Add butter, garlic, and herbs if you like." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "按喜好加入黄油、大蒜和香草。"
+          }
+        }
+      }
+    },
+    "BASTE" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "淋浇"
+          }
+        }
+      }
+    },
+    "Basting" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "淋浇中"
+          }
+        }
+      }
+    },
+    "Butter added" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已加入黄油"
+          }
+        }
+      }
+    },
+    "Carryover heat will finish the center." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "余温会继续加热中心。"
+          }
+        }
+      }
+    },
+    "Center temperature" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中心温度"
+          }
+        }
+      }
+    },
+    "CHECK TEMP" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "测量中心温度"
+          }
+        }
+      }
+    },
+    "COOK" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "煎制"
+          }
+        }
+      }
+    },
+    "Cooking" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "烹饪中"
+          }
+        }
+      }
+    },
+    "CRUST" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "焦壳"
+          }
+        }
+      }
+    },
+    "CUT" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "部位"
+          }
+        }
+      }
+    },
+    "Done" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完成"
+          }
+        }
+      }
+    },
+    "DONENESS" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "熟度"
+          }
+        }
+      }
+    },
+    "ENJOY" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "慢慢享用"
+          }
+        }
+      }
+    },
+    "ESTIMATED FINISH" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预计完成"
+          }
+        }
+      }
+    },
+    "Estimated finishing progress" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预计收尾进度"
+          }
+        }
+      }
+    },
+    "Estimated finishing time is complete. Time to eat." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预计收尾时间结束，可以享用了。"
+          }
+        }
+      }
+    },
+    "Evenly, edge to edge." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "均匀覆盖，从边缘到边缘。"
+          }
+        }
+      }
+    },
+    "Expected carryover +1–3°C · Estimated" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预计余温升温 +1–3°C"
+          }
+        }
+      }
+    },
+    "FAT CAP" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "脂肪边"
+          }
+        }
+      }
+    },
+    "Fat cap" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "煎脂肪边"
+          }
+        }
+      }
+    },
+    "FINISH" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "收尾"
+          }
+        }
+      }
+    },
+    "FINISHING" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "静置收尾"
+          }
+        }
+      }
+    },
+    "FLIP" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "翻面"
+          }
+        }
+      }
+    },
+    "FLIP\nNOW" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现在\n翻面"
+          }
+        }
+      }
+    },
+    "FLIP NOW" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现在翻面"
+          }
+        }
+      }
+    },
+    "Flipped" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已翻面"
+          }
+        }
+      }
+    },
+    "Give the pan\ntime to get hot." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让锅子\n充分热起来。"
+          }
+        }
+      }
+    },
+    "HEAT" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "热锅"
+          }
+        }
+      }
+    },
+    "Heat the pan" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始热锅"
+          }
+        }
+      }
+    },
+    "Help the next steak." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "帮助下一块牛排煎得更好。"
+          }
+        }
+      }
+    },
+    "Hold the fat edge against the pan." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让脂肪边贴住锅面。"
+          }
+        }
+      }
+    },
+    "How did it turn out?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "成品怎么样？"
+          }
+        }
+      }
+    },
+    "KEEP COOKING" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "继续煎制"
+          }
+        }
+      }
+    },
+    "LAST READING" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最后读数"
+          }
+        }
+      }
+    },
+    "Let the crust build until the next check." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "让焦壳继续形成，等待下一次检查。"
+          }
+        }
+      }
+    },
+    "Medium" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "七分熟"
+          }
+        }
+      }
+    },
+    "Medium Rare" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "五分熟"
+          }
+        }
+      }
+    },
+    "New York Strip" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "纽约客牛排"
+          }
+        }
+      }
+    },
+    "NEXT · %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "下一步 · %@"
+          }
+        }
+      }
+    },
+    "No thermometer reading recorded" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "未记录温度计读数"
+          }
+        }
+      }
+    },
+    "No thermometer — continue" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有温度计—继续"
+          }
+        }
+      }
+    },
+    "ONE LAST THING" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最后一件事"
+          }
+        }
+      }
+    },
+    "Open Perfect Steak for the next step." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "打开「完美牛排」查看下一步。"
+          }
+        }
+      }
+    },
+    "Out of the pan.\nCarryover heat is finishing the center." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已离锅。\n余温正在让中心完成。"
+          }
+        }
+      }
+    },
+    "Pan is ready" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "锅已热好"
+          }
+        }
+      }
+    },
+    "Pat it completely dry" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "把表面彻底擦干"
+          }
+        }
+      }
+    },
+    "Perfect" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "刚刚好"
+          }
+        }
+      }
+    },
+    "PERFECT STEAK" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "完美牛排"
+          }
+        }
+      }
+    },
+    "PREP" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "准备"
+          }
+        }
+      }
+    },
+    "Prepare this steak" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "准备这块牛排"
+          }
+        }
+      }
+    },
+    "Probe through the side toward the center." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从侧面插入温度计，探针指向中心。"
+          }
+        }
+      }
+    },
+    "PULL AT" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建议出锅"
+          }
+        }
+      }
+    },
+    "Pull at about %@°C." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "约 %@°C 时出锅。"
+          }
+        }
+      }
+    },
+    "Pull near %.0f°C" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "接近 %.0f°C 时出锅"
+          }
+        }
+      }
+    },
+    "Rare" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "三分熟"
+          }
+        }
+      }
+    },
+    "READY" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以享用"
+          }
+        }
+      }
+    },
+    "Ribeye" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "肉眼牛排"
+          }
+        }
+      }
+    },
+    "Salt both sides" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "两面撒盐"
+          }
+        }
+      }
+    },
+    "Save feedback" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "保存反馈"
+          }
+        }
+      }
+    },
+    "SEAR" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "煎制"
+          }
+        }
+      }
+    },
+    "Searing" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "煎制中"
+          }
+        }
+      }
+    },
+    "Slice across the grain and serve now." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "逆纹切片，趁热享用。"
+          }
+        }
+      }
+    },
+    "Slightly done" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "稍熟"
+          }
+        }
+      }
+    },
+    "Slightly rare" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "稍生"
+          }
+        }
+      }
+    },
+    "STAND IT UP" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立起牛排"
+          }
+        }
+      }
+    },
+    "STAND THE FAT CAP" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立起煎脂肪边"
+          }
+        }
+      }
+    },
+    "Start fat cap" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始煎脂肪边"
+          }
+        }
+      }
+    },
+    "Start with the steak\nin front of you." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从你面前的\n这块牛排开始。"
+          }
+        }
+      }
+    },
+    "Steak is out" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "牛排已出锅"
+          }
+        }
+      }
+    },
+    "Steak needs you" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "牛排需要你"
+          }
+        }
+      }
+    },
+    "Steak thickness" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "牛排厚度"
+          }
+        }
+      }
+    },
+    "TAKE\nIT OUT" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即\n出锅"
+          }
+        }
+      }
+    },
+    "TAKE IT OUT" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "立即出锅"
+          }
+        }
+      }
+    },
+    "Temperature" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "中心温度"
+          }
+        }
+      }
+    },
+    "Tenderloin" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "菲力牛排"
+          }
+        }
+      }
+    },
+    "This is an estimate, not a live temperature measurement." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "这是估算时间，并非实时温度测量。"
+          }
+        }
+      }
+    },
+    "THICKNESS" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "厚度"
+          }
+        }
+      }
+    },
+    "Tilt the pan and spoon the foaming butter." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "倾斜锅身，将起泡的黄油淋在牛排上。"
+          }
+        }
+      }
+    },
+    "TIME TO EAT" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以享用了"
+          }
+        }
+      }
+    },
+    "Time to eat" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始享用"
+          }
+        }
+      }
+    },
+    "Time to eat." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "可以开动了。"
+          }
+        }
+      }
+    },
+    "Too dark" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "太深"
+          }
+        }
+      }
+    },
+    "Too done" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "太熟"
+          }
+        }
+      }
+    },
+    "Too light" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "太浅"
+          }
+        }
+      }
+    },
+    "Too rare" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "太生"
+          }
+        }
+      }
+    },
+    "Turn it over now." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "现在把牛排翻面。"
+          }
+        }
+      }
+    },
+    "Two quiet things\nbefore the heat." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开火前，\n安静地做好两件事。"
+          }
+        }
+      }
+    },
+    "Use this reading" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "使用此读数"
+          }
+        }
+      }
+    },
+    "Watch the pan, not a fake countdown." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "观察锅的状态，不使用虚假倒计时。"
+          }
+        }
+      }
+    },
+    "whole" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "整块"
+          }
+        }
+      }
+    },
+    "sliced" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已切片"
+          }
+        }
+      }
+    },
+    "You nailed the timing." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "时机把握得刚刚好。"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

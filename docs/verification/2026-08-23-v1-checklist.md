@@ -4,12 +4,14 @@ Verified on 2026-08-23 with Xcode 26.2, Swift 6.2, and an iPhone 17 simulator ru
 
 ## Automated results
 
-- Full suite: **27/27 passed** in 173.225 seconds.
-- Unit and integration tests: **24/24 passed** across `CookingEngine`, `CookingSessionController`, calibration, motion mapping, and application loading.
-- End-to-end XCUITests: **3/3 passed**.
+- Full suite: **31/31 passed** in 187.806 seconds.
+- Unit and integration tests: **26/26 passed** across `CookingEngine`, `CookingSessionController`, calibration, localization, motion mapping, and application loading.
+- XCUITests: **5/5 passed**.
   - Case A: 3 cm Ribeye, Medium Rare, no thermometer; repeated flips, butter, take-out, honest estimated finish, Ready, Eat, Feedback, and fresh Setup.
   - Case B: 4 cm Strip, Medium Rare, manual thermometer; repeated flips, fat cap, butter/baste, temperature entry, and take-out.
   - Case C: 3 cm Tenderloin, Medium; repeated flips, no fat-cap step, butter, and finish.
+  - Simplified Chinese follows the `zh-Hans` system language without layout clipping.
+  - An unsupported system language falls back to English.
 - Debug simulator build: **passed**.
 - Release simulator build: **passed**. Xcode emitted only the expected signed Live Activity extension stripping note.
 - `git diff --check`: **passed**.
@@ -44,6 +46,7 @@ Verified on 2026-08-23 with Xcode 26.2, Swift 6.2, and an iPhone 17 simulator ru
 - [x] Cooking timing is date-based and independent of animation refresh.
 - [x] The app schedules the next background action from Engine-owned `nextActionAt`.
 - [x] Live Activity recovery rebinds an existing matching activity or starts a new one.
+- [x] App, notification, accessibility, Info.plist, and Live Activity copy follows English or Simplified Chinese system language; English is the development-language fallback.
 - [x] Reduce Motion preserves the full business flow while simplifying FLIP, TAKE IT OUT, READY, and ambience.
 - [x] Motion never owns or mutates phase, remaining time, target temperature, or next action.
 - [x] Feedback calibrates the next matching steak configuration locally without ML or cloud infrastructure.

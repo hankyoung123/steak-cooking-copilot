@@ -86,12 +86,12 @@ struct CookView: View {
 
     private var confirmButtonTitle: String {
         switch controller.guidance.currentAction {
-        case .flip: "Flipped"
-        case .standFatCap: "Start fat cap"
-        case .addButter: "Butter added"
-        case .checkTemperature: "No thermometer — continue"
-        case .takeOut: "Steak is out"
-        default: "Done"
+        case .flip: String(localized: "Flipped")
+        case .standFatCap: String(localized: "Start fat cap")
+        case .addButter: String(localized: "Butter added")
+        case .checkTemperature: String(localized: "No thermometer — continue")
+        case .takeOut: String(localized: "Steak is out")
+        default: String(localized: "Done")
         }
     }
 
@@ -167,11 +167,11 @@ private struct CookingHeader: View {
 
     private var phaseTitle: String {
         switch phase {
-        case .sear: "Searing"
-        case .fatCap: "Fat cap"
-        case .baste: "Basting"
-        case .checkTemperature: "Temperature"
-        default: "Cooking"
+        case .sear: String(localized: "Searing")
+        case .fatCap: String(localized: "Fat cap")
+        case .baste: String(localized: "Basting")
+        case .checkTemperature: String(localized: "Temperature")
+        default: String(localized: "Cooking")
         }
     }
 }

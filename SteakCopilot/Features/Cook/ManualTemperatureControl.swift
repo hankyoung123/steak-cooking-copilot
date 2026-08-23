@@ -12,7 +12,12 @@ struct ManualTemperatureControl: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Center temperature")
                         .font(.subheadline.weight(.semibold))
-                    Text("Pull near \(pullTemperatureC, specifier: "%.0f")°C")
+                    Text(
+                        String(
+                            format: String(localized: "Pull near %.0f°C"),
+                            pullTemperatureC
+                        )
+                    )
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }

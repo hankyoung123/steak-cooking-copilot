@@ -2,6 +2,22 @@ import XCTest
 
 @MainActor
 final class SteakCopilotUITests: XCTestCase {
+    func testSimplifiedChineseFollowsSystemLanguage() {
+        let app = launchApp(language: "zh-Hans", locale: "zh_Hans_CN")
+
+        XCTAssertTrue(app.staticTexts["完美牛排"].exists)
+        XCTAssertEqual(app.buttons["setup.primary"].label, "准备这块牛排")
+        attachScreenshot(named: "setup-zh-Hans", app: app)
+    }
+
+    func testUnsupportedSystemLanguageFallsBackToEnglish() {
+        let app = launchApp(language: "fr", locale: "fr_FR")
+
+        XCTAssertTrue(app.staticTexts["PERFECT STEAK"].exists)
+        XCTAssertEqual(app.buttons["setup.primary"].label, "Prepare this steak")
+        attachScreenshot(named: "setup-english-fallback", app: app)
+    }
+
     func testCaseARibeyeWithoutThermometerCompletesEstimatedFlow() {
         let app = launchApp()
         startCooking(app)
@@ -72,7 +88,10 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["FINISHING"].waitForExistence(timeout: 4))
     }
 
-    private func launchApp() -> XCUIApplication {
+    private func launchApp(
+        language: String? = "en",
+        locale: String? = "en_US"
+    ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             "-resetSession",
@@ -81,6 +100,12 @@ final class SteakCopilotUITests: XCTestCase {
             "-disableLiveActivity",
             "-quietFeedback"
         ]
+        if let language {
+            app.launchArguments += ["-AppleLanguages", "(\(language))"]
+        }
+        if let locale {
+            app.launchArguments += ["-AppleLocale", locale]
+        }
         app.launch()
         XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 5))
         return app

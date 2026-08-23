@@ -32,7 +32,10 @@ struct HeatView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
 
-                PrimaryActionButton(title: "Pan is ready", icon: "flame.fill") {
+                PrimaryActionButton(
+                    title: String(localized: "Pan is ready"),
+                    icon: "flame.fill"
+                ) {
                     controller.panIsReady()
                 }
                 .accessibilityIdentifier("heat.ready")
