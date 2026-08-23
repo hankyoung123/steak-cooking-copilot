@@ -23,6 +23,30 @@ final class LocalizationTests: XCTestCase {
         )
         XCTAssertEqual(
             bundle.localizedString(
+                forKey: "Rare",
+                value: nil,
+                table: nil
+            ),
+            "一分熟"
+        )
+        XCTAssertEqual(
+            bundle.localizedString(
+                forKey: "Medium Rare",
+                value: nil,
+                table: nil
+            ),
+            "三分熟"
+        )
+        XCTAssertEqual(
+            bundle.localizedString(
+                forKey: "Medium",
+                value: nil,
+                table: nil
+            ),
+            "五分熟"
+        )
+        XCTAssertEqual(
+            bundle.localizedString(
                 forKey: "Medium Well",
                 value: nil,
                 table: nil

@@ -7,6 +7,14 @@ final class SteakCopilotUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["设置"].exists)
         XCTAssertEqual(app.buttons["setup.primary"].label, "开始烹饪")
+        XCTAssertEqual(
+            app.buttons["setup.doneness.mediumWell"].label,
+            "七分熟"
+        )
+        XCTAssertEqual(
+            app.buttons["setup.doneness.wellDone"].label,
+            "全熟"
+        )
         attachScreenshot(named: "setup-zh-Hans", app: app)
 
         app.buttons["setup.primary"].tap()

@@ -16,7 +16,7 @@ The reference is a framed nine-screen composition rather than raw device screens
 
 | Surface | Evidence | Result |
 | --- | --- | --- |
-| Setup | English and Simplified Chinese setup captures | Passed |
+| Setup | English and Simplified Chinese five-doneness setup captures | Passed |
 | Prep | `stage-controls-prep` capture | Passed |
 | Heat | `prototype-heat` capture | Passed |
 | Cook | final 368 × 800 Cook capture and combined Flip comparison | Passed |
@@ -40,10 +40,16 @@ The reference is a framed nine-screen composition rather than raw device screens
 - Fix: constrained and compressed the runtime steak layer vertically while preserving the existing event-driven flip motion.
 - Verification: final combined Cook comparison shows a low, horizontal steak silhouette centered in the pan with no clipping.
 
+### Iteration 3
+
+- P1: Setup originally exposed only three doneness levels and reused synthetic image variants.
+- Fix: expanded the shared domain model to five ordered levels and installed the five supplied transparent steak cross-section assets from Rare through Well Done.
+- Verification: English and Simplified Chinese iPhone 17 captures show all five assets, readable two-line labels, correct red-to-brown progression, and working selection outlines without clipping the primary action.
+
 ### Deliberate product differences
 
 - Finish displays an explicitly labeled estimate when no thermometer reading exists. It does not copy the reference's precise live temperature, because the Cooking Engine has no sensor measurement to support that claim.
-- Setup exposes the three doneness levels and cuts supported by the current domain model; Feedback retains the five-point calibration scale.
+- Setup now exposes five doneness levels, and Feedback uses the same five supplied assets for its relative calibration scale.
 - Seven progress marks represent the app's real Setup → Prep → Heat → Cook → Finish → Eat → Feedback flow.
 
 ## Final audit
@@ -51,6 +57,6 @@ The reference is a framed nine-screen composition rather than raw device screens
 - No unresolved P0, P1, or P2 visual defects.
 - No cropped imagery, broken safe-area layout, inaccessible primary actions, or dead core controls observed.
 - Food remains the dominant visual element; Cook uses the requested focused dark mode and the other stages return to warm porcelain.
-- Final automated result: 33 passed, 0 failed, 0 skipped.
+- Final automated result: 36 passed, 0 failed, 0 skipped.
 
 Final result: passed
