@@ -4,15 +4,15 @@ import SwiftUI
 @MainActor
 @Observable
 final class AppTheme {
-    let porcelain = Color(red: 0.953, green: 0.937, blue: 0.906)
-    let porcelainDeep = Color(red: 0.925, green: 0.894, blue: 0.848)
-    let card = Color(red: 0.985, green: 0.975, blue: 0.955)
-    let charcoal = Color(red: 0.071, green: 0.067, blue: 0.059)
-    let charcoalLifted = Color(red: 0.12, green: 0.12, blue: 0.115)
+    let porcelain = Color(red: 0.956, green: 0.936, blue: 0.895)
+    let porcelainDeep = Color(red: 0.906, green: 0.875, blue: 0.816)
+    let card = Color(red: 0.976, green: 0.959, blue: 0.923)
+    let charcoal = Color(red: 0.075, green: 0.075, blue: 0.068)
+    let charcoalLifted = Color(red: 0.125, green: 0.12, blue: 0.108)
     let ember = Color(red: 0.486, green: 0.188, blue: 0.157)
     let emberBright = Color(red: 0.84, green: 0.27, blue: 0.10)
-    let butter = Color(red: 0.718, green: 0.596, blue: 0.400)
-    let ink = Color(red: 0.085, green: 0.078, blue: 0.067)
+    let butter = Color(red: 0.755, green: 0.641, blue: 0.426)
+    let ink = Color(red: 0.098, green: 0.09, blue: 0.077)
 
     var cream: Color { porcelain }
     var creamDeep: Color { porcelainDeep }
@@ -39,5 +39,14 @@ extension View {
         font(.caption.weight(.semibold))
             .tracking(1.4)
             .foregroundStyle(color.opacity(0.68))
+    }
+
+    func editorialDisplayStyle(
+        size: CGFloat,
+        color: Color = .primary
+    ) -> some View {
+        font(.system(size: size, weight: .regular, design: .serif))
+            .tracking(-0.45)
+            .foregroundStyle(color)
     }
 }

@@ -8,8 +8,9 @@ struct RootFlowView: View {
 
     var body: some View {
         ZStack {
-            theme.background(for: controller.flowStage)
-                .ignoresSafeArea()
+            EditorialCanvas(
+                dark: usesDarkCanvas
+            )
 
             Group {
                 switch controller.flowStage {
@@ -36,13 +37,11 @@ struct RootFlowView: View {
         }
         .foregroundStyle(theme.foreground(for: controller.flowStage))
         .animation(
-            .easeInOut(duration: MotionTiming.stageTransition),
+            .smooth(duration: MotionTiming.stageTransition),
             value: controller.flowStage
         )
         .preferredColorScheme(
-            [.prep, .heat, .cook, .finish].contains(controller.flowStage)
-                ? .dark
-                : .light
+            usesDarkCanvas ? .dark : .light
         )
         .alert(item: $pendingControl, content: controlAlert)
         .onChange(of: scenePhase) { _, phase in
@@ -127,11 +126,23 @@ struct RootFlowView: View {
     private var stageTransition: AnyTransition {
         if controller.flowStage == .finish {
             .asymmetric(
-                insertion: .opacity,
-                removal: .move(edge: .top).combined(with: .opacity)
+                insertion: .scale(scale: 1.02).combined(with: .opacity),
+                removal: .scale(scale: 0.98).combined(with: .opacity)
             )
         } else {
-            .opacity
+            .asymmetric(
+                insertion: .scale(scale: 1.015).combined(with: .opacity),
+                removal: .scale(scale: 0.985).combined(with: .opacity)
+            )
+        }
+    }
+
+    private var usesDarkCanvas: Bool {
+        switch controller.session.phase {
+        case .sear, .fatCap, .baste, .checkTemperature, .finishing:
+            true
+        default:
+            false
         }
     }
 }

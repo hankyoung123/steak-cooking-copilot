@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CookingSessionView: View {
     @Environment(AppTheme.self) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let controller: CookingSessionController
     let onExit: () -> Void
     let onSkip: () -> Void
@@ -13,30 +14,39 @@ struct CookingSessionView: View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
             GeometryReader { proxy in
                 ScrollView {
-                    VStack(spacing: AppSpacing.sm) {
+                    VStack(spacing: 0) {
                         SessionStageControls(
                             flowStage: controller.flowStage,
+                            phaseTitle: navigationTitle,
+                            stepLabel: stepLabel,
+                            dark: isDarkStage,
                             onExit: onExit,
                             onSkip: onSkip
                         )
+                        .padding(.horizontal, 18)
 
                         sessionHeader(at: context.date)
-                            .padding(.bottom, AppSpacing.xs)
+                            .padding(.horizontal, 22)
+                            .padding(.top, 12)
 
                         CookingStageScene(
                             controller: controller,
-                            prepIsDry: dried
+                            prepIsDry: dried,
+                            darkBackground: isDarkStage
                         )
-                        .frame(maxWidth: .infinity)
-                        .frame(height: max(260, min(proxy.size.height * 0.43, 420)))
+                        .frame(width: proxy.size.width)
+                        .frame(height: sceneHeight(for: proxy.size.height))
+                        .padding(.top, 5)
 
-                        instruction(at: context.date)
+                        instructionAction(at: context.date)
+                            .padding(.horizontal, 26)
+                            .padding(.top, 18)
 
                         if controller.session.phase == .checkTemperature {
                             ManualTemperatureControl(
-                                temperature: $manualTemperature,
-                                pullTemperatureC: controller.guidance.pullTemperatureC,
-                                accentColor: theme.butter,
+                            temperature: $manualTemperature,
+                            pullTemperatureC: controller.guidance.pullTemperatureC,
+                            accentColor: isDarkStage ? theme.butter : theme.ember,
                                 onSubmit: {
                                     controller.recordManualTemperature(
                                         manualTemperature,
@@ -44,22 +54,32 @@ struct CookingSessionView: View {
                                     )
                                 }
                             )
+                            .padding(.horizontal, 22)
+                            .padding(.top, 14)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                         }
 
+                        progressRail
+                            .padding(.horizontal, 26)
+                            .padding(.top, 20)
+
                         telemetry
-                        primaryAction(at: context.date)
+                            .padding(.horizontal, 28)
+                            .padding(.top, 16)
+
+                        explicitPhaseAction(at: context.date)
+                            .padding(.horizontal, 26)
+                            .padding(.top, 16)
+                            .padding(.bottom, 20)
                     }
-                    .padding(.bottom, AppSpacing.sm)
-                    .frame(width: max(0, proxy.size.width - AppSpacing.sm * 2))
-                    .padding(.horizontal, AppSpacing.sm)
+                    .frame(width: proxy.size.width)
                     .frame(minHeight: proxy.size.height, alignment: .top)
                 }
                 .scrollIndicators(.hidden)
             }
         }
-        .foregroundStyle(theme.porcelain)
-        .background(theme.charcoal.ignoresSafeArea())
+        .foregroundStyle(isDarkStage ? theme.porcelain : theme.ink)
+        .background(EditorialCanvas(dark: isDarkStage))
         .onAppear {
             manualTemperature = controller.session.lastManualTemperatureC
                 ?? controller.guidance.pullTemperatureC - 2
@@ -67,106 +87,146 @@ struct CookingSessionView: View {
         .task(id: controller.session.nextActionAt) {
             await refreshAtKeyBoundaries()
         }
+        .animation(
+            reduceMotion ? nil : .smooth(duration: 0.5),
+            value: controller.session.phase
+        )
     }
 
     private func sessionHeader(at date: Date) -> some View {
-        VStack(spacing: 7) {
-            Text(phaseEyebrow)
-                .font(.system(size: 11, weight: .bold))
-                .tracking(1.5)
-                .foregroundStyle(theme.butter)
-
-            Text(heroValue(at: date))
-                .font(.system(size: heroValue(at: date).contains(":") ? 82 : 44, weight: .semibold, design: .rounded))
-                .monospacedDigit()
-                .minimumScaleFactor(0.72)
-                .lineLimit(1)
-                .contentTransition(.numericText(countsDown: true))
-
-            GeometryReader { proxy in
-                ZStack(alignment: .leading) {
-                    Rectangle().fill(.white.opacity(0.16))
-                    Rectangle()
-                        .fill(theme.butter)
-                        .frame(width: proxy.size.width * overallProgress)
-                }
+        Group {
+            if usesTimer(at: date) {
+                Text(countdown(at: date))
+                    .editorialDisplayStyle(size: 78, color: primaryText.opacity(0.88))
+                    .monospacedDigit()
+                    .minimumScaleFactor(0.72)
+                    .lineLimit(1)
+                    .contentTransition(.numericText(countsDown: true))
+            } else {
+                Text(heroValue(at: date))
+                    .editorialDisplayStyle(size: 40, color: primaryText)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.78)
+                    .contentTransition(.opacity)
             }
-            .frame(height: 2)
         }
+        .frame(maxWidth: .infinity, minHeight: 88)
         .accessibilityElement(children: .combine)
     }
 
     @ViewBuilder
-    private func instruction(at date: Date) -> some View {
-        VStack(spacing: 7) {
-            Text(instructionTitle(at: date))
-                .font(.system(size: 26, weight: .semibold))
-                .multilineTextAlignment(.center)
-            Text(instructionDetail)
-                .font(.system(size: 14))
-                .foregroundStyle(.white.opacity(0.62))
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
+    private func instructionAction(at date: Date) -> some View {
+        if isCookPhase, shouldShowCookConfirm {
+            Button {
+                controller.confirmCurrentAction(at: date)
+            } label: {
+                instructionLabel(at: date, interactive: true)
+            }
+            .buttonStyle(EditorialPressStyle())
+            .disabled(remaining(at: date) > 0)
+            .opacity(remaining(at: date) > 0 ? 0.48 : 1)
+            .accessibilityLabel(cookConfirmTitle)
+            .accessibilityIdentifier("cook.confirm")
+        } else {
+            instructionLabel(at: date, interactive: false)
+                .accessibilityIdentifier("session.instruction")
         }
-        .frame(maxWidth: .infinity)
-        .animation(.easeInOut(duration: 0.42), value: controller.session.phase)
-        .accessibilityIdentifier("session.instruction")
+    }
+
+    private func instructionLabel(at date: Date, interactive: Bool) -> some View {
+        VStack(spacing: 7) {
+            HStack(spacing: 9) {
+                Text(instructionTitle(at: date))
+                    .font(.system(size: 21, weight: .regular, design: .serif))
+                if interactive {
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 12, weight: .light))
+                }
+            }
+            .foregroundStyle(interactive ? accentColor : primaryText.opacity(0.88))
+
+            if showsInstructionDetail {
+                Text(instructionDetail)
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(secondaryText)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+            }
+        }
+        .frame(maxWidth: .infinity, minHeight: showsInstructionDetail ? 52 : 34)
+        .contentShape(Rectangle())
+        .contentTransition(.opacity)
+    }
+
+    private var progressRail: some View {
+        GeometryReader { proxy in
+            ZStack(alignment: .leading) {
+                Rectangle()
+                    .fill(hairlineColor)
+                    .frame(height: 1)
+                Rectangle()
+                    .fill(accentColor)
+                    .frame(width: proxy.size.width * overallProgress, height: 1.4)
+                Circle()
+                    .fill(isDarkStage ? theme.charcoal : theme.porcelain)
+                    .frame(width: 10, height: 10)
+                    .overlay {
+                        Circle().stroke(accentColor, lineWidth: 1.3)
+                        Circle().fill(accentColor).frame(width: 3, height: 3)
+                    }
+                    .offset(x: max(0, proxy.size.width * overallProgress - 5))
+            }
+            .frame(maxHeight: .infinity)
+        }
+        .frame(height: 12)
+        .animation(
+            reduceMotion ? nil : .spring(duration: 0.52, bounce: 0.12),
+            value: overallProgress
+        )
+        .accessibilityHidden(true)
     }
 
     private var telemetry: some View {
-        HStack {
-            telemetryMetric(
-                label: "DONENESS",
-                value: controller.session.configuration.doneness.title
+        HStack(spacing: 0) {
+            sessionMetric(
+                label: "TARGET TEMP",
+                value: String(format: "%.0f°C", controller.session.configuration.doneness.targetTemperatureC)
             )
-            Spacer()
-            telemetryMetric(
-                label: "PULL TARGET",
-                value: String(
-                    format: "%.0f°C",
-                    controller.guidance.pullTemperatureC
-                ),
-                trailing: true
+            Rectangle()
+                .fill(hairlineColor.opacity(0.72))
+                .frame(width: 0.7, height: 42)
+            sessionMetric(
+                label: "CURRENT",
+                value: currentTemperatureText
             )
         }
-        .padding(.vertical, AppSpacing.xs)
     }
 
     @ViewBuilder
-    private func primaryAction(at date: Date) -> some View {
+    private func explicitPhaseAction(at date: Date) -> some View {
         switch controller.session.phase {
         case .prep:
-            VStack(spacing: AppSpacing.xs) {
-                HStack(spacing: AppSpacing.xs) {
+            VStack(spacing: 10) {
+                HStack(spacing: 10) {
                     prepToggle("Dry", identifier: "prep.dry", isOn: $dried)
                     prepToggle("Salt", identifier: "prep.salt", isOn: $salted)
                 }
                 PrimaryActionButton(
                     title: String(localized: "Continue to preheat"),
+                    icon: "arrow.right",
                     isEnabled: dried && salted,
-                    lightOnDark: true
+                    lightOnDark: isDarkStage
                 ) { controller.finishPrep(at: date) }
                 .accessibilityIdentifier("prep.continue")
             }
         case .heat:
             PrimaryActionButton(
                 title: String(localized: "Pan is ready"),
-                lightOnDark: true
+                icon: "arrow.right",
+                lightOnDark: isDarkStage
             ) { controller.panIsReady(at: date) }
             .accessibilityIdentifier("heat.ready")
-        case .sear, .fatCap, .baste, .checkTemperature:
-            if shouldShowCookConfirm {
-                PrimaryActionButton(
-                    title: cookConfirmTitle,
-                    isEnabled: remaining(at: date) <= 0,
-                    lightOnDark: true
-                ) { controller.confirmCurrentAction(at: date) }
-                .accessibilityIdentifier("cook.confirm")
-            }
-        case .finishing:
-            Text("Carryover heat is finishing the center.")
-                .font(.caption)
-                .foregroundStyle(.white.opacity(0.55))
         default:
             EmptyView()
         }
@@ -178,38 +238,85 @@ struct CookingSessionView: View {
         isOn: Binding<Bool>
     ) -> some View {
         Button { isOn.wrappedValue.toggle() } label: {
-            HStack {
+            HStack(spacing: 8) {
                 Image(systemName: isOn.wrappedValue ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(isOn.wrappedValue ? accentColor : secondaryText)
                 Text(title)
             }
+            .font(.system(size: 13, weight: .regular, design: .serif))
             .frame(maxWidth: .infinity, minHeight: 44)
-            .background(.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 12))
+            .overlay {
+                RoundedRectangle(cornerRadius: 6)
+                    .stroke(hairlineColor, lineWidth: 0.8)
+            }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(EditorialPressStyle())
         .accessibilityIdentifier(identifier)
         .accessibilityAddTraits(isOn.wrappedValue ? .isSelected : [])
     }
 
-    private func telemetryMetric(
+    private func sessionMetric(
         label: LocalizedStringKey,
-        value: String,
-        trailing: Bool = false
+        value: String
     ) -> some View {
-        VStack(alignment: trailing ? .trailing : .leading, spacing: 3) {
-            Text(label).font(.system(size: 10, weight: .semibold)).tracking(1.1).foregroundStyle(.white.opacity(0.48))
-            Text(value).font(.subheadline.weight(.semibold))
+        VStack(spacing: 5) {
+            Text(label)
+                .font(.system(size: 8, weight: .medium))
+                .tracking(1.1)
+                .foregroundStyle(secondaryText)
+            Text(value)
+                .font(.system(size: 20, weight: .regular, design: .serif))
+                .monospacedDigit()
+                .foregroundStyle(primaryText.opacity(0.84))
         }
+        .frame(maxWidth: .infinity)
     }
 
-    private var phaseEyebrow: String {
+    private var navigationTitle: String {
         switch controller.session.phase {
         case .prep: String(localized: "PREP")
         case .heat: String(localized: "PREHEAT")
-        case .sear, .fatCap: String(localized: "SEAR")
-        case .baste: String(localized: "BASTE")
+        case .sear, .fatCap:
+            controller.guidance.currentAction == .flip
+                ? String(localized: "SEAR · FLIP")
+                : String(localized: "SEAR · SIDE ONE")
+        case .baste:
+            [.checkTemperature, .takeOut].contains(controller.guidance.currentAction)
+                ? String(localized: "CHECK")
+                : String(localized: "BUTTER · BASTE")
         case .checkTemperature: String(localized: "CHECK")
         case .finishing: String(localized: "REST")
         default: ""
+        }
+    }
+
+    private var stepLabel: String {
+        let step: Int
+        switch controller.session.phase {
+        case .prep, .heat: step = 0
+        case .sear: step = controller.guidance.currentAction == .flip ? 2 : 1
+        case .fatCap: step = 3
+        case .baste:
+            step = [.checkTemperature, .takeOut].contains(controller.guidance.currentAction)
+                ? 5
+                : 4
+        case .checkTemperature: step = 5
+        case .finishing: step = 6
+        default: step = 7
+        }
+        return String(format: "%02d / 07", step)
+    }
+
+    private func sceneHeight(for availableHeight: CGFloat) -> CGFloat {
+        max(310, min(availableHeight * 0.43, 390))
+    }
+
+    private func usesTimer(at date: Date) -> Bool {
+        switch controller.session.phase {
+        case .sear, .fatCap, .baste, .finishing:
+            remaining(at: date) > 0
+        default:
+            false
         }
     }
 
@@ -217,26 +324,29 @@ struct CookingSessionView: View {
         switch controller.session.phase {
         case .prep: String(localized: "Ready the steak")
         case .heat: String(localized: "Heat the pan")
+        case .checkTemperature: String(localized: "Check doneness")
         case .finishing: countdown(at: date)
-        default:
-            remaining(at: date) > 0 ? countdown(at: date) : controller.guidance.currentAction.title
+        default: instructionTitle(at: date)
         }
     }
 
     private func instructionTitle(at date: Date) -> String {
         switch controller.session.phase {
-        case .prep: dried ? String(localized: "Season both sides") : String(localized: "Pat every surface dry")
-        case .heat: String(localized: "Wait for a hard sizzle")
-        case .finishing: String(localized: "Rest off the heat")
+        case .prep:
+            dried ? String(localized: "Season both sides") : String(localized: "Pat every surface dry")
+        case .heat:
+            String(localized: "Wait for a hard sizzle")
+        case .finishing:
+            String(localized: "Rest to lock in the juices.")
         default:
             switch controller.guidance.currentAction {
-            case .wait: String(localized: "Build the crust")
-            case .flip: String(localized: "Flip with tongs")
-            case .standFatCap: String(localized: "Sear the fat edge")
-            case .addButter: String(localized: "Add butter and aromatics")
-            case .baste: String(localized: "Baste continuously")
-            case .checkTemperature: String(localized: "Probe through the side")
-            case .takeOut: String(localized: "Remove from the pan")
+            case .wait: String(localized: "Don’t move it yet.")
+            case .flip: String(localized: "Flip now.")
+            case .standFatCap: String(localized: "Sear the fat edge.")
+            case .addButter: String(localized: "Add butter and aromatics.")
+            case .baste: String(localized: "Tilt pan & baste.")
+            case .checkTemperature: String(localized: "Insert probe in the thickest part.")
+            case .takeOut: String(localized: "Remove from the pan.")
             default: controller.guidance.currentAction.title
             }
         }
@@ -246,31 +356,58 @@ struct CookingSessionView: View {
         switch controller.session.phase {
         case .prep: String(localized: "A dry surface gives you a deeper, faster crust.")
         case .heat: String(localized: "A few drops of water should sizzle and dance.")
-        case .finishing: String(localized: "Let heat move gently toward the center.")
-        default:
-            switch controller.guidance.currentAction {
-            case .wait: String(localized: "Keep the steak still against the pan.")
-            case .flip: String(localized: "Turn once, then set it down cleanly.")
-            case .standFatCap: String(localized: "Hold the edge against the pan.")
-            case .addButter: String(localized: "Add garlic and rosemary if you like.")
-            case .baste: String(localized: "Tilt the pan and spoon over the steak.")
-            case .checkTemperature: String(localized: "Aim the probe at the center.")
-            case .takeOut: String(localized: "Carryover heat will finish the cook.")
-            default: ""
-            }
+        default: ""
         }
+    }
+
+    private var showsInstructionDetail: Bool {
+        [.prep, .heat].contains(controller.session.phase)
     }
 
     private var overallProgress: Double {
         switch controller.session.phase {
-        case .prep: 0.08
-        case .heat: 0.18
-        case .sear, .fatCap: 0.28 + controller.guidance.estimatedProgress * 0.42
-        case .baste: 0.76
-        case .checkTemperature: 0.86
-        case .finishing: 0.94
-        default: 0
+        case .prep: 0.04
+        case .heat: 0.08
+        case .sear, .fatCap: 0.12 + controller.guidance.estimatedProgress * 0.48
+        case .baste: 0.62
+        case .checkTemperature: 0.78
+        case .finishing: 0.9
+        default: 1
         }
+    }
+
+    private var currentTemperatureText: String {
+        guard let value = controller.session.lastManualTemperatureC else { return "—" }
+        return String(format: "%.0f°C", value)
+    }
+
+    private var isCookPhase: Bool {
+        [.sear, .fatCap, .baste, .checkTemperature].contains(controller.session.phase)
+    }
+
+    private var isDarkStage: Bool {
+        switch controller.session.phase {
+        case .sear, .fatCap, .baste, .checkTemperature, .finishing:
+            true
+        default:
+            false
+        }
+    }
+
+    private var primaryText: Color {
+        isDarkStage ? theme.porcelain : theme.ink
+    }
+
+    private var secondaryText: Color {
+        isDarkStage ? .white.opacity(0.43) : theme.ink.opacity(0.48)
+    }
+
+    private var hairlineColor: Color {
+        isDarkStage ? .white.opacity(0.22) : theme.ink.opacity(0.16)
+    }
+
+    private var accentColor: Color {
+        isDarkStage ? theme.butter : theme.ember
     }
 
     private func remaining(at date: Date) -> TimeInterval {
@@ -279,7 +416,7 @@ struct CookingSessionView: View {
 
     private func countdown(at date: Date) -> String {
         let total = max(0, Int(ceil(remaining(at: date))))
-        return String(format: "%01lld:%02lld", Int64(total / 60), Int64(total % 60))
+        return String(format: "%02lld:%02lld", Int64(total / 60), Int64(total % 60))
     }
 
     private var shouldShowCookConfirm: Bool {

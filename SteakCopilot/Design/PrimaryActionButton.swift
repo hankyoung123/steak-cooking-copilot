@@ -10,27 +10,35 @@ struct PrimaryActionButton: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 Text(title)
-                    .font(.headline.weight(.semibold))
+                    .font(.system(size: 17, weight: .regular, design: .serif))
+                Spacer(minLength: 0)
                 if let icon {
                     Image(systemName: icon)
+                        .font(.system(size: 15, weight: .light))
+                        .foregroundStyle(lightOnDark ? theme.ink : theme.butter)
                 }
             }
+            .padding(.horizontal, 22)
             .frame(maxWidth: .infinity)
-            .frame(minHeight: 54)
+            .frame(minHeight: 56)
             .foregroundStyle(lightOnDark ? theme.ink : Color.white)
             .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(lightOnDark ? Color.white : theme.ember)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(lightOnDark ? theme.porcelain : theme.charcoalLifted)
             )
+            .overlay {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .stroke(lightOnDark ? Color.white.opacity(0.24) : Color.white.opacity(0.07), lineWidth: 0.8)
+            }
             .shadow(
-                color: lightOnDark ? .clear : theme.ember.opacity(0.16),
-                radius: 12,
-                y: 6
+                color: Color.black.opacity(lightOnDark ? 0 : 0.2),
+                radius: 10,
+                y: 5
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(EditorialPressStyle())
         .opacity(isEnabled ? 1 : 0.34)
         .disabled(!isEnabled)
         .accessibilityAddTraits(.isButton)

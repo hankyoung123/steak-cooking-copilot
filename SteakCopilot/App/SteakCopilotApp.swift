@@ -8,6 +8,7 @@ struct SteakCopilotApp: App {
     init() {
         let arguments = ProcessInfo.processInfo.arguments
         let isFastPreview = arguments.contains("-fastCook")
+        let isVisualPreview = arguments.contains("-visualCook")
         let store = CookingStore()
         if arguments.contains("-resetSession") {
             store.clearSession()
@@ -26,7 +27,7 @@ struct SteakCopilotApp: App {
                 liveActivityService: LiveActivityService(
                     isEnabled: !arguments.contains("-disableLiveActivity")
                 ),
-                timeScale: isFastPreview ? 0.035 : 1
+                timeScale: isVisualPreview ? 0.08 : (isFastPreview ? 0.035 : 1)
             )
         )
     }

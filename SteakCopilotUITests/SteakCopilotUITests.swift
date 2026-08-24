@@ -57,9 +57,10 @@ final class SteakCopilotUITests: XCTestCase {
 
     func testHomePresentsSettingsAndCookLog() {
         let app = launchApp()
+        attachScreenshot(named: "home-v2", app: app)
 
         app.buttons["home.history"].tap()
-        XCTAssertTrue(app.navigationBars["Cook Log"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.staticTexts["history.title"].waitForExistence(timeout: 3))
         attachScreenshot(named: "cook-log", app: app)
         app.buttons["history.close"].tap()
 
@@ -91,7 +92,7 @@ final class SteakCopilotUITests: XCTestCase {
 
     func testCaseBStripWithManualTemperatureUsesFatCapAndTakesOut() {
         let app = launchApp()
-        app.buttons["setup.cut.strip"].tap()
+        app.buttons["home.nextCut"].tap()
         app.buttons["home.settings"].tap()
         app.sliders["setup.thickness"].adjust(toNormalizedSliderPosition: 0.67)
         app.buttons["settings.save"].tap()
@@ -131,11 +132,8 @@ final class SteakCopilotUITests: XCTestCase {
 
     func testCaseCTenderloinMediumSkipsFatCap() {
         let app = launchApp()
-        app.buttons["setup.cut.strip"].tap()
-        app.buttons["setup.cut.strip"].swipeLeft()
-        let filet = app.buttons["setup.cut.tenderloin"]
-        XCTAssertTrue(filet.waitForExistence(timeout: 3))
-        filet.tap()
+        app.buttons["home.nextCut"].tap()
+        app.buttons["home.nextCut"].tap()
         app.buttons["home.settings"].tap()
         app.buttons["setup.doneness.medium"].tap()
         app.buttons["settings.save"].tap()
@@ -163,11 +161,19 @@ final class SteakCopilotUITests: XCTestCase {
         attachScreenshot(named: "prototype-heat", app: app)
 
         confirmSkip(in: app)
-        XCTAssertTrue(app.staticTexts["SEAR"].waitForExistence(timeout: 3))
+        waitForLabelPrefix(
+            "SEAR",
+            on: app.staticTexts["session.phase.title"],
+            timeout: 3
+        )
         attachScreenshot(named: "stage-controls-cook", app: app)
 
         confirmSkip(in: app)
-        XCTAssertTrue(app.staticTexts["REST"].waitForExistence(timeout: 3))
+        waitForLabel(
+            "REST",
+            on: app.staticTexts["session.phase.title"],
+            timeout: 3
+        )
         attachScreenshot(named: "prototype-finish", app: app)
 
         confirmSkip(in: app)
@@ -193,18 +199,69 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 3))
     }
 
+    func testPrototypeVisualStatesUseStageSpecificArtwork() {
+        let app = launchApp(fastCook: false, visualCook: true)
+        startCooking(app)
+
+        settleArtwork(after: 0.15)
+        attachScreenshot(named: "prototype-sear", app: app)
+
+        var capturedFlip = false
+        var capturedBaste = false
+        var capturedCheck = false
+
+        for _ in 0..<30 {
+            if app.staticTexts["REST"].exists { break }
+            let confirm = app.buttons["cook.confirm"]
+            XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+
+            switch confirm.label {
+            case "Flipped" where !capturedFlip:
+                settleArtwork()
+                attachScreenshot(named: "prototype-flip", app: app)
+                capturedFlip = true
+            case "Butter added" where !capturedBaste:
+                settleArtwork()
+                attachScreenshot(named: "prototype-baste", app: app)
+                capturedBaste = true
+            case "No thermometer — continue" where !capturedCheck:
+                settleArtwork()
+                attachScreenshot(named: "prototype-check", app: app)
+                capturedCheck = true
+            default:
+                break
+            }
+
+            tapWhenEnabled(confirm, timeout: 15)
+        }
+
+        XCTAssertTrue(capturedFlip)
+        XCTAssertTrue(capturedBaste)
+        XCTAssertTrue(capturedCheck)
+        XCTAssertTrue(app.staticTexts["REST"].waitForExistence(timeout: 4))
+        settleArtwork()
+        attachScreenshot(named: "prototype-rest", app: app)
+
+        XCTAssertTrue(app.buttons["ready.continue"].waitForExistence(timeout: 15))
+        settleArtwork()
+        attachScreenshot(named: "prototype-result", app: app)
+    }
+
     private func launchApp(
         language: String? = "en",
-        locale: String? = "en_US"
+        locale: String? = "en_US",
+        fastCook: Bool = true,
+        visualCook: Bool = false
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
             "-resetSession",
-            "-fastCook",
             "-disableNotifications",
             "-disableLiveActivity",
             "-quietFeedback"
         ]
+        if fastCook { app.launchArguments.append("-fastCook") }
+        if visualCook { app.launchArguments.append("-visualCook") }
         if let language {
             app.launchArguments += ["-AppleLanguages", "(\(language))"]
         }
@@ -224,7 +281,11 @@ final class SteakCopilotUITests: XCTestCase {
         tapWhenEnabled(app.buttons["prep.continue"], timeout: 3)
         XCTAssertTrue(app.buttons["heat.ready"].waitForExistence(timeout: 3))
         app.buttons["heat.ready"].tap()
-        XCTAssertTrue(app.staticTexts["SEAR"].waitForExistence(timeout: 3))
+        waitForLabelPrefix(
+            "SEAR",
+            on: app.staticTexts["session.phase.title"],
+            timeout: 3
+        )
     }
 
     private func advanceWithoutThermometer(
@@ -300,6 +361,21 @@ final class SteakCopilotUITests: XCTestCase {
         )
     }
 
+    private func waitForLabelPrefix(
+        _ prefix: String,
+        on element: XCUIElement,
+        timeout: TimeInterval
+    ) {
+        let matches = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label BEGINSWITH %@", prefix),
+            object: element
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [matches], timeout: timeout),
+            .completed
+        )
+    }
+
     private func confirmSkip(in app: XCUIApplication) {
         let skip = app.buttons["session.skip"]
         XCTAssertTrue(skip.waitForExistence(timeout: 3))
@@ -317,5 +393,13 @@ final class SteakCopilotUITests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    private func settleArtwork(after delay: TimeInterval = 0.8) {
+        let settled = XCTestExpectation(description: "Artwork transition settled")
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+            settled.fulfill()
+        }
+        wait(for: [settled], timeout: delay + 0.5)
     }
 }

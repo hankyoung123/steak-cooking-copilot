@@ -6,42 +6,69 @@ struct CookLogView: View {
     let records: [FeedbackRecord]
 
     var body: some View {
-        NavigationStack {
+        ZStack {
+            EditorialCanvas(dark: true)
+
             ScrollView {
-                LazyVStack(spacing: 0) {
-                    if records.isEmpty {
-                        VStack(spacing: AppSpacing.sm) {
-                            Image(systemName: "fork.knife")
-                                .font(.system(size: 38, weight: .light))
-                                .foregroundStyle(theme.butter)
-                            Text("No cooks logged yet")
-                                .font(.title3.weight(.semibold))
-                            Text("Your completed steaks will appear here.")
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, AppSpacing.xl)
-                    } else {
-                        ForEach(records) { record in
-                            CookLogRow(record: record)
-                            Divider().opacity(0.5)
+                VStack(spacing: 0) {
+                    header
+
+                    Text("Your Cook Log")
+                        .editorialDisplayStyle(size: 30, color: theme.porcelain.opacity(0.9))
+                        .accessibilityIdentifier("history.title")
+                        .padding(.top, 15)
+                        .padding(.bottom, 24)
+
+                    LazyVStack(spacing: 10) {
+                        if records.isEmpty {
+                            emptyState
+                        } else {
+                            ForEach(records) { record in
+                                CookLogRow(record: record)
+                            }
                         }
                     }
+
+                    Text("View All Logs")
+                        .font(.system(size: 16, weight: .regular, design: .serif))
+                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8)
+                                .stroke(.white.opacity(0.14), lineWidth: 0.8)
+                        }
+                        .padding(.top, 22)
+                        .padding(.bottom, 20)
                 }
-                .padding(.horizontal, AppSpacing.sm)
+                .padding(.horizontal, 22)
             }
-            .background(theme.porcelain)
-            .navigationTitle("Cook Log")
-            .navigationBarTitleDisplayMode(.large)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Close") { dismiss() }
-                        .accessibilityIdentifier("history.close")
-                }
-            }
+            .scrollIndicators(.hidden)
         }
-        .preferredColorScheme(.light)
+        .preferredColorScheme(.dark)
+    }
+
+    private var header: some View {
+        HStack {
+            Button("Close", systemImage: "chevron.left") { dismiss() }
+                .labelStyle(.iconOnly)
+                .font(.system(size: 17, weight: .light))
+                .accessibilityIdentifier("history.close")
+            Spacer()
+        }
+        .frame(height: 44)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "fork.knife")
+                .font(.system(size: 34, weight: .light))
+                .foregroundStyle(theme.butter)
+            Text("No cooks logged yet")
+                .font(.system(size: 20, weight: .regular, design: .serif))
+            Text("Your completed steaks will appear here.")
+                .font(.system(size: 12))
+                .foregroundStyle(.white.opacity(0.43))
+        }
+        .frame(maxWidth: .infinity, minHeight: 300)
     }
 }
 
@@ -50,33 +77,37 @@ private struct CookLogRow: View {
     let record: FeedbackRecord
 
     var body: some View {
-        HStack(spacing: AppSpacing.sm) {
-            Image(record.configuration.doneness.assetName)
-                .resizable()
-                .scaledToFit()
-                .frame(width: 76, height: 60)
-
+        HStack(spacing: 14) {
             VStack(alignment: .leading, spacing: 5) {
                 Text(record.configuration.cut.title)
-                    .font(.headline)
-                Text(
-                    String(
-                        format: String(localized: "%@ · %.1f cm"),
-                        record.configuration.doneness.title,
-                        record.configuration.thicknessCM
-                    )
-                )
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text(record.date.formatted(date: .abbreviated, time: .shortened))
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 16, weight: .regular, design: .serif))
+                    .foregroundStyle(theme.porcelain.opacity(0.9))
+                Text(record.configuration.doneness.title)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.white.opacity(0.46))
+                HStack {
+                    Text(String(format: "%.0f°C", record.configuration.doneness.targetTemperatureC))
+                        .font(.system(size: 13, weight: .regular, design: .serif))
+                    Spacer()
+                    Text(record.date.formatted(date: .abbreviated, time: .omitted))
+                        .font(.system(size: 9))
+                        .foregroundStyle(.white.opacity(0.38))
+                }
             }
-            Spacer()
-            Image(systemName: record.doneness == .perfect ? "checkmark.circle.fill" : "circle")
-                .foregroundStyle(record.doneness == .perfect ? theme.butter : Color.secondary)
+
+            Image("ResultHeroCutout")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 70, height: 70)
+                .padding(4)
+                .background(.white.opacity(0.025), in: RoundedRectangle(cornerRadius: 7))
         }
-        .padding(.vertical, AppSpacing.sm)
+        .padding(14)
+        .background(.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 9))
+        .overlay {
+            RoundedRectangle(cornerRadius: 9)
+                .stroke(.white.opacity(0.09), lineWidth: 0.8)
+        }
         .accessibilityElement(children: .combine)
     }
 }

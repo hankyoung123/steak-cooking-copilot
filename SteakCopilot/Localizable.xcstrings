@@ -2295,6 +2295,176 @@
         }
       }
     },
+    "Begin Cooking" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开始烹饪"
+          }
+        }
+      }
+    },
+    "BUTTER · BASTE" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "黄油 · 淋油"
+          }
+        }
+      }
+    },
+    "Check doneness" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "检查熟度"
+          }
+        }
+      }
+    },
+    "Don’t move it yet." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "先别移动牛排。"
+          }
+        }
+      }
+    },
+    "Enjoy!" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "开动吧！"
+          }
+        }
+      }
+    },
+    "Estimated Time" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "预计时间"
+          }
+        }
+      }
+    },
+    "Insert probe in the thickest part." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "从最厚处插入探针。"
+          }
+        }
+      }
+    },
+    "Juicy and tender. Great job!" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "多汁鲜嫩，做得很棒！"
+          }
+        }
+      }
+    },
+    "Rest to lock in the juices." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "静置锁住肉汁。"
+          }
+        }
+      }
+    },
+    "SEAR · FLIP" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "煎制 · 翻面"
+          }
+        }
+      }
+    },
+    "SEAR · SIDE ONE" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "煎制 · 第一面"
+          }
+        }
+      }
+    },
+    "Target Temperature" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "目标温度"
+          }
+        }
+      }
+    },
+    "Tilt pan & baste." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "倾斜锅身并持续淋油。"
+          }
+        }
+      }
+    },
+    "TIME" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "时间"
+          }
+        }
+      }
+    },
+    "View All Logs" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "查看全部记录"
+          }
+        }
+      }
+    },
+    "WELL DONE" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "做得好"
+          }
+        }
+      }
+    },
+    "Your Cook Log" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "你的烹饪记录"
+          }
+        }
+      }
+    },
     "Your completed steaks will appear here." : {
       "localizations" : {
         "zh-Hans" : {

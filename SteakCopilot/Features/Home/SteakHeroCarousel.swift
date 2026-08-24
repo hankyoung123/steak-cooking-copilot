@@ -14,21 +14,26 @@ struct SteakHeroCarousel: View {
                             Image(cut.heroAssetName)
                                 .resizable()
                                 .scaledToFit()
-                                .padding(.horizontal, AppSpacing.sm)
-                                .frame(width: max(250, proxy.size.width - 180))
-                                .scaleEffect(selection == cut ? 1 : 0.88)
-                                .opacity(selection == cut ? 1 : 0.42)
+                                .padding(20)
+                                .frame(width: max(268, proxy.size.width - 86))
+                                .shadow(color: .black.opacity(0.2), radius: 18, x: 4, y: 14)
                         }
                         .buttonStyle(.plain)
                         .id(cut)
                         .accessibilityLabel(cut.title)
                         .accessibilityIdentifier("setup.cut.\(cut.rawValue)")
                         .accessibilityAddTraits(selection == cut ? .isSelected : [])
+                        .scrollTransition(.interactive, axis: .horizontal) { content, phase in
+                            content
+                                .scaleEffect(1 - abs(phase.value) * 0.09)
+                                .opacity(1 - abs(phase.value) * 0.52)
+                                .rotationEffect(.degrees(phase.value * 2.4))
+                        }
                     }
                 }
                 .scrollTargetLayout()
             }
-            .contentMargins(.horizontal, 44, for: .scrollContent)
+            .contentMargins(.horizontal, 43, for: .scrollContent)
             .scrollIndicators(.hidden)
             .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
             .scrollPosition(id: Binding(
@@ -38,7 +43,7 @@ struct SteakHeroCarousel: View {
                 }
             ))
             .sensoryFeedback(.selection, trigger: selection)
-            .animation(.easeOut(duration: 0.42), value: selection)
+            .animation(.smooth(duration: 0.42), value: selection)
         }
     }
 }

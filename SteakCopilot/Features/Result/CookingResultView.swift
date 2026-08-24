@@ -2,87 +2,151 @@ import SwiftUI
 
 struct CookingResultView: View {
     @Environment(AppTheme.self) private var theme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let controller: CookingSessionController
     let onExit: () -> Void
     let onSkip: () -> Void
     @State private var doneness: DonenessFeedback = .perfect
     @State private var crust: CrustFeedback = .perfect
     @State private var showsHistory = false
+    @State private var appeared = false
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: AppSpacing.sm) {
-                SessionStageControls(
-                    flowStage: controller.flowStage,
-                    onExit: onExit,
-                    onSkip: onSkip
-                )
+        ZStack {
+            EditorialCanvas(dark: false)
 
-                VStack(spacing: 6) {
-                    Text(resultEyebrow)
-                        .font(.system(size: 11, weight: .semibold))
-                        .tracking(1.5)
-                        .foregroundStyle(theme.ember)
-                    Text(resultTitle)
-                        .font(.system(size: 38, weight: .semibold, design: .serif))
-                    Text(controller.session.configuration.doneness.title)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
+            ScrollView {
+                VStack(spacing: 0) {
+                    SessionStageControls(
+                        flowStage: controller.flowStage,
+                        phaseTitle: resultEyebrow,
+                        onExit: onExit,
+                        onSkip: onSkip
+                    )
+                    .padding(.horizontal, 18)
 
-                Image(controller.session.configuration.doneness.assetName)
-                    .resizable()
-                    .scaledToFit()
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 250)
-                    .accessibilityLabel("Sliced steak")
-
-                HStack {
-                    resultMetric(temperatureLabel, finalTemperature)
-                    Spacer()
-                    resultMetric("TOTAL TIME", totalTime, trailing: true)
-                }
-                .padding(.horizontal, AppSpacing.sm)
-
-                if controller.session.phase == .feedback {
-                    feedbackControls
-                        .transition(.opacity)
-                }
-
-                PrimaryActionButton(title: primaryTitle) {
-                    performPrimaryAction()
-                }
-                .accessibilityIdentifier(primaryIdentifier)
-
-                HStack(spacing: AppSpacing.md) {
-                    Button("Cook Again") {
-                        Task { await controller.startOver() }
+                    VStack(spacing: 5) {
+                        Text(controller.session.configuration.doneness.title.uppercased())
+                            .font(.system(size: 9, weight: .semibold))
+                            .tracking(1.6)
+                            .foregroundStyle(theme.ember)
+                        Text(resultTitle)
+                            .editorialDisplayStyle(size: 43, color: theme.ink)
                     }
-                    Button("View Cook Log") { showsHistory = true }
+                    .padding(.top, 14)
+                    .offset(y: appeared ? 0 : 10)
+                    .opacity(appeared ? 1 : 0)
+
+                    Image("ResultHeroCutout")
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 306)
+                        .padding(.horizontal, 14)
+                        .shadow(color: .black.opacity(0.13), radius: 18, y: 12)
+                        .scaleEffect(appeared ? 1 : 0.94)
+                        .opacity(appeared ? 1 : 0)
+                        .accessibilityLabel("Sliced steak")
+
+                    summaryCard
+                        .padding(.horizontal, 26)
+                        .offset(y: appeared ? 0 : 12)
+                        .opacity(appeared ? 1 : 0)
+
+                    if controller.session.phase == .feedback {
+                        feedbackControls
+                            .padding(.horizontal, 26)
+                            .padding(.top, 14)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    } else {
+                        resultNote
+                            .padding(.horizontal, 26)
+                            .padding(.top, 14)
+                    }
+
+                    PrimaryActionButton(
+                        title: primaryTitle,
+                        icon: "arrow.right"
+                    ) {
+                        performPrimaryAction()
+                    }
+                    .accessibilityIdentifier(primaryIdentifier)
+                    .padding(.horizontal, 26)
+                    .padding(.top, 14)
+
+                    HStack(spacing: 12) {
+                        outlineButton("View Cook Log", icon: "chevron.right") {
+                            showsHistory = true
+                        }
                         .accessibilityIdentifier("result.history")
+
+                        outlineButton("Cook Again", icon: "arrow.right") {
+                            Task { await controller.startOver() }
+                        }
+                    }
+                    .padding(.horizontal, 26)
+                    .padding(.top, 12)
+                    .padding(.bottom, 20)
                 }
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(theme.ink.opacity(0.68))
-                .padding(.vertical, AppSpacing.xs)
             }
-            .padding(.horizontal, AppSpacing.sm)
-            .padding(.bottom, AppSpacing.md)
+            .scrollIndicators(.hidden)
         }
-        .scrollIndicators(.hidden)
         .sheet(isPresented: $showsHistory) {
             CookLogView(records: controller.cookHistory)
                 .presentationDetents([.large])
+                .presentationCornerRadius(28)
+        }
+        .onAppear {
+            guard !reduceMotion else {
+                appeared = true
+                return
+            }
+            withAnimation(.easeOut(duration: 0.65)) {
+                appeared = true
+            }
+        }
+    }
+
+    private var summaryCard: some View {
+        HStack(spacing: 0) {
+            resultMetric(temperatureLabel, finalTemperature)
+            Rectangle()
+                .fill(theme.ink.opacity(0.1))
+                .frame(width: 0.7, height: 56)
+            resultMetric("TIME", totalTime)
+        }
+        .padding(.vertical, 13)
+        .background(theme.card.opacity(0.78), in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(theme.ink.opacity(0.08), lineWidth: 0.8)
+        }
+        .shadow(color: .black.opacity(0.04), radius: 8, y: 4)
+    }
+
+    private var resultNote: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text(String(format: String(localized: "Perfect %@"), controller.session.configuration.doneness.title))
+                .font(.system(size: 14, weight: .regular, design: .serif))
+            Text("Juicy and tender. Great job!")
+                .font(.system(size: 11))
+                .foregroundStyle(theme.ink.opacity(0.58))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(15)
+        .background(theme.card.opacity(0.7), in: RoundedRectangle(cornerRadius: 8))
+        .overlay {
+            RoundedRectangle(cornerRadius: 8)
+                .stroke(theme.ink.opacity(0.08), lineWidth: 0.8)
         }
     }
 
     private var feedbackControls: some View {
-        VStack(alignment: .leading, spacing: AppSpacing.sm) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("HOW WAS IT?")
-                .font(.system(size: 11, weight: .semibold))
-                .tracking(1.4)
-                .foregroundStyle(.secondary)
+                .quietEyebrowStyle(color: theme.ink)
 
-            HStack(spacing: 5) {
+            HStack(spacing: 3) {
                 ForEach(DonenessFeedback.allCases) { option in
                     Button {
                         doneness = option
@@ -91,67 +155,91 @@ struct CookingResultView: View {
                             Image(donenessAsset(for: option))
                                 .resizable()
                                 .scaledToFit()
-                                .frame(height: 38)
+                                .frame(height: 36)
                             Text(option.title)
-                                .font(.caption2)
+                                .font(.system(size: 7, weight: .regular, design: .serif))
                                 .lineLimit(2)
-                                .minimumScaleFactor(0.7)
+                                .minimumScaleFactor(0.65)
                         }
-                        .frame(maxWidth: .infinity, minHeight: 72)
+                        .frame(maxWidth: .infinity, minHeight: 66)
                         .overlay(alignment: .bottom) {
                             Rectangle()
                                 .fill(doneness == option ? theme.ember : .clear)
-                                .frame(height: 2)
+                                .frame(height: 1)
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(EditorialPressStyle())
                 }
             }
 
-            HStack(spacing: AppSpacing.xs) {
+            HStack(spacing: 8) {
                 ForEach(CrustFeedback.allCases) { option in
                     Button(option.title) { crust = option }
-                        .font(.caption.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: 38)
+                        .font(.system(size: 9, weight: .medium, design: .serif))
+                        .frame(maxWidth: .infinity, minHeight: 34)
                         .overlay(alignment: .bottom) {
                             Rectangle()
-                                .fill(crust == option ? theme.ember : theme.ink.opacity(0.12))
-                                .frame(height: crust == option ? 2 : 1)
+                                .fill(crust == option ? theme.ember : theme.ink.opacity(0.11))
+                                .frame(height: crust == option ? 1.3 : 0.7)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(EditorialPressStyle())
                 }
             }
         }
-        .padding(.vertical, AppSpacing.xs)
+        .padding(14)
+        .background(theme.card.opacity(0.62), in: RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func outlineButton(
+        _ title: LocalizedStringKey,
+        icon: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack {
+                Text(title)
+                Spacer()
+                Image(systemName: icon)
+            }
+            .font(.system(size: 12, weight: .regular, design: .serif))
+            .padding(.horizontal, 14)
+            .frame(maxWidth: .infinity, minHeight: 46)
+            .overlay {
+                RoundedRectangle(cornerRadius: 7)
+                    .stroke(theme.ink.opacity(0.16), lineWidth: 0.8)
+            }
+        }
+        .buttonStyle(EditorialPressStyle())
     }
 
     private func resultMetric(
         _ label: LocalizedStringKey,
-        _ value: String,
-        trailing: Bool = false
+        _ value: String
     ) -> some View {
-        VStack(alignment: trailing ? .trailing : .leading, spacing: 4) {
+        VStack(spacing: 5) {
             Text(label)
-                .font(.system(size: 10, weight: .semibold))
-                .tracking(1.2)
-                .foregroundStyle(.secondary)
+                .font(.system(size: 8, weight: .medium))
+                .tracking(1.1)
+                .foregroundStyle(theme.ink.opacity(0.44))
             Text(value)
-                .font(.title3.weight(.semibold).monospacedDigit())
+                .font(.system(size: 22, weight: .regular, design: .serif))
+                .monospacedDigit()
         }
+        .frame(maxWidth: .infinity)
     }
 
     private var resultEyebrow: String {
         controller.session.phase == .feedback
             ? String(localized: "COOK COMPLETE")
-            : String(localized: "DONE")
+            : String(localized: "WELL DONE")
     }
 
     private var resultTitle: String {
         switch controller.session.phase {
-        case .ready: String(localized: "Ready to enjoy")
-        case .eat: String(localized: "Slice and serve")
+        case .ready: String(localized: "Enjoy!")
+        case .eat: String(localized: "Enjoy!")
         case .feedback: String(localized: "How was it?")
-        default: String(localized: "Done")
+        default: String(localized: "Enjoy!")
         }
     }
 
@@ -171,7 +259,7 @@ struct CookingResultView: View {
         guard let started = controller.session.startedAt else { return "—" }
         let end = controller.session.finishedAt ?? .now
         let seconds = max(0, Int(end.timeIntervalSince(started)))
-        return String(format: "%lld:%02lld", Int64(seconds / 60), Int64(seconds % 60))
+        return String(format: "%02lld:%02lld", Int64(seconds / 60), Int64(seconds % 60))
     }
 
     private var primaryTitle: String {
