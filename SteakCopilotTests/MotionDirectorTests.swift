@@ -26,6 +26,15 @@ final class MotionDirectorTests: XCTestCase {
         XCTAssertEqual(cue.sound, .ready)
     }
 
+    func testTakeOutUsesThePullVisualAndUrgentFeedback() {
+        let cue = MotionDirector.cue(for: .pullNow)
+
+        XCTAssertEqual(cue.visual, .pull)
+        XCTAssertEqual(cue.preset, .action)
+        XCTAssertEqual(cue.haptic, .heavyImpact)
+        XCTAssertEqual(cue.sound, .pull)
+    }
+
     func testCountdownOnlyTapsForLastThreeSeconds() {
         XCTAssertEqual(
             MotionDirector.cue(for: .flipApproaching(seconds: 5)).haptic,

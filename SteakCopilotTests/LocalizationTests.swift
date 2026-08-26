@@ -125,6 +125,22 @@ final class LocalizationTests: XCTestCase {
             ),
             "检查熟度"
         )
+        let cookingCopy = [
+            "Add butter and aromatics.": "加入黄油和香料。",
+            "CURRENT": "当前温度",
+            "Flip now.": "立即翻面。",
+            "Remove from the pan.": "立即出锅。",
+            "Sear the fat edge.": "煎制脂肪边。",
+            "Settings": "设置",
+            "Starting Temperature": "初始温度"
+        ]
+        for (key, translation) in cookingCopy {
+            XCTAssertEqual(
+                bundle.localizedString(forKey: key, value: nil, table: nil),
+                translation,
+                "Missing Simplified Chinese translation for \(key)"
+            )
+        }
         XCTAssertEqual(
             bundle.localizedString(
                 forKey: "CFBundleDisplayName",

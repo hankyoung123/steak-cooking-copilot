@@ -31,4 +31,36 @@ final class SteakCopilotTests: XCTestCase {
             .recommended(for: .ribeye)
         )
     }
+
+    func testCookingStagesUseTheFiveSuppliedFullBleedBackgrounds() {
+        XCTAssertEqual(
+            CookingStageArtwork.backgroundAsset(for: .sear, action: .wait),
+            "CookSearBackground"
+        )
+        XCTAssertEqual(
+            CookingStageArtwork.backgroundAsset(for: .sear, action: .flip),
+            "CookFlipBackground"
+        )
+        XCTAssertEqual(
+            CookingStageArtwork.backgroundAsset(for: .baste, action: .baste),
+            "CookBasteBackground"
+        )
+        XCTAssertEqual(
+            CookingStageArtwork.backgroundAsset(
+                for: .checkTemperature,
+                action: .checkTemperature
+            ),
+            "CookCheckBackground"
+        )
+        XCTAssertEqual(
+            CookingStageArtwork.backgroundAsset(
+                for: .finishing,
+                action: .waitForFinish
+            ),
+            "CookRestBackground"
+        )
+        XCTAssertNil(
+            CookingStageArtwork.backgroundAsset(for: .prep, action: .wait)
+        )
+    }
 }

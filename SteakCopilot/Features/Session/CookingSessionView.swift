@@ -29,11 +29,18 @@ struct CookingSessionView: View {
                             .padding(.horizontal, 22)
                             .padding(.top, 12)
 
-                        CookingStageScene(
-                            controller: controller,
-                            prepIsDry: dried,
-                            darkBackground: isDarkStage
-                        )
+                        Group {
+                            if isDarkStage {
+                                Color.clear
+                                    .accessibilityHidden(true)
+                            } else {
+                                CookingStageScene(
+                                    controller: controller,
+                                    prepIsDry: dried,
+                                    darkBackground: false
+                                )
+                            }
+                        }
                         .frame(width: proxy.size.width)
                         .frame(height: sceneHeight(for: proxy.size.height))
                         .padding(.top, 5)
@@ -79,7 +86,6 @@ struct CookingSessionView: View {
             }
         }
         .foregroundStyle(isDarkStage ? theme.porcelain : theme.ink)
-        .background(EditorialCanvas(dark: isDarkStage))
         .onAppear {
             manualTemperature = controller.session.lastManualTemperatureC
                 ?? controller.guidance.pullTemperatureC - 2
@@ -112,6 +118,11 @@ struct CookingSessionView: View {
             }
         }
         .frame(maxWidth: .infinity, minHeight: 88)
+        .shadow(
+            color: .black.opacity(isDarkStage ? 0.84 : 0),
+            radius: 10,
+            y: 2
+        )
         .accessibilityElement(children: .combine)
     }
 
@@ -155,6 +166,11 @@ struct CookingSessionView: View {
             }
         }
         .frame(maxWidth: .infinity, minHeight: showsInstructionDetail ? 52 : 34)
+        .shadow(
+            color: .black.opacity(isDarkStage ? 0.88 : 0),
+            radius: 8,
+            y: 2
+        )
         .contentShape(Rectangle())
         .contentTransition(.opacity)
     }
@@ -273,36 +289,48 @@ struct CookingSessionView: View {
     }
 
     private var navigationTitle: String {
+        if isCookPhase {
+            switch controller.guidance.currentAction {
+            case .flip:
+                return String(localized: "SEAR · FLIP")
+            case .standFatCap:
+                return String(localized: "SEAR · FAT CAP")
+            case .addButter, .baste:
+                return String(localized: "BUTTER · BASTE")
+            case .checkTemperature, .takeOut:
+                return String(localized: "CHECK")
+            default:
+                break
+            }
+        }
+
         switch controller.session.phase {
-        case .prep: String(localized: "PREP")
-        case .heat: String(localized: "PREHEAT")
-        case .sear, .fatCap:
-            controller.guidance.currentAction == .flip
-                ? String(localized: "SEAR · FLIP")
-                : String(localized: "SEAR · SIDE ONE")
-        case .baste:
-            [.checkTemperature, .takeOut].contains(controller.guidance.currentAction)
-                ? String(localized: "CHECK")
-                : String(localized: "BUTTER · BASTE")
-        case .checkTemperature: String(localized: "CHECK")
-        case .finishing: String(localized: "REST")
-        default: ""
+        case .prep: return String(localized: "PREP")
+        case .heat: return String(localized: "PREHEAT")
+        case .sear, .fatCap: return String(localized: "SEAR · SIDE ONE")
+        case .baste: return String(localized: "BUTTER · BASTE")
+        case .checkTemperature: return String(localized: "CHECK")
+        case .finishing: return String(localized: "REST")
+        default: return ""
         }
     }
 
     private var stepLabel: String {
         let step: Int
-        switch controller.session.phase {
-        case .prep, .heat: step = 0
-        case .sear: step = controller.guidance.currentAction == .flip ? 2 : 1
-        case .fatCap: step = 3
-        case .baste:
-            step = [.checkTemperature, .takeOut].contains(controller.guidance.currentAction)
-                ? 5
-                : 4
-        case .checkTemperature: step = 5
-        case .finishing: step = 6
-        default: step = 7
+        if isCookPhase {
+            switch controller.guidance.currentAction {
+            case .flip: step = 2
+            case .standFatCap: step = 3
+            case .addButter, .baste: step = 4
+            case .checkTemperature, .takeOut: step = 5
+            default: step = 1
+            }
+        } else {
+            switch controller.session.phase {
+            case .prep, .heat: step = 0
+            case .finishing: step = 6
+            default: step = 7
+            }
         }
         return String(format: "%02d / 07", step)
     }

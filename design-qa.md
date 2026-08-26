@@ -1,53 +1,62 @@
-# Design QA — Transparent artwork fidelity pass
+# Design QA — Full-bleed cooking photography
 
-## Source and comparison
+## Comparison target
 
-- Visual source of truth: `/Users/hankyoung/.codex/attachments/60d0fe74-cfa5-415e-9259-c5f684e681b3/image-1.png`
-- Runtime: iPhone 16e Simulator, iOS 26.2
-- Native capture: 390 × 844 points (1170 × 2532 at 3×)
-- Same-state reference + implementation canvas: `docs/verification/screenshots/editorial-v3-alpha/reference-implementation-same-states.png`
-- Native implementation captures: `docs/verification/screenshots/editorial-v3-alpha/{sear,flip,baste,check,rest,result}.png`
+- Prototype visual truth: `/Users/hankyoung/.codex/attachments/60d0fe74-cfa5-415e-9259-c5f684e681b3/image-1.png`
+- Supplied photography truth:
+  - `/Users/hankyoung/Downloads/ChatGPT Image 2026年8月24日 21_35_05.png` — Sear, 941 × 1672 px
+  - `/Users/hankyoung/Downloads/ChatGPT Image 2026年8月24日 21_39_04.png` — Flip, 853 × 1844 px
+  - `/Users/hankyoung/Downloads/ChatGPT Image 2026年8月24日 22_10_11.png` — Baste, 839 × 1875 px
+  - `/Users/hankyoung/Downloads/ChatGPT Image 2026年8月24日 22_12_47.png` — Check, 941 × 1672 px
+  - `/Users/hankyoung/Downloads/ChatGPT Image 2026年8月24日 22_14_49.png` — Rest, 941 × 1672 px
+- Rendered implementation: `docs/verification/screenshots/full-bleed-final/{sear,flip,baste,check,rest}.png`
+- Five-state implementation contact sheet: `docs/verification/screenshots/full-bleed-final/five-stage-contact-sheet.png`
+- Source/implementation comparison evidence: `docs/verification/screenshots/full-bleed-final/source-implementation-five-states.png`
+- Runtime and viewport: iPhone 16e Simulator, iOS 26.2, portrait, 390 × 844 points
+- Implementation density: 3× native capture, 1170 × 2532 px
+- Density normalization: each source photo was scaled to cover and cropped to 1170 × 2532 px using the same focal alignment as SwiftUI; it was then placed beside the matching 1170 × 2532 implementation capture. Each pair is 2340 × 2532 px.
+- States: Sear / Flip / Baste / Check / Rest, English default language, dark cooking theme
 
-The final QA compares the same six states side by side: Sear, Flip, Baste, Check, Rest, and Result. No Heat, Prep, or Feedback screen is substituted for a cooking state.
+## Findings
 
-## Asset audit
+No actionable P0, P1, or P2 visual differences remain after two corrective iterations.
 
-| Asset | Role | Alpha | Composite result |
-| --- | --- | --- | --- |
-| `SearCutout` | raw ribeye entering skillet | Yes | Passed |
-| `FlipCutout` | browned steak with tongs | Yes | Passed |
-| `BasteCutout` | butter spoon, aromatics, skillet | Yes | Passed |
-| `CheckCutout` | steak, skillet, probe | Yes | Passed |
-| `RestCutout` | steak on rack and tray | Yes | Passed |
-| `HotPanCutout` | preheated skillet and glow | Yes | Passed |
-| `PrepDryCutout` / `PrepSaltCutout` | preparation actions | Yes | Passed |
-| `ResultHeroCutout` | sliced medium-rare serving hero | Yes | Passed |
+- Fonts and typography: the existing editorial serif display style, system UI labels, weight hierarchy, line breaks, and monospaced timer remain consistent with the prototype. The top and bottom gradient fields keep display copy legible without flattening the photography.
+- Spacing and layout rhythm: the supplied images now cover the complete screen including status and home-indicator regions. Hero subjects occupy the central cooking region; instructions, progress rail, and telemetry retain the prototype's vertical hierarchy and safe tap spacing.
+- Colors and visual tokens: warm porcelain text and butter-gold action accents remain consistent. The top mask reaches near-black behind navigation and display copy, while the bottom mask fades through the instruction and telemetry area without a hard edge.
+- Image quality and asset fidelity: all five user-supplied original photos are used directly from the asset catalog at source resolution. There are no transparency halos, opaque rectangular cutout edges, synthetic substitutes, stretched images, or visible compression artifacts. Check uses trailing focal alignment to preserve the probe.
+- Copy and content: the five actions and their stage labels are coherent and synchronized. English is the source/default language; every extracted string now has a Simplified Chinese translation, including the new fat-cap, flip, take-out, settings, and current-temperature copy.
+- Icons and controls: Exit, Skip, progress rail, and temperature telemetry remain visible and correctly aligned on all five captures.
+- Accessibility and resilience: persistent controls stay inside the safe content region, the background alone extends under system areas, and high-contrast gradient zones protect text readability. Full UI coverage also verifies Chinese localization, English fallback, every-stage skip, and exit behavior.
 
-Every cutout was checked with `sips -g hasAlpha`, then composited on the app's actual charcoal background to remove green spill and hard rectangular edges. The original source files remain untouched; the app references the new sibling cutout image sets.
+## Focused region evidence
 
-## Resolved findings
+- Header and title comparison: `docs/verification/screenshots/full-bleed-final/focused-baste-header.png`
+- Instruction/image transition comparison: `docs/verification/screenshots/full-bleed-final/focused-baste-instruction-and-telemetry.png`
 
-1. [P1 resolved] Opaque rectangular Sear, Flip, Check, Rest, Hot Pan, Baste, and Prep photography was replaced by isolated transparent PNG subjects.
-2. [P1 resolved] The invalid mixed-state comparison board was replaced by a same-state Sear / Flip / Baste / Check / Rest / Result comparison.
-3. [P1 resolved] The result screen no longer enlarges a doneness thumbnail. It uses a dedicated sliced-steak serving hero while the five user-supplied doneness images remain canonical for settings and feedback.
-4. [P1 resolved] Check guidance could appear while the Baste title and artwork remained visible. Guidance, phase title, step number, and probe artwork now switch together.
-5. [P2 resolved] Transparent cooking subjects were initially too small in the shared scene frame. Stage-specific scaling now restores the food-first proportions of the reference without cropping tools or pan handles.
-6. [P2 resolved] Chroma-key edge spill was visible around dark cookware on charcoal. Edge decontamination and alpha feathering remove the green fringe while preserving steam and glow.
+These focused crops verify the small stage label, step count, title hierarchy, subject sharpness, instruction contrast, and the absence of a hard mask edge. Separate icon zooms were not needed because the original 1170 × 2532 captures clearly resolve the navigation and progress controls.
 
-## Interaction and regression coverage
+## Comparison history
 
-- Exit and Skip remain reachable in every active phase and use confirmation before destructive progression.
-- English remains the development/default language; Simplified Chinese follows the system language.
-- Five doneness levels and the five supplied doneness assets remain available and selectable.
-- Current temperature remains `—` until a manual probe reading exists; an unmeasured result is labeled Target rather than Final.
-- The visual-state UI test now captures and asserts the artwork path for Sear, Flip, Baste, Check, Rest, and Result.
-- Full suite passed: 31 unit tests + 9 UI tests = 40 tests.
+### Iteration 1
+
+- [P1] The full-bleed scene was attached to `CookingSessionView`, whose layout stopped at the safe-area bounds. The status-bar and home-indicator regions exposed the old charcoal texture.
+- Fix: moved the full-bleed cooking scene into the root flow Z-stack and kept the interactive session content above it.
+- Post-fix evidence: `docs/verification/screenshots/full-bleed-final/{sear,flip,baste,check,rest}.png`; photography and black masks extend continuously from the top to the bottom edge.
+
+### Iteration 2
+
+- [P2] The Baste photograph and Add Butter instruction appeared while the navigation label still read `SEAR · SIDE ONE / 01`.
+- Fix: made the navigation title and seven-step label follow the current cooking action before falling back to phase-level labels; added `SEAR · FAT CAP` localization.
+- Post-fix evidence: `docs/verification/screenshots/full-bleed-final/baste.png` and `focused-baste-header.png` show `BUTTER · BASTE / 04` with the matching Baste photograph.
+
+## Verification
+
+- Final validation passed: 33 unit tests and 9 UI tests, 42 total across the final unit and UI runs.
+- The visual-state UI test captured Sear, Flip, Baste, Check, Rest, and Result after the final change.
 - Release iOS Simulator build succeeded.
-- `git diff --check`, asset-catalog JSON parsing, and Alpha-channel checks passed.
+- SHA-256 comparison confirms every packaged cooking background is byte-for-byte identical to its corresponding user-supplied source image.
+- A clean iPhone 17 Simulator install registered `com.hankyoung.SteakCopilot.LiveActivity (1.0)` with PlugInKit; the embedded extension descriptor is discoverable at runtime.
+- `git diff --check`, localization JSON parsing, and all five asset-catalog JSON files passed validation.
 
-## Final audit
-
-- No unresolved P0, P1, or P2 visual defects remain.
-- No opaque photo rectangles, checkerboard pixels, chroma spill, cropped primary actions, dead core controls, placeholder imagery, or fabricated temperature readings remain.
-
-Final result: passed
+final result: passed

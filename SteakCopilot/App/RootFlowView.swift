@@ -3,6 +3,7 @@ import SwiftUI
 struct RootFlowView: View {
     @Environment(AppTheme.self) private var theme
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pendingControl: SessionControlConfirmation?
     let controller: CookingSessionController
 
@@ -11,6 +12,16 @@ struct RootFlowView: View {
             EditorialCanvas(
                 dark: usesDarkCanvas
             )
+
+            if usesDarkCanvas {
+                CookingStageScene(
+                    controller: controller,
+                    prepIsDry: false,
+                    darkBackground: true,
+                    presentation: .fullBleed
+                )
+                .ignoresSafeArea()
+            }
 
             Group {
                 switch controller.flowStage {
@@ -37,7 +48,9 @@ struct RootFlowView: View {
         }
         .foregroundStyle(theme.foreground(for: controller.flowStage))
         .animation(
-            .smooth(duration: MotionTiming.stageTransition),
+            reduceMotion
+                ? .easeOut(duration: MotionTiming.subtle)
+                : .smooth(duration: MotionTiming.stageTransition),
             value: controller.flowStage
         )
         .preferredColorScheme(
@@ -124,13 +137,17 @@ struct RootFlowView: View {
     }
 
     private var stageTransition: AnyTransition {
+        if reduceMotion {
+            return .opacity
+        }
+
         if controller.flowStage == .finish {
-            .asymmetric(
+            return .asymmetric(
                 insertion: .scale(scale: 1.02).combined(with: .opacity),
                 removal: .scale(scale: 0.98).combined(with: .opacity)
             )
         } else {
-            .asymmetric(
+            return .asymmetric(
                 insertion: .scale(scale: 1.015).combined(with: .opacity),
                 removal: .scale(scale: 0.985).combined(with: .opacity)
             )
