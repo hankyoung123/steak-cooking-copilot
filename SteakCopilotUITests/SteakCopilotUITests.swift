@@ -148,6 +148,36 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["FINISHING"].waitForExistence(timeout: 4))
     }
 
+    /// Regression for the overlapping artwork bug: a cook stage draws a
+    /// complete photograph that already contains the pan and the steak, so it
+    /// must not also layer an object cutout on top of it (which rendered two
+    /// steaks). The stage artwork is exposed to accessibility as images whose
+    /// labels are the asset names, so the rendered layer count is observable.
+    func testCookingStageRendersOneArtworkLayerWithoutCutoutOverlap() {
+        let app = launchApp()
+        startCooking(app)
+
+        let cutouts = app.images.matching(
+            NSPredicate(format: "label ENDSWITH %@", "Cutout")
+        )
+        let compositions = app.images.matching(
+            NSPredicate(format: "label BEGINSWITH %@", "Cook")
+        )
+
+        // Guard against a vacuous pass: the stage artwork must be observable.
+        XCTAssertGreaterThanOrEqual(
+            compositions.count,
+            1,
+            "Expected the full-bleed stage photograph to be rendered"
+        )
+        XCTAssertEqual(
+            cutouts.count,
+            0,
+            "A complete cooking photograph must not be overlaid with a cutout"
+        )
+        attachScreenshot(named: "stage-single-layer-sear", app: app)
+    }
+
     func testStageControlsSkipEveryStageAndExitToSetup() {
         let app = launchApp()
         app.buttons["setup.primary"].tap()

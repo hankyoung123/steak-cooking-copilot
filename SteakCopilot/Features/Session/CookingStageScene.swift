@@ -1,69 +1,104 @@
 import SwiftUI
 
-enum CookingStageArtwork {
-    static func backgroundAsset(
+/// Explicit artwork policy for the cooking stage.
+///
+/// The repository holds two INCOMPATIBLE artwork families:
+///
+/// 1. `Cook*Background` — opaque photographs that already contain the pan,
+///    the steak and the steam. They are a *complete composition*.
+/// 2. `*Cutout` (SearCutout, FlipCutout, …) — transparent object layers
+///    (verified alpha channel) meant to be the single food layer on a plain
+///    canvas.
+///
+/// Drawing a complete composition and an object cutout at the same time
+/// renders two steaks, which is exactly the overlap this type prevents: the
+/// view no longer guesses, it asks for the policy and renders what it says.
+struct CookingStageArtwork: Equatable, Sendable {
+    /// Opaque complete photograph, drawn full-bleed. Never combined with an
+    /// object layer.
+    let backgroundAsset: String?
+    /// Transparent single object layer, used only when the stage has no
+    /// complete photograph behind it.
+    let objectAsset: String?
+
+    /// True for stages whose artwork is a complete composition: render the
+    /// photograph and nothing else.
+    var usesBackgroundOnly: Bool { backgroundAsset != nil }
+
+    /// True only for stages with no complete photograph, where the single
+    /// transparent object layer *is* the picture.
+    var showsObjectOverlay: Bool {
+        backgroundAsset == nil && objectAsset != nil
+    }
+
+    /// A steak cutout may be layered only when there is no complete
+    /// composition behind it. This is the invariant that was violated.
+    var allowsSteakCutout: Bool { !usesBackgroundOnly }
+
+    /// The single image this stage draws. Exactly one layer, always.
+    var asset: String {
+        backgroundAsset ?? objectAsset ?? "CookSearBackground"
+    }
+
+    /// Resolves the artwork for a stage. The artwork family is a property of
+    /// the stage, not of the presentation, so a stage can never end up
+    /// layered differently depending on where it is rendered.
+    static func resolve(
         for phase: CookingPhase,
-        action: CookingAction
-    ) -> String? {
+        action: CookingAction,
+        prepIsDry: Bool = true
+    ) -> CookingStageArtwork {
         switch phase {
+        case .prep:
+            // No background photo for prep: the transparent cutout is the
+            // single layer on the light canvas.
+            return CookingStageArtwork(
+                backgroundAsset: nil,
+                objectAsset: prepIsDry ? "PrepSaltCutout" : "PrepDryCutout"
+            )
+        case .heat:
+            return CookingStageArtwork(
+                backgroundAsset: nil,
+                objectAsset: "HotPanCutout"
+            )
         case .sear, .fatCap:
             switch action {
             case .flip, .standFatCap:
-                "CookFlipBackground"
+                return backgroundOnly("CookFlipBackground")
             case .addButter, .baste:
-                "CookBasteBackground"
+                return backgroundOnly("CookBasteBackground")
             case .checkTemperature, .takeOut:
-                "CookCheckBackground"
+                return backgroundOnly("CookCheckBackground")
             default:
-                "CookSearBackground"
+                return backgroundOnly("CookSearBackground")
             }
         case .baste:
-            [.checkTemperature, .takeOut].contains(action)
-                ? "CookCheckBackground"
-                : "CookBasteBackground"
+            return [.checkTemperature, .takeOut].contains(action)
+                ? backgroundOnly("CookCheckBackground")
+                : backgroundOnly("CookBasteBackground")
         case .checkTemperature:
-            "CookCheckBackground"
+            return backgroundOnly("CookCheckBackground")
         case .finishing:
-            "CookRestBackground"
-        default:
-            nil
+            return backgroundOnly("CookRestBackground")
+        case .setup, .ready, .eat, .feedback:
+            return CookingStageArtwork(backgroundAsset: nil, objectAsset: nil)
         }
     }
 
-    /// Transparent object layer for the layered cooking scene.
-    static func objectAsset(
-        for phase: CookingPhase,
-        action: CookingAction
-    ) -> String? {
-        switch phase {
-        case .sear, .fatCap:
-            switch action {
-            case .flip, .standFatCap:
-                "FlipCutout"
-            case .addButter, .baste:
-                "BasteCutout"
-            case .checkTemperature, .takeOut:
-                "CheckCutout"
-            default:
-                "SearCutout"
-            }
-        case .baste:
-            [.checkTemperature, .takeOut].contains(action)
-                ? "CheckCutout"
-                : "BasteCutout"
-        case .checkTemperature:
-            "CheckCutout"
-        case .finishing:
-            "RestCutout"
-        default:
-            nil
-        }
+    /// Convenience for the five supplied full-bleed compositions.
+    private static func backgroundOnly(_ asset: String) -> CookingStageArtwork {
+        CookingStageArtwork(backgroundAsset: asset, objectAsset: nil)
     }
 }
 
-/// Pure mapping from a motion cue to object-layer motion. Kept value-level
-/// so it is testable without rendering; `reduceMotion` disables everything.
-enum SignatureObjectMotion: Equatable, Sendable {
+/// Pure mapping from a motion cue to the stage's whole-frame motion response.
+/// Kept value-level so it is testable without rendering; `reduceMotion`
+/// disables everything.
+///
+/// The cook stages are complete photographs, so the response stays a subtle
+/// scale / brightness pulse: no layer is spun or swapped, because there is no
+/// separate object layer to animate.
+enum StageMotionResponse: Equatable, Sendable {
     case none
     case attention
     case heroFlip
@@ -88,12 +123,6 @@ enum SignatureObjectMotion: Equatable, Sendable {
             self = .none
         }
     }
-
-    /// Flip animations crossfade between two cutout states near the
-    /// midpoint of the turn.
-    var swapsObjectMidway: Bool {
-        self == .heroFlip || self == .compactFlip
-    }
 }
 
 struct CookingStageScene: View {
@@ -107,10 +136,8 @@ struct CookingStageScene: View {
     let prepIsDry: Bool
     let darkBackground: Bool
     var presentation: Presentation = .inline
-    @State private var objectMotion = SignatureObjectMotion.none
-    @State private var objectMotionTrigger = 0
-    @State private var flipPair: (pre: String, post: String)?
-    @State private var settledObjectAsset = "SearCutout"
+    @State private var motion = StageMotionResponse.none
+    @State private var motionTrigger = 0
 
     var body: some View {
         GeometryReader { proxy in
@@ -130,29 +157,19 @@ struct CookingStageScene: View {
             value: sceneAsset
         )
         .onChange(of: controller.motionDirector.sequence) { _, _ in
-            guard presentation == .fullBleed else { return }
-            let motion = SignatureObjectMotion(
+            let response = StageMotionResponse(
                 visual: controller.motionDirector.cue.visual,
                 reduceMotion: reduceMotion
             )
-            guard motion != .none else { return }
-            if motion.swapsObjectMidway {
-                // The object layer before this flip is whatever settled
-                // during the previous non-flip state.
-                flipPair = (
-                    pre: settledObjectAsset,
-                    post: objectAssetForOverlay ?? "FlipCutout"
-                )
-            } else {
-                flipPair = nil
-                settledObjectAsset = objectAssetForOverlay ?? settledObjectAsset
-            }
-            objectMotion = motion
-            objectMotionTrigger += 1
+            guard response != .none else { return }
+            motion = response
+            motionTrigger += 1
         }
         .accessibilityHidden(true)
     }
 
+    /// Inline presentation for stages without a photograph (prep, heat): the
+    /// transparent cutout is the one and only layer.
     private var inlineScene: some View {
         ZStack {
             Image(sceneAsset)
@@ -181,10 +198,16 @@ struct CookingStageScene: View {
         }
     }
 
+    /// Full-bleed presentation for the cook and finishing stages.
+    ///
+    /// These stages use a complete composition that already contains the pan
+    /// and the steak, so this renders ONE layer: the photograph. Adding an
+    /// object cutout here would duplicate the steak.
     private func fullBleedScene(in size: CGSize) -> some View {
         ZStack {
-            // Background stays essentially still; only a subtle brightness /
-            // micro-scale response so motion never reads as camera shake.
+            // The photograph stays essentially still; only a subtle
+            // brightness / micro-scale response so motion never reads as
+            // camera shake and never as a second layer.
             Image(sceneAsset)
                 .resizable()
                 .scaledToFill()
@@ -197,17 +220,13 @@ struct CookingStageScene: View {
                 .id(sceneAsset)
                 .transition(.opacity)
                 .modifier(
-                    BackgroundPhotoResponseModifier(
-                        trigger: objectMotionTrigger,
-                        motion: objectMotion
+                    StageCompositionResponseModifier(
+                        trigger: motionTrigger,
+                        response: motion
                     )
                 )
 
             Color.black.opacity(0.06)
-
-            if let overlayAsset = objectAssetForOverlay {
-                objectLayer(overlayAsset, in: size)
-            }
 
             LinearGradient(
                 stops: [
@@ -235,113 +254,18 @@ struct CookingStageScene: View {
         .clipped()
     }
 
-    @ViewBuilder
-    private func objectLayer(_ asset: String, in size: CGSize) -> some View {
-        if let flipPair,
-           objectMotion.swapsObjectMidway,
-           flipPair.post == asset {
-            ZStack {
-                objectImage(flipPair.pre).modifier(
-                    SteakObjectMotionModifier(
-                        trigger: objectMotionTrigger,
-                        motion: objectMotion,
-                        midlineOpacity: { progress in progress < 0.5 ? 1 : 0 }
-                    )
-                )
-                objectImage(flipPair.post).modifier(
-                    SteakObjectMotionModifier(
-                        trigger: objectMotionTrigger,
-                        motion: objectMotion,
-                        midlineOpacity: { progress in progress >= 0.5 ? 1 : 0 }
-                    )
-                )
-            }
-            .frame(
-                width: size.width * 0.86,
-                height: size.height * 0.52,
-                alignment: objectAlignment
-            )
-            .frame(width: size.width, height: size.height, alignment: objectAlignment)
-        } else {
-            objectImage(asset)
-                .modifier(
-                    SteakObjectMotionModifier(
-                        trigger: objectMotionTrigger,
-                        motion: objectMotion,
-                        midlineOpacity: nil
-                    )
-                )
-                .frame(
-                    width: size.width * 0.86,
-                    height: size.height * 0.52,
-                    alignment: objectAlignment
-                )
-                .frame(width: size.width, height: size.height, alignment: objectAlignment)
-        }
-    }
-
-    private func objectImage(_ asset: String) -> some View {
-        Image(asset)
-            .resizable()
-            .scaledToFit()
-            .shadow(
-                color: .black.opacity(0.34),
-                radius: 16,
-                y: 10
-            )
-    }
-
-    private var objectAssetForOverlay: String? {
-        guard presentation == .fullBleed else { return nil }
-        return CookingStageArtwork.objectAsset(
+    /// The resolved artwork policy for the current stage.
+    private var artwork: CookingStageArtwork {
+        CookingStageArtwork.resolve(
             for: controller.session.phase,
-            action: controller.guidance.currentAction
+            action: controller.guidance.currentAction,
+            prepIsDry: prepIsDry
         )
     }
 
-    private var objectAlignment: Alignment {
-        switch controller.session.phase {
-        case .finishing: .center
-        default: .bottom
-        }
-    }
-
-    private var sceneAsset: String {
-        if presentation == .fullBleed {
-            return CookingStageArtwork.backgroundAsset(
-                for: controller.session.phase,
-                action: controller.guidance.currentAction
-            ) ?? "CookSearBackground"
-        }
-
-        switch controller.session.phase {
-        case .prep:
-            return prepIsDry ? "PrepSaltCutout" : "PrepDryCutout"
-        case .heat:
-            return "HotPanCutout"
-        case .baste:
-            return [.checkTemperature, .takeOut].contains(controller.guidance.currentAction)
-                ? "CheckCutout"
-                : "BasteCutout"
-        case .checkTemperature:
-            return "CheckCutout"
-        case .finishing:
-            return "RestCutout"
-        case .sear, .fatCap:
-            switch controller.guidance.currentAction {
-            case .flip, .standFatCap:
-                return "FlipCutout"
-            case .addButter, .baste:
-                return "BasteCutout"
-            case .checkTemperature, .takeOut:
-                return "CheckCutout"
-            default:
-                return "SearCutout"
-            }
-        default:
-            return "SearCutout"
-        }
-    }
+    /// Identity of the single rendered layer, used for the crossfade between
+    /// stage compositions.
+    private var sceneAsset: String { artwork.asset }
 
     private var focalAlignment: Alignment {
         switch sceneAsset {
@@ -369,15 +293,15 @@ struct CookingStageScene: View {
     }
 }
 
-// MARK: - Background response (restrained, never a full-photo flip)
+// MARK: - Whole-frame response (no separate object layer)
 
-private struct BackgroundPhotoResponseModifier: ViewModifier {
+private struct StageCompositionResponseModifier: ViewModifier {
     let trigger: Int
-    let motion: SignatureObjectMotion
+    let response: StageMotionResponse
 
     func body(content: Content) -> some View {
         content.keyframeAnimator(
-            initialValue: BackgroundResponseValues(),
+            initialValue: StageCompositionResponseValues(),
             trigger: trigger
         ) { content, value in
             content
@@ -396,7 +320,7 @@ private struct BackgroundPhotoResponseModifier: ViewModifier {
     }
 
     private var peakScale: CGFloat {
-        switch motion {
+        switch response {
         case .heroFlip: 1.006
         case .compactFlip: 1.004
         case .pull: 1.008
@@ -406,7 +330,7 @@ private struct BackgroundPhotoResponseModifier: ViewModifier {
     }
 
     private var peakBrightness: Double {
-        switch motion {
+        switch response {
         case .attention: 0.018
         case .pull: -0.02
         default: 0
@@ -414,149 +338,7 @@ private struct BackgroundPhotoResponseModifier: ViewModifier {
     }
 }
 
-private struct BackgroundResponseValues {
+private struct StageCompositionResponseValues {
     var scale: CGFloat = 1
     var brightness: Double = 0
-}
-
-// MARK: - Object layer motion (the steak itself moves, not the photo)
-
-private struct SteakObjectMotionModifier: ViewModifier {
-    let trigger: Int
-    let motion: SignatureObjectMotion
-    /// Per-frame opacity for the pre/post flip swap, nil for plain motion.
-    let midlineOpacity: (@Sendable (Double) -> Double)?
-
-    func body(content: Content) -> some View {
-        content.keyframeAnimator(
-            initialValue: SteakObjectMotionValues(),
-            trigger: trigger
-        ) { content, value in
-            content
-                .scaleEffect(x: value.scaleX, y: value.scaleY)
-                .offset(y: value.verticalOffset)
-                .rotation3DEffect(
-                    .degrees(value.flipAngle),
-                    axis: (x: 1, y: 0, z: 0),
-                    perspective: 0.55
-                )
-                .opacity(midlineOpacity?(value.flipProgress) ?? value.opacity)
-        } keyframes: { _ in
-            KeyframeTrack(\.scaleY) {
-                CubicKeyframe(midScaleY, duration: riseDuration)
-                SpringKeyframe(1, duration: settleDuration, spring: .smooth)
-            }
-            KeyframeTrack(\.scaleX) {
-                CubicKeyframe(midScaleX, duration: riseDuration)
-                SpringKeyframe(1, duration: settleDuration, spring: .smooth)
-            }
-            KeyframeTrack(\.verticalOffset) {
-                CubicKeyframe(peakLift, duration: riseDuration)
-                if exitsScene {
-                    LinearKeyframe(exitLift, duration: exitDuration)
-                } else {
-                    SpringKeyframe(0, duration: settleDuration, spring: .smooth)
-                }
-            }
-            KeyframeTrack(\.flipAngle) {
-                CubicKeyframe(flipArc, duration: riseDuration)
-                if spins {
-                    SpringKeyframe(360, duration: settleDuration, spring: .smooth)
-                } else {
-                    LinearKeyframe(flipArc, duration: settleDuration)
-                }
-            }
-            KeyframeTrack(\.flipProgress) {
-                LinearKeyframe(1, duration: riseDuration + settleDuration)
-            }
-            KeyframeTrack(\.opacity) {
-                if exitsScene {
-                    CubicKeyframe(1, duration: riseDuration)
-                    LinearKeyframe(0, duration: exitDuration)
-                } else {
-                    LinearKeyframe(1, duration: riseDuration + settleDuration)
-                }
-            }
-        }
-    }
-
-    private var spins: Bool {
-        motion == .heroFlip || motion == .compactFlip
-    }
-
-    private var exitsScene: Bool {
-        motion == .pull
-    }
-
-    private var riseDuration: TimeInterval {
-        switch motion {
-        case .none: MotionTiming.subtle
-        case .attention: MotionTiming.responsive
-        case .heroFlip: MotionTiming.flipLift + MotionTiming.flipRotate
-        case .compactFlip: MotionTiming.compactFlipOut
-        case .pull: MotionTiming.takeOutLift
-        }
-    }
-
-    private var settleDuration: TimeInterval {
-        switch motion {
-        case .none, .attention: MotionTiming.responsive
-        case .heroFlip: MotionTiming.flipLand + MotionTiming.flipSettle
-        case .compactFlip: MotionTiming.compactFlipLand
-        case .pull: MotionTiming.takeOutHold
-        }
-    }
-
-    private var exitDuration: TimeInterval {
-        MotionTiming.takeOutSettle
-    }
-
-    private var peakLift: CGFloat {
-        switch motion {
-        case .attention: -4
-        case .heroFlip: -14
-        case .compactFlip: -7
-        case .pull: -22
-        case .none: 0
-        }
-    }
-
-    private var exitLift: CGFloat {
-        -170
-    }
-
-    private var midScaleY: CGFloat {
-        switch motion {
-        case .heroFlip: 0.84
-        case .compactFlip: 0.9
-        case .pull: 1
-        case .attention, .none: 1
-        }
-    }
-
-    private var midScaleX: CGFloat {
-        switch motion {
-        case .heroFlip: 1.05
-        case .compactFlip: 1.03
-        case .pull: 1.04
-        case .attention, .none: 1
-        }
-    }
-
-    private var flipArc: Double {
-        switch motion {
-        case .heroFlip: 165
-        case .compactFlip: 170
-        default: 0
-        }
-    }
-}
-
-private struct SteakObjectMotionValues {
-    var scaleX: CGFloat = 1
-    var scaleY: CGFloat = 1
-    var verticalOffset: CGFloat = 0
-    var flipAngle: Double = 0
-    var flipProgress: Double = 0
-    var opacity: Double = 1
 }

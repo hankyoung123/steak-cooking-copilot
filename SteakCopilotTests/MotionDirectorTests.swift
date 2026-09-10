@@ -48,47 +48,39 @@ final class MotionDirectorTests: XCTestCase {
 
 }
 
-// MARK: - Signature object motion mapping
+// MARK: - Stage motion response mapping
 
 @MainActor
-final class SignatureObjectMotionTests: XCTestCase {
-    func testReduceMotionDisablesAllObjectMotion() {
+final class StageMotionResponseTests: XCTestCase {
+    func testReduceMotionDisablesAllStageMotion() {
         let visuals: [MotionVisual] = [
             .heroFlip, .compactFlip, .pull, .attention(seconds: 3), .ready, .none
         ]
         for visual in visuals {
             XCTAssertEqual(
-                SignatureObjectMotion(visual: visual, reduceMotion: true),
+                StageMotionResponse(visual: visual, reduceMotion: true),
                 .none
             )
         }
     }
 
-    func testFlipAndPullMapToDistinctObjectMotion() {
+    func testFlipAndPullMapToDistinctStageMotion() {
         XCTAssertEqual(
-            SignatureObjectMotion(visual: .heroFlip, reduceMotion: false),
+            StageMotionResponse(visual: .heroFlip, reduceMotion: false),
             .heroFlip
         )
         XCTAssertEqual(
-            SignatureObjectMotion(visual: .compactFlip, reduceMotion: false),
+            StageMotionResponse(visual: .compactFlip, reduceMotion: false),
             .compactFlip
         )
         XCTAssertEqual(
-            SignatureObjectMotion(visual: .pull, reduceMotion: false),
+            StageMotionResponse(visual: .pull, reduceMotion: false),
             .pull
         )
         XCTAssertEqual(
-            SignatureObjectMotion(visual: .addButter, reduceMotion: false),
+            StageMotionResponse(visual: .addButter, reduceMotion: false),
             .none
         )
-    }
-
-    func testOnlyFlipsSwapObjectStateMidway() {
-        XCTAssertTrue(SignatureObjectMotion.heroFlip.swapsObjectMidway)
-        XCTAssertTrue(SignatureObjectMotion.compactFlip.swapsObjectMidway)
-        XCTAssertFalse(SignatureObjectMotion.pull.swapsObjectMidway)
-        XCTAssertFalse(SignatureObjectMotion.attention.swapsObjectMidway)
-        XCTAssertFalse(SignatureObjectMotion.none.swapsObjectMidway)
     }
 }
 
