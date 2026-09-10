@@ -17,11 +17,24 @@ protocol CookingLiveActivityServing: AnyObject {
 final class LiveActivityService: CookingLiveActivityServing {
     private var activity: Activity<SteakActivityAttributes>?
     private let isEnabled: Bool
-    private let tuning: AppTuning
+    /// Read at each update, so tuning changes apply to the next activity
+    /// content instead of a stale snapshot taken at init.
+    private let tuningProvider: any TuningProviding
 
-    init(isEnabled: Bool = true, tuning: AppTuning = .production) {
+    init(
+        isEnabled: Bool = true,
+        tuningProvider: any TuningProviding = StaticTuningProvider()
+    ) {
         self.isEnabled = isEnabled
-        self.tuning = tuning
+        self.tuningProvider = tuningProvider
+    }
+
+    /// Convenience for a fixed tuning (tests, previews).
+    convenience init(isEnabled: Bool = true, tuning: AppTuning) {
+        self.init(
+            isEnabled: isEnabled,
+            tuningProvider: StaticTuningProvider(tuning: tuning)
+        )
     }
 
     func recover(for session: CookingSession, guidance: CookingGuidance) async {
@@ -50,10 +63,10 @@ final class LiveActivityService: CookingLiveActivityServing {
             state: Self.contentState(
                 for: session,
                 guidance: guidance,
-                tuning: tuning
+                tuning: tuningProvider.effective
             ),
             staleDate: guidance.nextActionAt?.addingTimeInterval(
-                tuning.notifications.staleDelaySeconds
+                tuningProvider.effective.notifications.staleDelaySeconds
             )
         )
         activity = try? Activity.request(
@@ -73,10 +86,10 @@ final class LiveActivityService: CookingLiveActivityServing {
             state: Self.contentState(
                 for: session,
                 guidance: guidance,
-                tuning: tuning
+                tuning: tuningProvider.effective
             ),
             staleDate: guidance.nextActionAt?.addingTimeInterval(
-                tuning.notifications.staleDelaySeconds
+                tuningProvider.effective.notifications.staleDelaySeconds
             )
         )
         await activity.update(content)
@@ -131,9 +144,17 @@ final class LiveActivityService: CookingLiveActivityServing {
         switch reason {
         case .finished:
             // Celebration lingers briefly so the user can see the result.
-            .after(.now.addingTimeInterval(tuning.notifications.finishedDismissalSeconds))
+            .after(
+                .now.addingTimeInterval(
+                    tuningProvider.effective.notifications.finishedDismissalSeconds
+                )
+            )
         case .cancelled:
-            .after(.now.addingTimeInterval(tuning.notifications.cancelledDismissalSeconds))
+            .after(
+                .now.addingTimeInterval(
+                    tuningProvider.effective.notifications.cancelledDismissalSeconds
+                )
+            )
         }
     }
 

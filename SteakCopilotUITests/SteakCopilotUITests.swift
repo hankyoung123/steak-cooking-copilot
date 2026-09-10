@@ -277,16 +277,135 @@ final class SteakCopilotUITests: XCTestCase {
         settleArtwork()
         attachScreenshot(named: "prototype-rest", app: app)
 
-        XCTAssertTrue(app.buttons["ready.continue"].waitForExistence(timeout: 15))
+        // FINISHING runs for the estimated carryover time, which at the
+        // visual-cook time scale is ~18s, so the wait must exceed that.
+        XCTAssertTrue(app.buttons["ready.continue"].waitForExistence(timeout: 45))
         settleArtwork()
         attachScreenshot(named: "prototype-result", app: app)
+    }
+
+    /// The Tuning Lab is a developer tool, reachable only via `-tuningLab`.
+    ///
+    /// Walks its flows in the order a developer would: edit a value at the top
+    /// of the form, save it, then scroll down through every section to export,
+    /// attempt an invalid import, and reset.
+    func testTuningLabEditsExportImportsAndResets() {
+        let app = launchApp(tuningLab: true)
+
+        // The Lab opens automatically for this launch.
+        let budgetValue = app.staticTexts["tuningLab.cooking.baseCookingBudget.value"]
+        XCTAssertTrue(budgetValue.waitForExistence(timeout: 5))
+        let productionBudget = budgetValue.label
+
+        // Live edit the first row of the Cooking section.
+        let increment = app.buttons["tuningLab.cooking.baseCookingBudget.increment"]
+        XCTAssertTrue(increment.waitForExistence(timeout: 3))
+        increment.tap()
+        XCTAssertNotEqual(
+            budgetValue.label,
+            productionBudget,
+            "Editing a value should update the displayed value immediately"
+        )
+
+        // Save persists it; the Lab reports back.
+        app.buttons["tuningLab.save"].tap()
+        XCTAssertTrue(
+            app.staticTexts["tuningLab.message"].waitForExistence(timeout: 3),
+            "Saving should report success"
+        )
+
+        // Every parameter group has a section, each reachable by scrolling.
+        for section in ["Cooking", "Cuts", "Doneness", "Calibration",
+                        "Finishing", "Notifications", "Motion", "Override JSON"] {
+            XCTAssertTrue(
+                scrollToVisible(section, in: app),
+                "Tuning Lab is missing the \(section) section"
+            )
+        }
+
+        // The Override JSON section exposes every import/export affordance.
+        XCTAssertTrue(app.buttons["tuningLab.export"].exists)
+        XCTAssertTrue(app.buttons["tuningLab.copy"].exists)
+        XCTAssertTrue(app.buttons["tuningLab.importPasted"].exists)
+        XCTAssertTrue(app.buttons["tuningLab.importFile"].exists)
+
+        // Export populates the editor with a versioned document.
+        app.buttons["tuningLab.export"].tap()
+        let editor = app.textViews["tuningLab.importText"]
+        XCTAssertTrue(editor.waitForExistence(timeout: 3))
+        let exported = editor.value as? String ?? ""
+        XCTAssertTrue(
+            exported.contains("schemaVersion"),
+            "Export should produce a versioned override document, got: \(exported)"
+        )
+
+        // Reset returns to production.yaml defaults.
+        app.buttons["tuningLab.reset"].tap()
+        XCTAssertTrue(app.staticTexts["tuningLab.message"].waitForExistence(timeout: 3))
+
+        attachScreenshot(named: "tuning-lab", app: app)
+    }
+
+    private enum ScrollDirection {
+        case up
+        case down
+
+        var gesture: (XCUIApplication) -> Void {
+            switch self {
+            case .up: { $0.swipeUp() }
+            case .down: { $0.swipeDown() }
+            }
+        }
+    }
+
+    /// Scrolls until a static text with this label is actually on screen.
+    /// Hittability (not just existence) is required, because XCUITest reports
+    /// off-screen form rows as existing.
+    private func scrollToVisible(
+        _ label: String,
+        in app: XCUIApplication,
+        direction: ScrollDirection = .up,
+        attempts: Int = 14
+    ) -> Bool {
+        scrollToVisible(app.staticTexts[label], in: app, direction: direction, attempts: attempts)
+    }
+
+    /// Scrolls until an arbitrary element is actually on screen.
+    private func scrollToVisible(
+        _ element: XCUIElement,
+        in app: XCUIApplication,
+        direction: ScrollDirection = .up,
+        attempts: Int = 14
+    ) -> Bool {
+        for _ in 0..<attempts {
+            if element.exists, element.isHittable { return true }
+            direction.gesture(app)
+        }
+        return element.exists && element.isHittable
+    }
+
+    /// Scrolls until a button with this identifier is on screen.
+    private func scrollToVisibleButton(
+        _ identifier: String,
+        in app: XCUIApplication,
+        direction: ScrollDirection = .up,
+        attempts: Int = 14
+    ) -> Bool {
+        for _ in 0..<attempts {
+            let element = app.buttons[identifier]
+            if element.exists, element.isHittable { return true }
+            direction.gesture(app)
+        }
+        let element = app.buttons[identifier]
+        return element.exists && element.isHittable
     }
 
     private func launchApp(
         language: String? = "en",
         locale: String? = "en_US",
         fastCook: Bool = true,
-        visualCook: Bool = false
+        visualCook: Bool = false,
+        tuningLab: Bool = false
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
@@ -296,6 +415,7 @@ final class SteakCopilotUITests: XCTestCase {
             "-disableLiveActivity",
             "-quietFeedback"
         ]
+        if tuningLab { app.launchArguments.append("-tuningLab") }
         if fastCook { app.launchArguments.append("-fastCook") }
         if visualCook { app.launchArguments.append("-visualCook") }
         if let language {
@@ -367,7 +487,8 @@ final class SteakCopilotUITests: XCTestCase {
     }
 
     private func finishReadyFeedbackFlow(_ app: XCUIApplication) {
-        XCTAssertTrue(app.buttons["ready.continue"].waitForExistence(timeout: 15))
+        // Long enough to cover the finishing estimate at any time scale.
+        XCTAssertTrue(app.buttons["ready.continue"].waitForExistence(timeout: 45))
         app.buttons["ready.continue"].tap()
         XCTAssertTrue(app.buttons["eat.feedback"].waitForExistence(timeout: 3))
         app.buttons["eat.feedback"].tap()

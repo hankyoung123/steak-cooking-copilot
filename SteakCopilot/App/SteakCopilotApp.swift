@@ -21,11 +21,12 @@ struct SteakCopilotApp: App {
         if arguments.contains("-resetTuning") {
             tuningStore.resetToProduction()
         }
-        let tuning = tuningStore.effective
+        // Every tuning consumer shares one store, so a change made in the
+        // Tuning Lab is read live instead of being frozen at launch.
         let motion = MotionDirector(
             haptics: HapticService(isEnabled: !arguments.contains("-quietFeedback")),
             sounds: SoundService(isEnabled: !arguments.contains("-quietFeedback")),
-            tuning: tuning
+            tuningProvider: tuningStore
         )
         _tuningStore = State(initialValue: tuningStore)
         _controller = State(
@@ -37,9 +38,9 @@ struct SteakCopilotApp: App {
                 ),
                 liveActivityService: LiveActivityService(
                     isEnabled: !arguments.contains("-disableLiveActivity"),
-                    tuning: tuning
+                    tuningProvider: tuningStore
                 ),
-                tuning: tuning,
+                tuningStore: tuningStore,
                 timeScale: isVisualPreview ? 0.08 : (isFastPreview ? 0.035 : 1)
             )
         )

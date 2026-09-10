@@ -48,19 +48,80 @@ untracked artifact is caught as well).
 ## Runtime overrides
 
 ```
-ProductionTuning.production   generated from production.yaml
+ProductionTuning.production          generated from production.yaml
+          ↓  merge a sparse, validated patch over production
+Validated local override             TuningOverride (versioned, JSON)
           ↓
-TuningStore.override          local JSON (UserDefaults), development only
-          ↓
-TuningStore.effective         what the engine actually runs on
+TuningStore.effective                what the app actually runs on
 ```
 
-Launch with `-tuningLab` to open the Tuning Lab: change parameters, save the
-override, reset to production defaults, and export/import the override as JSON.
+The override is a **patch, not a snapshot**: `TuningOverride` records only the
+leaves that differ from production, as a `{schemaVersion, patch}` document. Two
+consequences that matter:
+
+- a field added to `production.yaml` later keeps its new default even while an
+  older override is installed — it is simply absent from the patch;
+- an explicitly cleared optional field (`fatCapDuration`) is recorded as `null`
+  so it stays cleared instead of reverting to the production value.
+
+`schemaVersion` guards the patch layout: a document written by a newer build is
+refused rather than silently misinterpreted. A stored override that fails to
+decode or validate is ignored at launch, so a bad override can never brick the
+app.
+
+### Live propagation
+
+Consumers that must react to a change read the store through
+`TuningProviding` on each use instead of holding an `AppTuning` snapshot:
+
+| Consumer | How it gets tuning |
+| --- | --- |
+| `CookingEngine` | value type; the controller rebuilds it on change |
+| `CookingSessionController` | proxies `tuningStore.effective`, rebuilds the engine |
+| `MotionDirector` | `tuningProvider.effective` per event (haptics/sound thresholds) |
+| `LiveActivityService` | `tuningProvider.effective` per update (stale delay, urgency, dismissal) |
+| `NotificationService` | reads the announced action from guidance, which the engine derived from tuning |
+| SwiftUI motion timing | `controller.tuning.motion.*` at render time |
+
+So editing a value in the Lab takes effect immediately — no relaunch, no
+service rebuild.
+
+### Tuning Lab
+
+Launch with `-tuningLab` (development only; it cannot appear in a user flow).
+It exposes **every** tunable parameter, in sections: Source, Cooking, Cuts,
+Doneness, Calibration, Finishing, Notifications, Motion, Override JSON.
+
+- numbers have `−`/`+` steppers with per-field step and range;
+- `needsFatCap` is a toggle (enabling it seeds the duration from production);
+- cut and doneness groups are collapsible DisclosureGroups;
+- edits apply live; **Save override** validates and persists;
+- **Reset to production** drops the override entirely;
+- **Export** fills the JSON editor, **Copy**/Share put it on the clipboard;
+- import via pasted JSON or the file picker. A rejected import leaves the
+  existing override untouched and shows the reason.
+
 Pass `-resetTuning` to force shipped production values (UI tests do this).
 
 Overrides are stored as JSON under the `steak.tuning.override.v1` key. They are a
 development convenience and are never required for the app to work.
+
+## Validation
+
+Two layers enforce the same rules:
+
+| Where | What |
+| --- | --- |
+| `Scripts/generate_tuning.py` | validates `production.yaml` at build time; `--self-test` runs 14 offline cases |
+| `SteakCopilot/Tuning/AppTuningValidator.swift` | validates runtime overrides |
+
+`AppTuningValidator` mirrors the generator's semantics — min/max ordering,
+non-negative durations, `pullTemperatureC < targetTemperatureC`, monotonically
+increasing doneness temperatures, `needsFatCap`/`fatCapDuration` agreement,
+thickness threshold ordering, `lateStageRatio` in `(0, 1)`, `carryoverMin <=
+carryoverMax`, non-negative motion durations, bounce in `[0, 1]`, and sane
+notification thresholds. `TuningConfigurationTests` asserts that every
+production value passes it, so the two rule sets cannot silently drift apart.
 
 ## Adding a parameter
 

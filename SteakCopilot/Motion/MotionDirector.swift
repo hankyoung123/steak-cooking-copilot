@@ -6,7 +6,9 @@ import Observation
 final class MotionDirector {
     private let haptics: HapticService
     private let sounds: SoundService
-    private let tuning: AppTuning
+    /// Read on every event, so a tuning change takes effect immediately
+    /// instead of being frozen into an `AppTuning` snapshot at init.
+    private let tuningProvider: any TuningProviding
 
     private(set) var cue = MotionCue(
         visual: .none,
@@ -19,15 +21,31 @@ final class MotionDirector {
     init(
         haptics: HapticService = HapticService(),
         sounds: SoundService = SoundService(),
-        tuning: AppTuning = .production
+        tuningProvider: any TuningProviding = StaticTuningProvider()
     ) {
         self.haptics = haptics
         self.sounds = sounds
-        self.tuning = tuning
+        self.tuningProvider = tuningProvider
     }
 
+    /// Convenience for a fixed tuning (tests, previews).
+    convenience init(
+        haptics: HapticService = HapticService(),
+        sounds: SoundService = SoundService(),
+        tuning: AppTuning
+    ) {
+        self.init(
+            haptics: haptics,
+            sounds: sounds,
+            tuningProvider: StaticTuningProvider(tuning: tuning)
+        )
+    }
+
+    /// The tuning in force right now.
+    var effectiveTuning: AppTuning { tuningProvider.effective }
+
     func handle(_ event: CookingEvent) {
-        cue = Self.cue(for: event, tuning: tuning)
+        cue = Self.cue(for: event, tuning: tuningProvider.effective)
         sequence += 1
         haptics.fire(cue.haptic)
         sounds.play(cue.sound)

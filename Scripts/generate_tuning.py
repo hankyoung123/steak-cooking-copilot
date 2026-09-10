@@ -340,6 +340,11 @@ ROOT_KEYS = [
 ]
 
 
+# NOTE: these rules are mirrored at runtime by
+# SteakCopilot/Tuning/AppTuningValidator.swift, which validates overrides
+# imported in the Tuning Lab. `TuningConfigurationTests` asserts that every
+# production value passes the Swift validator, so the two cannot drift apart
+# silently. Keep the two in step when adding a rule.
 def validate(root: dict[str, Any]) -> dict[str, Any]:
     require_keys(root, ROOT_KEYS, "config")
 

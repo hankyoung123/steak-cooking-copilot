@@ -64,7 +64,9 @@ struct RootFlowView: View {
             if let tuningStore {
                 TuningLabView(
                     store: tuningStore,
-                    onApply: { controller.applyTuning($0) }
+                    // The store already holds the new values; the controller
+                    // just has to re-derive its engine and guidance.
+                    onApply: { controller.tuningDidChange() }
                 )
             }
         }

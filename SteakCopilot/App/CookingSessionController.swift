@@ -9,6 +9,10 @@ final class CookingSessionController {
     private let timeScale: Double
     private let notificationService: any CookingNotificationServing
     private let liveActivityService: any CookingLiveActivityServing
+    /// The single runtime authority for tunable parameters. The engine is
+    /// rebuilt when it changes; every other consumer holds the store itself
+    /// (as a `TuningProviding`) and therefore reads the new values live.
+    private let tuningStore: TuningStore
     private var lastMotionToken: String?
 
     private(set) var session: CookingSession
@@ -17,26 +21,28 @@ final class CookingSessionController {
     let motionDirector: MotionDirector
 
     /// Effective tuning: production defaults (generated from
-    /// Config/production.yaml) merged with any local development override.
-    private(set) var tuning: AppTuning
+    /// Config/production.yaml) merged with any validated local override.
+    var tuning: AppTuning { tuningStore.effective }
 
     var flowStage: CookingFlowStage { session.phase.flowStage }
 
     init(
         engine: CookingEngine? = nil,
         store: CookingStore = CookingStore(),
-        motionDirector: MotionDirector = MotionDirector(),
+        motionDirector: MotionDirector? = nil,
         notificationService: any CookingNotificationServing = NotificationService(),
         liveActivityService: any CookingLiveActivityServing = LiveActivityService(),
-        tuning: AppTuning = .production,
+        tuningStore: TuningStore = TuningStore(),
         timeScale: Double = 1,
         now: Date = .now
     ) {
+        let tuning = tuningStore.effective
         let resolvedEngine = engine ?? CookingEngine(tuning: tuning)
         self.engine = resolvedEngine
-        self.tuning = tuning
+        self.tuningStore = tuningStore
         self.store = store
         self.motionDirector = motionDirector
+            ?? MotionDirector(tuningProvider: tuningStore)
         self.notificationService = notificationService
         self.liveActivityService = liveActivityService
         self.timeScale = timeScale
@@ -297,9 +303,29 @@ final class CookingSessionController {
     /// Applies a new effective tuning (production defaults plus a local
     /// override) without disturbing the running session: the absolute
     /// `nextActionAt` is preserved, so only future boundaries are affected.
+    ///
+    /// Motion, sound and Live Activity read the store directly, so they pick
+    /// the change up on their next use; the engine is rebuilt here because it
+    /// is a value type.
     func applyTuning(_ newTuning: AppTuning) {
-        tuning = newTuning
-        engine = CookingEngine(tuning: newTuning)
+        tuningStore.apply(newTuning)
+        rebuild()
+    }
+
+    /// Applies and validates a tuning, rejecting unusable values.
+    func applyValidatedTuning(_ newTuning: AppTuning) throws {
+        try tuningStore.applyValidated(newTuning)
+        rebuild()
+    }
+
+    /// Re-reads the effective tuning after an out-of-band change (for example
+    /// a Tuning Lab import or reset) and refreshes guidance.
+    func tuningDidChange() {
+        rebuild()
+    }
+
+    private func rebuild() {
+        engine = CookingEngine(tuning: tuningStore.effective)
         refresh(at: .now)
     }
 
