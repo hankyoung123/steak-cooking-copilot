@@ -139,6 +139,9 @@ jobs:
              && [ "${{ inputs.suite }}" = "full" ]; then
             echo "Manual run: full suite (unit + UI)."
             scope=""
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Manual run: unit tests only."
+            scope="-only-testing:SteakCopilotTests"
           else
             echo "Default run: unit tests only."
             echo "The UI suite runs on a manual dispatch (Actions -> iOS -> Run workflow)."
