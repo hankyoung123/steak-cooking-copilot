@@ -19,8 +19,7 @@ final class SteakCopilotTests: XCTestCase {
                 cut: .strip,
                 thicknessCM: 4.5,
                 doneness: .medium
-            ),
-            startingCondition: .room
+            )
         )
 
         store.save(setupPreferences: preferences)

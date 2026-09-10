@@ -172,16 +172,6 @@
         }
       }
     },
-    "A few drops of water should sizzle and dance." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "滴几滴水，应当发出滋滋声并跳动。"
-          }
-        }
-      }
-    },
     "ADD BUTTER" : {
       "localizations" : {
         "zh-Hans" : {
@@ -991,16 +981,6 @@
         }
       }
     },
-    "Fridge cold" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "冷藏状态"
-          }
-        }
-      }
-    },
     "Give the pan\ntime to get hot." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1294,16 +1274,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "尚无烹饪记录"
-          }
-        }
-      }
-    },
-    "No thermometer — continue" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "没有温度计—继续"
           }
         }
       }
@@ -1658,16 +1628,6 @@
         }
       }
     },
-    "REST" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "静置"
-          }
-        }
-      }
-    },
     "Rest off the heat" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1689,16 +1649,6 @@
         }
       }
     },
-    "Rest to lock in the juices." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "静置锁住肉汁。"
-          }
-        }
-      }
-    },
     "Return to setup without saving feedback?" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1715,16 +1665,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "肉眼牛排"
-          }
-        }
-      }
-    },
-    "Room temperature" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "室温状态"
           }
         }
       }
@@ -2061,27 +2001,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "从你面前的\n这块牛排开始。"
-          }
-        }
-      }
-    },
-    "Starting temperature" : {
-      "extractionState" : "stale",
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "初始温度"
-          }
-        }
-      }
-    },
-    "Starting Temperature" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "初始温度"
           }
         }
       }
@@ -2593,6 +2512,86 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "当前进度将被清除，并返回设置界面。"
+          }
+        }
+      }
+    },
+    "No thermometer — use timing" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No thermometer — use timing"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "没有温度计—改用计时"
+          }
+        }
+      }
+    },
+    "Oil should shimmer and the steak should sizzle immediately on contact." : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Oil should shimmer and the steak should sizzle immediately on contact."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "油面应微微泛光，牛排入锅应立即发出滋滋声。"
+          }
+        }
+      }
+    },
+    "Finishing heat" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Finishing heat"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "余温收尾"
+          }
+        }
+      }
+    },
+    "SESSION ENDED" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SESSION ENDED"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "本次烹饪已结束"
+          }
+        }
+      }
+    },
+    "CANCELLED" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "CANCELLED"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "已取消"
           }
         }
       }

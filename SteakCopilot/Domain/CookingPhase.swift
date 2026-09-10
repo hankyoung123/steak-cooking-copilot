@@ -36,6 +36,28 @@ enum CookingFlowStage: String, Equatable, Sendable {
     case feedback
 }
 
+extension CookingFlowStage {
+    static let ordered: [Self] = [
+        .setup, .prep, .heat, .cook, .finish, .eat, .feedback
+    ]
+
+    var index: Int {
+        Self.ordered.firstIndex(of: self) ?? 0
+    }
+
+    var title: String {
+        switch self {
+        case .setup: String(localized: "SETUP")
+        case .prep: String(localized: "PREP")
+        case .heat: String(localized: "HEAT")
+        case .cook: String(localized: "COOK")
+        case .finish: String(localized: "FINISH")
+        case .eat: String(localized: "EAT")
+        case .feedback: String(localized: "FEEDBACK")
+        }
+    }
+}
+
 enum FlipStyle: String, Codable, Equatable, Sendable {
     case hero
     case compact

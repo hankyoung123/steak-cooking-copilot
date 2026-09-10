@@ -87,7 +87,7 @@ struct CookingHomeView: View {
             case .settings:
                 AdvancedSettingsSheet(
                     preferences: preferences,
-                    estimatedSeconds: controller.currentProfile.estimatedCookingBudget,
+                    estimate: { controller.estimatedCookingBudget(for: $0) },
                     onSave: save
                 )
                 .presentationDetents([.large])
@@ -191,12 +191,11 @@ struct CookingHomeView: View {
         VStack(spacing: 11) {
             EditorialHairline()
             HStack(spacing: 8) {
-                Image(systemName: preferences.startingCondition == .fridge ? "snowflake" : "sun.max")
-                Text(preferences.startingCondition.title)
+                Image(systemName: "clock")
+                Text(durationText)
                 Text("·")
                 Text(String(format: "%.0f°C", preferences.configuration.doneness.pullTemperatureC))
-                Text("·")
-                Text(durationText)
+                Text(String(localized: "Pull target"))
             }
             .font(.system(size: 11, weight: .regular))
             .foregroundStyle(theme.ink.opacity(0.48))

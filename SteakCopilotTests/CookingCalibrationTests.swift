@@ -50,6 +50,11 @@ final class CookingCalibrationTests: XCTestCase {
             thicknessBucket: .thick,
             doneness: .mediumRare
         )
+        let mediumStrip = CalibrationKey(
+            cut: .strip,
+            thicknessBucket: .standard,
+            doneness: .medium
+        )
         let learned = CookingCalibration(
             cookingTimeAdjustment: 24,
             searBias: 8
@@ -60,5 +65,42 @@ final class CookingCalibrationTests: XCTestCase {
         XCTAssertEqual(store.loadCalibration(for: strip), learned)
         XCTAssertEqual(store.loadCalibration(for: tenderloin), .neutral)
         XCTAssertEqual(store.loadCalibration(for: thickStrip), .neutral)
+        XCTAssertEqual(store.loadCalibration(for: mediumStrip), .neutral)
+    }
+
+    func testCrustFeedbackChangesSearBiasByObservableSteps() {
+        var calibration = CookingCalibration.neutral
+
+        for _ in 0..<3 {
+            calibration = calibration.applying(doneness: .perfect, crust: .tooLight)
+        }
+        XCTAssertEqual(calibration.searBias, 24)
+        XCTAssertEqual(calibration.cookingTimeAdjustment, 0)
+
+        for _ in 0..<6 {
+            calibration = calibration.applying(doneness: .perfect, crust: .tooDark)
+        }
+        XCTAssertEqual(calibration.searBias, -24)
+    }
+
+    func testSearBiasMovesLateStageDateOffset() {
+        let engine = CookingEngine()
+        let configuration = SteakConfiguration(
+            cut: .strip,
+            thicknessCM: 3,
+            doneness: .mediumRare
+        )
+        let neutral = engine.profile(for: configuration, calibration: .neutral)
+        let light = engine.profile(
+            for: configuration,
+            calibration: CookingCalibration(cookingTimeAdjustment: 0, searBias: 8)
+        )
+        let dark = engine.profile(
+            for: configuration,
+            calibration: CookingCalibration(cookingTimeAdjustment: 0, searBias: -8)
+        )
+
+        XCTAssertGreaterThan(light.lateStageDateOffset, neutral.lateStageDateOffset)
+        XCTAssertLessThan(dark.lateStageDateOffset, neutral.lateStageDateOffset)
     }
 }

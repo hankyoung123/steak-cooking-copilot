@@ -4,16 +4,16 @@ struct AdvancedSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppTheme.self) private var theme
     @State private var draft: SteakSetupPreferences
-    let estimatedSeconds: TimeInterval
+    let estimate: (SteakConfiguration) -> TimeInterval
     let onSave: (SteakSetupPreferences) -> Void
 
     init(
         preferences: SteakSetupPreferences,
-        estimatedSeconds: TimeInterval,
+        estimate: @escaping (SteakConfiguration) -> TimeInterval,
         onSave: @escaping (SteakSetupPreferences) -> Void
     ) {
         _draft = State(initialValue: preferences)
-        self.estimatedSeconds = estimatedSeconds
+        self.estimate = estimate
         self.onSave = onSave
     }
 
@@ -29,8 +29,6 @@ struct AdvancedSettingsSheet: View {
                     donenessSection
                     settingDivider
                     thicknessSection
-                    settingDivider
-                    startingTemperatureSection
                     settingDivider
                     valueRow("Target Temperature", value: targetText)
                     settingDivider
@@ -172,45 +170,6 @@ struct AdvancedSettingsSheet: View {
         .padding(.vertical, 15)
     }
 
-    private var startingTemperatureSection: some View {
-        VStack(spacing: 12) {
-            valueRow("Starting Temperature", value: draft.startingCondition.title)
-            HStack(spacing: 10) {
-                ForEach(StartingCondition.allCases) { condition in
-                    Button {
-                        draft.startingCondition = condition
-                    } label: {
-                        Text(condition.title)
-                            .font(.system(size: 11, weight: .medium))
-                            .frame(maxWidth: .infinity, minHeight: 42)
-                            .foregroundStyle(
-                                draft.startingCondition == condition
-                                    ? theme.ink
-                                    : theme.ink.opacity(0.46)
-                            )
-                            .background(
-                                draft.startingCondition == condition
-                                    ? theme.card.opacity(0.85)
-                                    : Color.clear,
-                                in: RoundedRectangle(cornerRadius: 6)
-                            )
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(
-                                        draft.startingCondition == condition
-                                            ? theme.butter
-                                            : theme.ink.opacity(0.05),
-                                        lineWidth: 0.8
-                                    )
-                            }
-                    }
-                    .buttonStyle(EditorialPressStyle())
-                }
-            }
-        }
-        .padding(.vertical, 15)
-    }
-
     private func valueRow(_ title: LocalizedStringKey, value: String) -> some View {
         HStack {
             Text(title)
@@ -233,8 +192,11 @@ struct AdvancedSettingsSheet: View {
         String(format: "%.0f°C", draft.configuration.doneness.targetTemperatureC)
     }
 
+    /// Recomputed from the live draft so doneness/thickness changes are
+    /// reflected immediately.
     private var durationText: String {
-        let minutes = max(1, Int(ceil(estimatedSeconds / 60)))
+        let seconds = estimate(draft.configuration)
+        let minutes = max(1, Int(ceil(seconds / 60)))
         return String(format: String(localized: "~%lld min"), Int64(minutes))
     }
 }

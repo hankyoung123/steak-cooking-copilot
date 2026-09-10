@@ -12,7 +12,9 @@ struct CookingSession: Codable, Equatable, Identifiable, Sendable {
     var lastManualTemperatureC: Double?
     var lastManualTemperatureAt: Date?
     var butterAddedAt: Date?
-    var temperatureCheckConfirmedAt: Date?
+    /// Set when the user explicitly chose the no-thermometer timing fallback.
+    /// It means “estimate cooking by time”, never “pull temperature reached”.
+    var thermometerUnavailableAt: Date?
     var pulledAt: Date?
     var finishedAt: Date?
 
@@ -29,7 +31,7 @@ struct CookingSession: Codable, Equatable, Identifiable, Sendable {
             lastManualTemperatureC: nil,
             lastManualTemperatureAt: nil,
             butterAddedAt: nil,
-            temperatureCheckConfirmedAt: nil,
+            thermometerUnavailableAt: nil,
             pulledAt: nil,
             finishedAt: nil
         )

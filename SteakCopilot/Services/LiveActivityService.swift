@@ -6,7 +6,11 @@ protocol CookingLiveActivityServing: AnyObject {
     func recover(for session: CookingSession, guidance: CookingGuidance) async
     func start(for session: CookingSession, guidance: CookingGuidance) async
     func update(for session: CookingSession, guidance: CookingGuidance) async
-    func end(for session: CookingSession, guidance: CookingGuidance) async
+    func end(
+        for session: CookingSession,
+        guidance: CookingGuidance,
+        reason: CookingLiveActivityEndReason
+    ) async
 }
 
 @MainActor
@@ -39,9 +43,7 @@ final class LiveActivityService: CookingLiveActivityServing {
             return
         }
 
-        let attributes = SteakActivityAttributes(
-            steakName: "\(session.configuration.cut.title) · \(session.configuration.doneness.title)"
-        )
+        let attributes = SteakActivityAttributes(sessionID: session.id)
         let content = ActivityContent(
             state: contentState(for: session, guidance: guidance),
             staleDate: guidance.nextActionAt?.addingTimeInterval(30)
@@ -66,20 +68,19 @@ final class LiveActivityService: CookingLiveActivityServing {
         await activity.update(content)
     }
 
-    func end(for session: CookingSession, guidance: CookingGuidance) async {
+    func end(
+        for session: CookingSession,
+        guidance: CookingGuidance,
+        reason: CookingLiveActivityEndReason
+    ) async {
         if activity == nil {
             activity = matchingActivity(for: session)
         }
         guard let activity else { return }
-        let final = SteakActivityAttributes.ContentState(
-            phaseTitle: String(localized: "READY"),
-            actionTitle: String(localized: "TIME TO EAT"),
-            actionDate: nil,
-            isUrgent: false
-        )
+        let final = SteakActivityAttributes.ContentState.endState(for: reason)
         await activity.end(
             ActivityContent(state: final, staleDate: nil),
-            dismissalPolicy: .after(.now.addingTimeInterval(60))
+            dismissalPolicy: dismissalPolicy(for: reason)
         )
         self.activity = nil
     }
@@ -87,9 +88,8 @@ final class LiveActivityService: CookingLiveActivityServing {
     private func matchingActivity(
         for session: CookingSession
     ) -> Activity<SteakActivityAttributes>? {
-        let steakName = "\(session.configuration.cut.title) · \(session.configuration.doneness.title)"
-        return Activity<SteakActivityAttributes>.activities.first {
-            $0.attributes.steakName == steakName
+        Activity<SteakActivityAttributes>.activities.first {
+            $0.attributes.sessionID == session.id
         }
     }
 
@@ -105,15 +105,52 @@ final class LiveActivityService: CookingLiveActivityServing {
         )
     }
 
+    private func dismissalPolicy(
+        for reason: CookingLiveActivityEndReason
+    ) -> ActivityUIDismissalPolicy {
+        switch reason {
+        case .finished:
+            // Celebration lingers briefly so the user can see the result.
+            .after(.now.addingTimeInterval(60))
+        case .cancelled:
+            .after(.now.addingTimeInterval(4))
+        }
+    }
+
     private func phaseTitle(for phase: CookingPhase) -> String {
         switch phase {
         case .sear: String(localized: "SEAR")
         case .fatCap: String(localized: "FAT CAP")
         case .baste: String(localized: "BASTE")
         case .checkTemperature: String(localized: "CHECK TEMP")
-        case .finishing: String(localized: "FINISH")
+        case .finishing: String(localized: "FINISHING")
         case .ready: String(localized: "READY")
         default: String(localized: "COOK")
+        }
+    }
+}
+
+extension SteakActivityAttributes.ContentState {
+    /// Final activity content for the two end reasons. A cancelled session
+    /// must never present itself as READY / TIME TO EAT.
+    static func endState(
+        for reason: CookingLiveActivityEndReason
+    ) -> SteakActivityAttributes.ContentState {
+        switch reason {
+        case .finished:
+            SteakActivityAttributes.ContentState(
+                phaseTitle: String(localized: "READY"),
+                actionTitle: String(localized: "TIME TO EAT"),
+                actionDate: nil,
+                isUrgent: false
+            )
+        case .cancelled:
+            SteakActivityAttributes.ContentState(
+                phaseTitle: String(localized: "SESSION ENDED"),
+                actionTitle: String(localized: "CANCELLED"),
+                actionDate: nil,
+                isUrgent: false
+            )
         }
     }
 }

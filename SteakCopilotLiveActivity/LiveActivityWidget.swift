@@ -23,7 +23,7 @@ struct SteakLiveActivityWidget: Widget {
                         .font(.headline)
                 }
                 Spacer()
-                actionTime(context.state.actionDate)
+                actionTime(context.state)
             }
             .padding()
             .activityBackgroundTint(Color(red: 0.10, green: 0.085, blue: 0.07))
@@ -35,7 +35,7 @@ struct SteakLiveActivityWidget: Widget {
                         .foregroundStyle(.orange)
                 }
                 DynamicIslandExpandedRegion(.trailing) {
-                    actionTime(context.state.actionDate)
+                    actionTime(context.state)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     Text(context.state.actionTitle)
@@ -45,7 +45,7 @@ struct SteakLiveActivityWidget: Widget {
                 Image(systemName: "flame.fill")
                     .foregroundStyle(.orange)
             } compactTrailing: {
-                actionTime(context.state.actionDate)
+                actionTime(context.state)
                     .frame(maxWidth: 54)
             } minimal: {
                 Image(systemName: context.state.isUrgent ? "exclamationmark" : "flame.fill")
@@ -55,14 +55,17 @@ struct SteakLiveActivityWidget: Widget {
     }
 
     @ViewBuilder
-    private func actionTime(_ date: Date?) -> some View {
-        if let date, date > .now {
+    private func actionTime(_ state: SteakActivityAttributes.ContentState) -> some View {
+        if let date = state.actionDate, date > .now {
             Text(timerInterval: .now...date, countsDown: true)
                 .font(.headline.monospacedDigit())
-        } else {
+        } else if state.isUrgent {
             Text("NOW")
                 .font(.headline.weight(.black))
                 .foregroundStyle(.orange)
+        } else {
+            // End states (finished/cancelled) carry no countdown.
+            EmptyView()
         }
     }
 }

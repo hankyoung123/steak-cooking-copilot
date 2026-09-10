@@ -104,23 +104,25 @@ struct CookingEngine: Sendable {
         let remaining = session.remaining(at: date)
         let elapsed = max(0, date.timeIntervalSince(session.startedAt ?? date))
         let estimatedProgress = min(max(elapsed / profile.estimatedCookingBudget, 0), 1)
+        let lateStageAt = lateStageDate(for: session, profile: profile)
+        let estimatedPullAt = estimatedPullDate(for: session, profile: profile)
         let pullRecommendation = pullRecommendation(
             for: session,
-            profile: profile
+            profile: profile,
+            at: date,
+            estimatedPullAt: estimatedPullAt
         )
         let action = currentAction(
             for: session,
             at: date,
-            profile: profile,
-            estimatedProgress: estimatedProgress,
-            pullRecommendation: pullRecommendation
+            pullRecommendation: pullRecommendation,
+            lateStageAt: lateStageAt
         )
         let nextAction = nextAction(
             for: session,
             action: action,
             at: date,
-            profile: profile,
-            estimatedProgress: estimatedProgress
+            lateStageAt: lateStageAt
         )
         let finishingEstimate = finishingEstimate(
             for: session,
@@ -148,17 +150,42 @@ struct CookingEngine: Sendable {
         )
     }
 
-    private func pullRecommendation(
+    /// Authoritative boundary where frequent-flip searing ends and the
+    /// late stage (fat cap / butter) begins. Derived from the absolute
+    /// cooking start date, so it is stable across refreshes.
+    func lateStageDate(
         for session: CookingSession,
         profile: CookingProfile
+    ) -> Date {
+        (session.startedAt ?? session.phaseStartedAt)
+            .addingTimeInterval(profile.lateStageDateOffset)
+    }
+
+    /// Authoritative estimated pull boundary used by the no-thermometer
+    /// timing fallback. Never represented as a temperature.
+    func estimatedPullDate(
+        for session: CookingSession,
+        profile: CookingProfile
+    ) -> Date {
+        (session.startedAt ?? session.phaseStartedAt)
+            .addingTimeInterval(profile.estimatedCookingBudget)
+    }
+
+    private func pullRecommendation(
+        for session: CookingSession,
+        profile: CookingProfile,
+        at date: Date,
+        estimatedPullAt: Date
     ) -> PullRecommendation {
+        // A real thermometer reading always wins over time estimation.
         if let temperature = session.lastManualTemperatureC {
             return temperature >= profile.pullTemperatureC ? .takeOut : .keepCooking
         }
-        if session.phase == .checkTemperature,
-           let confirmedAt = session.temperatureCheckConfirmedAt,
-           confirmedAt >= session.phaseStartedAt {
-            return .takeOut
+        // Explicit no-thermometer fallback: pull only when the estimated
+        // cooking budget has elapsed. Selecting the fallback never means
+        // “pull temperature reached”.
+        if session.thermometerUnavailableAt != nil {
+            return date >= estimatedPullAt ? .takeOut : .keepCooking
         }
         if session.phase == .baste || session.phase == .checkTemperature {
             return .checkTemperature
@@ -169,9 +196,8 @@ struct CookingEngine: Sendable {
     private func currentAction(
         for session: CookingSession,
         at date: Date,
-        profile: CookingProfile,
-        estimatedProgress: Double,
-        pullRecommendation: PullRecommendation
+        pullRecommendation: PullRecommendation,
+        lateStageAt: Date
     ) -> CookingAction {
         if pullRecommendation == .takeOut,
            session.phase.flowStage == .cook {
@@ -182,18 +208,33 @@ struct CookingEngine: Sendable {
         case .sear:
             guard session.remaining(at: date) <= 0 else { return .wait }
             if session.butterAddedAt != nil {
+                // After butter, prompt one more flip before checking again
+                // when a real reading exists. Without a thermometer the
+                // fallback keeps the frequent-flip loop until the estimated
+                // pull boundary.
                 if let temperatureAt = session.lastManualTemperatureAt,
-                   (session.lastFlipAt ?? .distantPast) <= temperatureAt {
+                   (session.lastFlipAt ?? .distantPast) <= temperatureAt,
+                   session.thermometerUnavailableAt == nil {
                     return .flip
                 }
-                return .checkTemperature
+                return session.thermometerUnavailableAt == nil
+                    ? .checkTemperature
+                    : .flip
             }
-            guard estimatedProgress >= 0.65 else { return .flip }
-            return session.configuration.cut.profile.needsFatCap ? .standFatCap : .addButter
+            guard date < lateStageAt else {
+                return session.configuration.cut.profile.needsFatCap
+                    ? .standFatCap
+                    : .addButter
+            }
+            return .flip
         case .fatCap:
             return session.remaining(at: date) > 0 ? .standFatCap : .addButter
         case .baste:
-            return session.remaining(at: date) > 0 ? .baste : .checkTemperature
+            return session.remaining(at: date) > 0
+                ? .baste
+                : (session.thermometerUnavailableAt == nil
+                    ? .checkTemperature
+                    : .flip)
         case .checkTemperature:
             return .checkTemperature
         case .finishing:
@@ -209,26 +250,32 @@ struct CookingEngine: Sendable {
         for session: CookingSession,
         action: CookingAction,
         at date: Date,
-        profile: CookingProfile,
-        estimatedProgress: Double
+        lateStageAt: Date
     ) -> CookingAction? {
         switch session.phase {
         case .sear where action == .wait:
             if session.butterAddedAt != nil {
                 if let temperatureAt = session.lastManualTemperatureAt,
-                   (session.lastFlipAt ?? .distantPast) <= temperatureAt {
+                   (session.lastFlipAt ?? .distantPast) <= temperatureAt,
+                   session.thermometerUnavailableAt == nil {
                     return .flip
                 }
-                return .checkTemperature
+                return session.thermometerUnavailableAt == nil
+                    ? .checkTemperature
+                    : .flip
             }
-            if estimatedProgress >= 0.65 {
-                return session.configuration.cut.profile.needsFatCap ? .standFatCap : .addButter
+            if date >= lateStageAt {
+                return session.configuration.cut.profile.needsFatCap
+                    ? .standFatCap
+                    : .addButter
             }
             return .flip
         case .fatCap where action == .standFatCap:
             return .addButter
         case .baste where action == .baste:
-            return .checkTemperature
+            return session.thermometerUnavailableAt == nil
+                ? .checkTemperature
+                : .flip
         case .finishing:
             return .eat
         default:

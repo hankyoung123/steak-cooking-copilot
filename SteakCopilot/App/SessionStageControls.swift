@@ -11,59 +11,70 @@ struct SessionStageControls: View {
 
     var body: some View {
         HStack(spacing: 10) {
-            controlButton(
-                title: String(localized: "Exit"),
-                systemImage: "chevron.left",
-                identifier: "session.exit",
-                action: onExit
-            )
+            exitControl
 
             Spacer(minLength: 0)
 
-            Group {
-                if let phaseTitle {
-                    Text(phaseTitle)
-                        .font(.system(size: 9, weight: .semibold))
-                        .tracking(1.7)
-                        .foregroundStyle(isDark ? theme.porcelain.opacity(0.8) : theme.ink.opacity(0.72))
-                        .lineLimit(1)
-                        .accessibilityIdentifier("session.phase.title")
-                } else {
-                    HStack(spacing: 4) {
-                        ForEach(CookingFlowStage.ordered.indices, id: \.self) { index in
-                            Rectangle()
-                                .fill(
-                                    index <= flowStage.index
-                                        ? (isDark ? theme.butter : theme.ember)
-                                        : Color.secondary.opacity(0.22)
-                                )
-                                .frame(width: index == flowStage.index ? 18 : 6, height: 2)
-                        }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .accessibilityLabel(phaseTitle ?? flowStage.title)
+            centerContent
+                .frame(maxWidth: .infinity)
+                .accessibilityLabel(phaseTitle ?? flowStage.title)
 
             Spacer(minLength: 0)
 
-            VStack(alignment: .trailing, spacing: 1) {
-                if let stepLabel {
-                    Text(stepLabel)
-                        .font(.system(size: 9, weight: .medium, design: .serif))
-                        .monospacedDigit()
-                        .foregroundStyle(isDark ? theme.porcelain.opacity(0.78) : theme.ink.opacity(0.68))
-                }
-                skipButton(
-                    title: String(localized: "Skip"),
-                    identifier: "session.skip",
-                    action: onSkip
-                )
-            }
-            .frame(width: 62, alignment: .trailing)
+            trailingContent
         }
         .padding(.horizontal, 2)
         .frame(height: 42)
+    }
+
+    private var exitControl: some View {
+        controlButton(
+            title: String(localized: "Exit"),
+            systemImage: "chevron.left",
+            identifier: "session.exit",
+            action: onExit
+        )
+    }
+
+    @ViewBuilder
+    private var centerContent: some View {
+        if let phaseTitle {
+            Text(phaseTitle)
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(1.7)
+                .foregroundStyle(isDark ? theme.porcelain.opacity(0.8) : theme.ink.opacity(0.72))
+                .lineLimit(1)
+                .accessibilityIdentifier("session.phase.title")
+        } else {
+            HStack(spacing: 4) {
+                ForEach(CookingFlowStage.ordered.indices, id: \.self) { index in
+                    Rectangle()
+                        .fill(
+                            index <= flowStage.index
+                                ? (isDark ? theme.butter : theme.ember)
+                                : Color.secondary.opacity(0.22)
+                        )
+                        .frame(width: index == flowStage.index ? 18 : 6, height: 2)
+                }
+            }
+        }
+    }
+
+    private var trailingContent: some View {
+        VStack(alignment: .trailing, spacing: 1) {
+            if let stepLabel {
+                Text(stepLabel)
+                    .font(.system(size: 9, weight: .medium, design: .serif))
+                    .monospacedDigit()
+                    .foregroundStyle(isDark ? theme.porcelain.opacity(0.78) : theme.ink.opacity(0.68))
+            }
+            skipButton(
+                title: String(localized: "Skip"),
+                identifier: "session.skip",
+                action: onSkip
+            )
+        }
+        .frame(width: 62, alignment: .trailing)
     }
 
     private func controlButton(

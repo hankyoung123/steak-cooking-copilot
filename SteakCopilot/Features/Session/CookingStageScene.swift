@@ -29,6 +29,71 @@ enum CookingStageArtwork {
             nil
         }
     }
+
+    /// Transparent object layer for the layered cooking scene.
+    static func objectAsset(
+        for phase: CookingPhase,
+        action: CookingAction
+    ) -> String? {
+        switch phase {
+        case .sear, .fatCap:
+            switch action {
+            case .flip, .standFatCap:
+                "FlipCutout"
+            case .addButter, .baste:
+                "BasteCutout"
+            case .checkTemperature, .takeOut:
+                "CheckCutout"
+            default:
+                "SearCutout"
+            }
+        case .baste:
+            [.checkTemperature, .takeOut].contains(action)
+                ? "CheckCutout"
+                : "BasteCutout"
+        case .checkTemperature:
+            "CheckCutout"
+        case .finishing:
+            "RestCutout"
+        default:
+            nil
+        }
+    }
+}
+
+/// Pure mapping from a motion cue to object-layer motion. Kept value-level
+/// so it is testable without rendering; `reduceMotion` disables everything.
+enum SignatureObjectMotion: Equatable, Sendable {
+    case none
+    case attention
+    case heroFlip
+    case compactFlip
+    case pull
+
+    init(visual: MotionVisual, reduceMotion: Bool) {
+        guard !reduceMotion else {
+            self = .none
+            return
+        }
+        switch visual {
+        case .attention:
+            self = .attention
+        case .heroFlip:
+            self = .heroFlip
+        case .compactFlip:
+            self = .compactFlip
+        case .pull:
+            self = .pull
+        default:
+            self = .none
+        }
+    }
+
+    /// Flip animations crossfade between two cutout states near the
+    /// midpoint of the turn.
+    var swapsObjectMidway: Bool {
+        self == .heroFlip || self == .compactFlip
+    }
 }
 
 struct CookingStageScene: View {
@@ -42,8 +107,10 @@ struct CookingStageScene: View {
     let prepIsDry: Bool
     let darkBackground: Bool
     var presentation: Presentation = .inline
-    @State private var photoMotion = FullBleedPhotoMotion.none
-    @State private var photoMotionTrigger = 0
+    @State private var objectMotion = SignatureObjectMotion.none
+    @State private var objectMotionTrigger = 0
+    @State private var flipPair: (pre: String, post: String)?
+    @State private var settledObjectAsset = "SearCutout"
 
     var body: some View {
         GeometryReader { proxy in
@@ -63,13 +130,25 @@ struct CookingStageScene: View {
             value: sceneAsset
         )
         .onChange(of: controller.motionDirector.sequence) { _, _ in
-            guard presentation == .fullBleed, !reduceMotion else { return }
-            let motion = FullBleedPhotoMotion(
-                visual: controller.motionDirector.cue.visual
+            guard presentation == .fullBleed else { return }
+            let motion = SignatureObjectMotion(
+                visual: controller.motionDirector.cue.visual,
+                reduceMotion: reduceMotion
             )
             guard motion != .none else { return }
-            photoMotion = motion
-            photoMotionTrigger += 1
+            if motion.swapsObjectMidway {
+                // The object layer before this flip is whatever settled
+                // during the previous non-flip state.
+                flipPair = (
+                    pre: settledObjectAsset,
+                    post: objectAssetForOverlay ?? "FlipCutout"
+                )
+            } else {
+                flipPair = nil
+                settledObjectAsset = objectAssetForOverlay ?? settledObjectAsset
+            }
+            objectMotion = motion
+            objectMotionTrigger += 1
         }
         .accessibilityHidden(true)
     }
@@ -104,6 +183,8 @@ struct CookingStageScene: View {
 
     private func fullBleedScene(in size: CGSize) -> some View {
         ZStack {
+            // Background stays essentially still; only a subtle brightness /
+            // micro-scale response so motion never reads as camera shake.
             Image(sceneAsset)
                 .resizable()
                 .scaledToFill()
@@ -116,13 +197,17 @@ struct CookingStageScene: View {
                 .id(sceneAsset)
                 .transition(.opacity)
                 .modifier(
-                    FullBleedPhotoMotionModifier(
-                        trigger: photoMotionTrigger,
-                        motion: photoMotion
+                    BackgroundPhotoResponseModifier(
+                        trigger: objectMotionTrigger,
+                        motion: objectMotion
                     )
                 )
 
             Color.black.opacity(0.06)
+
+            if let overlayAsset = objectAssetForOverlay {
+                objectLayer(overlayAsset, in: size)
+            }
 
             LinearGradient(
                 stops: [
@@ -148,6 +233,77 @@ struct CookingStageScene: View {
         }
         .frame(width: size.width, height: size.height)
         .clipped()
+    }
+
+    @ViewBuilder
+    private func objectLayer(_ asset: String, in size: CGSize) -> some View {
+        if let flipPair,
+           objectMotion.swapsObjectMidway,
+           flipPair.post == asset {
+            ZStack {
+                objectImage(flipPair.pre).modifier(
+                    SteakObjectMotionModifier(
+                        trigger: objectMotionTrigger,
+                        motion: objectMotion,
+                        midlineOpacity: { progress in progress < 0.5 ? 1 : 0 }
+                    )
+                )
+                objectImage(flipPair.post).modifier(
+                    SteakObjectMotionModifier(
+                        trigger: objectMotionTrigger,
+                        motion: objectMotion,
+                        midlineOpacity: { progress in progress >= 0.5 ? 1 : 0 }
+                    )
+                )
+            }
+            .frame(
+                width: size.width * 0.86,
+                height: size.height * 0.52,
+                alignment: objectAlignment
+            )
+            .frame(width: size.width, height: size.height, alignment: objectAlignment)
+        } else {
+            objectImage(asset)
+                .modifier(
+                    SteakObjectMotionModifier(
+                        trigger: objectMotionTrigger,
+                        motion: objectMotion,
+                        midlineOpacity: nil
+                    )
+                )
+                .frame(
+                    width: size.width * 0.86,
+                    height: size.height * 0.52,
+                    alignment: objectAlignment
+                )
+                .frame(width: size.width, height: size.height, alignment: objectAlignment)
+        }
+    }
+
+    private func objectImage(_ asset: String) -> some View {
+        Image(asset)
+            .resizable()
+            .scaledToFit()
+            .shadow(
+                color: .black.opacity(0.34),
+                radius: 16,
+                y: 10
+            )
+    }
+
+    private var objectAssetForOverlay: String? {
+        guard presentation == .fullBleed else { return nil }
+        return CookingStageArtwork.objectAsset(
+            for: controller.session.phase,
+            action: controller.guidance.currentAction
+        )
+    }
+
+    private var objectAlignment: Alignment {
+        switch controller.session.phase {
+        case .finishing: .center
+        default: .bottom
+        }
     }
 
     private var sceneAsset: String {
@@ -213,132 +369,123 @@ struct CookingStageScene: View {
     }
 }
 
-private enum FullBleedPhotoMotion: Equatable {
-    case none
-    case attention
-    case heroFlip
-    case compactFlip
-    case pull
+// MARK: - Background response (restrained, never a full-photo flip)
 
-    init(visual: MotionVisual) {
-        switch visual {
-        case .attention:
-            self = .attention
-        case .heroFlip:
-            self = .heroFlip
-        case .compactFlip:
-            self = .compactFlip
-        case .pull:
-            self = .pull
-        default:
-            self = .none
-        }
-    }
-}
-
-private struct FullBleedPhotoMotionModifier: ViewModifier {
+private struct BackgroundPhotoResponseModifier: ViewModifier {
     let trigger: Int
-    let motion: FullBleedPhotoMotion
+    let motion: SignatureObjectMotion
 
     func body(content: Content) -> some View {
         content.keyframeAnimator(
-            initialValue: FullBleedPhotoMotionValues(),
+            initialValue: BackgroundResponseValues(),
             trigger: trigger
         ) { content, value in
             content
                 .scaleEffect(value.scale)
-                .offset(y: value.verticalOffset)
-                .rotationEffect(.degrees(value.rotation))
-                .rotation3DEffect(
-                    .degrees(value.perspectiveTilt),
-                    axis: (x: 1, y: 0.08, z: 0),
-                    perspective: 0.45
-                )
                 .brightness(value.brightness)
         } keyframes: { _ in
             KeyframeTrack(\.scale) {
-                CubicKeyframe(peakScale, duration: riseDuration)
-                SpringKeyframe(
-                    1,
-                    duration: settleDuration,
-                    spring: .smooth
-                )
-            }
-            KeyframeTrack(\.verticalOffset) {
-                CubicKeyframe(peakOffset, duration: riseDuration)
-                SpringKeyframe(
-                    0,
-                    duration: settleDuration,
-                    spring: .smooth
-                )
-            }
-            KeyframeTrack(\.rotation) {
-                CubicKeyframe(peakRotation, duration: riseDuration)
-                SpringKeyframe(
-                    0,
-                    duration: settleDuration,
-                    spring: .smooth
-                )
-            }
-            KeyframeTrack(\.perspectiveTilt) {
-                CubicKeyframe(peakPerspectiveTilt, duration: riseDuration)
-                SpringKeyframe(
-                    0,
-                    duration: settleDuration,
-                    spring: .smooth
-                )
+                CubicKeyframe(peakScale, duration: MotionTiming.responsive)
+                SpringKeyframe(1, duration: MotionTiming.emphasis, spring: .smooth)
             }
             KeyframeTrack(\.brightness) {
-                CubicKeyframe(peakBrightness, duration: riseDuration)
-                LinearKeyframe(0, duration: settleDuration)
+                CubicKeyframe(peakBrightness, duration: MotionTiming.responsive)
+                LinearKeyframe(0, duration: MotionTiming.emphasis)
             }
         }
     }
 
     private var peakScale: CGFloat {
         switch motion {
+        case .heroFlip: 1.006
+        case .compactFlip: 1.004
+        case .pull: 1.008
+        case .attention: 1.004
         case .none: 1
-        case .attention: 1.012
-        case .heroFlip: 1.065
-        case .compactFlip: 1.032
-        case .pull: 1.085
-        }
-    }
-
-    private var peakOffset: CGFloat {
-        switch motion {
-        case .none, .attention: 0
-        case .heroFlip: -18
-        case .compactFlip: -6
-        case .pull: -24
-        }
-    }
-
-    private var peakRotation: Double {
-        switch motion {
-        case .heroFlip: -0.9
-        case .compactFlip: 0.55
-        default: 0
-        }
-    }
-
-    private var peakPerspectiveTilt: Double {
-        switch motion {
-        case .heroFlip: 5.5
-        case .compactFlip: 2
-        case .pull: 3.5
-        default: 0
         }
     }
 
     private var peakBrightness: Double {
         switch motion {
-        case .none: 0
         case .attention: 0.018
-        case .heroFlip: 0.055
-        case .compactFlip: 0.025
-        case .pull: 0.045
+        case .pull: -0.02
+        default: 0
         }
+    }
+}
+
+private struct BackgroundResponseValues {
+    var scale: CGFloat = 1
+    var brightness: Double = 0
+}
+
+// MARK: - Object layer motion (the steak itself moves, not the photo)
+
+private struct SteakObjectMotionModifier: ViewModifier {
+    let trigger: Int
+    let motion: SignatureObjectMotion
+    /// Per-frame opacity for the pre/post flip swap, nil for plain motion.
+    let midlineOpacity: (@Sendable (Double) -> Double)?
+
+    func body(content: Content) -> some View {
+        content.keyframeAnimator(
+            initialValue: SteakObjectMotionValues(),
+            trigger: trigger
+        ) { content, value in
+            content
+                .scaleEffect(x: value.scaleX, y: value.scaleY)
+                .offset(y: value.verticalOffset)
+                .rotation3DEffect(
+                    .degrees(value.flipAngle),
+                    axis: (x: 1, y: 0, z: 0),
+                    perspective: 0.55
+                )
+                .opacity(midlineOpacity?(value.flipProgress) ?? value.opacity)
+        } keyframes: { _ in
+            KeyframeTrack(\.scaleY) {
+                CubicKeyframe(midScaleY, duration: riseDuration)
+                SpringKeyframe(1, duration: settleDuration, spring: .smooth)
+            }
+            KeyframeTrack(\.scaleX) {
+                CubicKeyframe(midScaleX, duration: riseDuration)
+                SpringKeyframe(1, duration: settleDuration, spring: .smooth)
+            }
+            KeyframeTrack(\.verticalOffset) {
+                CubicKeyframe(peakLift, duration: riseDuration)
+                if exitsScene {
+                    LinearKeyframe(exitLift, duration: exitDuration)
+                } else {
+                    SpringKeyframe(0, duration: settleDuration, spring: .smooth)
+                }
+            }
+            KeyframeTrack(\.flipAngle) {
+                CubicKeyframe(flipArc, duration: riseDuration)
+                if spins {
+                    SpringKeyframe(360, duration: settleDuration, spring: .smooth)
+                } else {
+                    LinearKeyframe(flipArc, duration: settleDuration)
+                }
+            }
+            KeyframeTrack(\.flipProgress) {
+                LinearKeyframe(1, duration: riseDuration + settleDuration)
+            }
+            KeyframeTrack(\.opacity) {
+                if exitsScene {
+                    CubicKeyframe(1, duration: riseDuration)
+                    LinearKeyframe(0, duration: exitDuration)
+                } else {
+                    LinearKeyframe(1, duration: riseDuration + settleDuration)
+                }
+            }
+        }
+    }
+
+    private var spins: Bool {
+        motion == .heroFlip || motion == .compactFlip
+    }
+
+    private var exitsScene: Bool {
+        motion == .pull
     }
 
     private var riseDuration: TimeInterval {
@@ -347,7 +494,7 @@ private struct FullBleedPhotoMotionModifier: ViewModifier {
         case .attention: MotionTiming.responsive
         case .heroFlip: MotionTiming.flipLift + MotionTiming.flipRotate
         case .compactFlip: MotionTiming.compactFlipOut
-        case .pull: MotionTiming.takeOutLift + MotionTiming.takeOutHold
+        case .pull: MotionTiming.takeOutLift
         }
     }
 
@@ -356,15 +503,60 @@ private struct FullBleedPhotoMotionModifier: ViewModifier {
         case .none, .attention: MotionTiming.responsive
         case .heroFlip: MotionTiming.flipLand + MotionTiming.flipSettle
         case .compactFlip: MotionTiming.compactFlipLand
-        case .pull: MotionTiming.takeOutSettle
+        case .pull: MotionTiming.takeOutHold
+        }
+    }
+
+    private var exitDuration: TimeInterval {
+        MotionTiming.takeOutSettle
+    }
+
+    private var peakLift: CGFloat {
+        switch motion {
+        case .attention: -4
+        case .heroFlip: -14
+        case .compactFlip: -7
+        case .pull: -22
+        case .none: 0
+        }
+    }
+
+    private var exitLift: CGFloat {
+        -170
+    }
+
+    private var midScaleY: CGFloat {
+        switch motion {
+        case .heroFlip: 0.84
+        case .compactFlip: 0.9
+        case .pull: 1
+        case .attention, .none: 1
+        }
+    }
+
+    private var midScaleX: CGFloat {
+        switch motion {
+        case .heroFlip: 1.05
+        case .compactFlip: 1.03
+        case .pull: 1.04
+        case .attention, .none: 1
+        }
+    }
+
+    private var flipArc: Double {
+        switch motion {
+        case .heroFlip: 165
+        case .compactFlip: 170
+        default: 0
         }
     }
 }
 
-private struct FullBleedPhotoMotionValues {
-    var scale: CGFloat = 1
+private struct SteakObjectMotionValues {
+    var scaleX: CGFloat = 1
+    var scaleY: CGFloat = 1
     var verticalOffset: CGFloat = 0
-    var rotation: Double = 0
-    var perspectiveTilt: Double = 0
-    var brightness: Double = 0
+    var flipAngle: Double = 0
+    var flipProgress: Double = 0
+    var opacity: Double = 1
 }

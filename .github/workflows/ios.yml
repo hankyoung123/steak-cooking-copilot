@@ -1,0 +1,32 @@
+name: iOS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    # macOS 15 GitHub-hosted runners ship Xcode 16.x, which supports the
+    # project's object version (Xcode 16.3+), Swift 6 and the iOS 18 SDK.
+    # The project's LastSwiftUpdateCheck marker (Xcode 26.x) is metadata
+    # only and does not require a newer Xcode. This assumption is
+    # documented in docs/asset-audit.md.
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          xcrun simctl list runtimes
+
+      - name: Build and test
+        run: |
+          xcodebuild test \
+            -project SteakCopilot.xcodeproj \
+            -scheme SteakCopilot \
+            -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+            CODE_SIGNING_ALLOWED=NO

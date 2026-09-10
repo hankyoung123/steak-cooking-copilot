@@ -40,20 +40,6 @@ enum SteakCut: String, Codable, CaseIterable, Identifiable, Sendable {
     }
 }
 
-enum StartingCondition: String, Codable, CaseIterable, Identifiable, Sendable {
-    case fridge
-    case room
-
-    var id: Self { self }
-
-    var title: String {
-        switch self {
-        case .fridge: String(localized: "Fridge cold")
-        case .room: String(localized: "Room temperature")
-        }
-    }
-}
-
 enum ThicknessBucket: String, Codable, Hashable, Sendable {
     case thin
     case standard
@@ -80,7 +66,6 @@ struct SteakConfiguration: Codable, Equatable, Sendable {
 
 struct SteakSetupPreferences: Codable, Equatable, Sendable {
     var configuration: SteakConfiguration
-    var startingCondition: StartingCondition
 
     static func recommended(for cut: SteakCut) -> SteakSetupPreferences {
         SteakSetupPreferences(
@@ -88,8 +73,7 @@ struct SteakSetupPreferences: Codable, Equatable, Sendable {
                 cut: cut,
                 thicknessCM: cut == .tenderloin ? 4 : 3,
                 doneness: .mediumRare
-            ),
-            startingCondition: .fridge
+            )
         )
     }
 }
