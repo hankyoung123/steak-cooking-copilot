@@ -304,18 +304,16 @@ final class CookingSessionController {
     /// override) without disturbing the running session: the absolute
     /// `nextActionAt` is preserved, so only future boundaries are affected.
     ///
-    /// Motion, sound and Live Activity read the store directly, so they pick
-    /// the change up on their next use; the engine is rebuilt here because it
-    /// is a value type.
-    func applyTuning(_ newTuning: AppTuning) {
-        tuningStore.apply(newTuning)
+    /// Validated: an unusable tuning is rejected and the previously effective
+    /// one stays in force, so the engine never runs on an invalid
+    /// configuration. Motion, sound and Live Activity read the store directly
+    /// and pick a change up on their next use; the engine is rebuilt here
+    /// because it is a value type.
+    @discardableResult
+    func applyValidatedTuning(_ newTuning: AppTuning) -> TuningApplyOutcome {
+        let outcome = tuningStore.applyValidated(newTuning)
         rebuild()
-    }
-
-    /// Applies and validates a tuning, rejecting unusable values.
-    func applyValidatedTuning(_ newTuning: AppTuning) throws {
-        try tuningStore.applyValidated(newTuning)
-        rebuild()
+        return outcome
     }
 
     /// Re-reads the effective tuning after an out-of-band change (for example

@@ -1,166 +1,331 @@
-# Production cooking parameters — the ONLY source of truth for tunable values.
+# 生产环境烹饪参数 —— 所有可调参数的「唯一真实来源」(single source of truth)。
 #
-# These values are compiled into the app at build time by
+# 这些数值在构建期由脚本编译进 App：
 #   Scripts/generate_tuning.py
-# which emits SteakCopilot/Generated/ProductionTuning.generated.swift.
+# 生成产物为：
+#   SteakCopilot/Generated/ProductionTuning.generated.swift
 #
-# The YAML is validated at generation time: missing keys, wrong types and
-# out-of-range values fail the build with a clear error. Do not add tuning
-# defaults in Swift — a parameter exists here or not at all.
+# 【重要】不要在 Swift 代码里再写一份默认值。
+#   某个参数要么在这里定义，要么就不存在。
+#   生成的 Swift 文件是构建产物，不是第二份需要人工维护的配置。
 #
-# Business invariants (manual temperature priority, no-thermometer never
-# fabricating a temperature, boundary priority, session identity, state
-# transitions, Reduce Motion, accessibility identifiers) are deliberately NOT
-# configurable and stay in code.
+# 【生成期校验】缺字段、多字段（拼写错误）、类型不对、数值越界，
+#   都会让构建直接失败并给出明确报错，不会静默使用错误数值。
+#
+# 【修改流程】
+#   1) 改本文件
+#   2) 运行： python3 Scripts/generate_tuning.py
+#   3) 运行： python3 Scripts/generate_tuning.py --check   # 确认生成物与 YAML 一致
+#   4) 运行： make check-tuning && make test-unit
+#   CI 会在 xcodebuild 之前执行 --self-test 与 --check，
+#   若生成的 Swift 与 YAML 不一致（或未提交），CI 直接失败。
+#
+# 【本文件不负责的内容：业务正确性规则】
+#   以下规则是「正确性约束」，不是「可调参数」，因此刻意写死在代码里，不在这里配置：
+#     - 手动温度读数优先于时间估算
+#     - 没有温度计时绝不伪造温度值
+#     - 边界优先级：estimatedPull > lateStage > flip
+#     - nextActionAt 与 nextAction 必须一致
+#     - sessionID 会话身份规则
+#     - 合法状态机转换
+#     - 动画完成不得推进 CookingPhase
+#     - Reduce Motion（减弱动态效果）
+#     - accessibility identifiers（无障碍标识符）
+#
+# 【字段含义速查】
+#   时长单位：秒（除非另有说明）    温度单位：摄氏度 °C    厚度单位：厘米 cm
+#   所有「比例」类字段取值均为 0~1 之间的小数（如 0.65 表示 65%）。
 
 version: 1
 
+# ============================================================================
+# cooking —— 烹饪时长与频繁翻面的核心节奏参数
+# 决定「总时长估算」、「多久翻一次面」、「何时进入后段（黄油/脂肪边）」
+# ============================================================================
 cooking:
-  # Estimated cooking budget before calibration, in seconds.
+  # 【基准烹饪总时长】估算公式的基数，单位秒。
+  # 实际时长 = 本值 × 厚度系数 × 熟度系数 + 部位偏移 + 学习到的校准修正。
+  # 调大 → 整体煎得更久；调小 → 整体更快出锅。
   baseCookingBudget: 300
-  # Thickness at which the thickness factor is 1.0, in centimetres.
+
+  # 【厚度基准】厚度系数 = 实际厚度 ÷ 本值，单位 cm。
+  # 3cm 的牛排在此基准为 2.5cm 时，系数为 1.2，即比基准时长多 20%。
   referenceThickness: 2.5
-  # Floors the thickness factor so very thin cuts still get a sane budget.
+
+  # 【厚度系数下限】防止过薄的牛排算出过短的时长，导致外焦里生。
+  # 例如 1cm 的薄片若仅按比例会得到 0.4 系数，此处保底为 0.72。
   minThicknessFactor: 0.72
-  # Absolute clamp for the estimated budget, in seconds.
+
+  # 【总时长下限/上限】估算时长的绝对夹取区间，单位秒。
+  # 下限 180s = 最短不低于 3 分钟；上限 720s = 最长不超过 12 分钟。
+  # 注意：min 必须小于 max，否则生成期报错。
   minCookingBudget: 180
   maxCookingBudget: 720
-  # Frequent-flip cadence by thickness, in seconds.
+
+  # 【频繁翻面间隔】按厚度分档，单位秒。
+  # 本项目默认策略是「频繁翻面」（frequent flipping），而非一面煎到底。
+  # thin=薄切翻得最勤，thick=厚切翻得最慢。
+  # 要求：三者必须非递减（薄 ≤ 标准 ≤ 厚），否则生成期报错。
   flipIntervalThin: 25
   flipIntervalStandard: 30
   flipIntervalThick: 40
-  # Thickness above which the standard flip cadence no longer applies.
+
+  # 【标准翻面档的厚度上限】超过此厚度（cm）即改用 thick 档的翻面间隔。
+  # 与下面的 thinMaxThickness 共同把厚度切成 薄/标准/厚 三档。
+  # 要求：必须大于 thinMaxThickness。
   flipIntervalStandardMaxThickness: 4
-  # Never schedule a flip sooner than this, in seconds.
+
+  # 【翻面间隔下限】任何情况下都不安排比这更早的翻面，单位秒。
+  # 主要防止 timeScale（测试用时间缩放）把间隔压到不现实的程度。
   minFlipInterval: 0.3
-  # Estimated budget is never shorter than this many flip intervals.
+
+  # 【最短时长 = 几个翻面间隔】防止总时长短于 1~2 次翻面，
+  # 保证至少能完成若干次翻面动作。整数，最小 1。
   minBudgetInFlipIntervals: 3
-  # Thickness bucket boundaries, in centimetres.
+
+  # 【厚度分档边界】单位 cm。
+  #   厚度 < thinMaxThickness            → 薄档(thin)
+  #   厚度 ≤ standardMaxThickness        → 标准档(standard)
+  #   更厚                                → 厚档(thick)
+  # 要求：thinMaxThickness < standardMaxThickness，
+  #       且 thinMaxThickness < flipIntervalStandardMaxThickness。
   thinMaxThickness: 2.5
   standardMaxThickness: 3.5
-  # Late stage (fat cap / butter) begins at this fraction of the budget.
+
+  # 【后段开始时间比例 / 最小间隔数】
+  # 后段 = 停止频繁翻面、开始煎脂肪边或加黄油的时间点。
+  # 时间点 = max(翻面间隔 × lateStageMinFlipIntervals,
+  #              总时长 × lateStageRatio + 外壳偏好修正 searBias)
+  # lateStageRatio 调大 → 翻面阶段更久、后段更晚开始。
+  # 取值范围 (0, 1)，即不能早于开局、也不能晚于结束。
+  # 这里正是「焦壳反馈」真正影响烹饪的地方：
+  #   用户反馈「焦壳太浅」→ searBias 为正 → 后段更晚 → 多煎一会儿。
   lateStageRatio: 0.65
-  # The late stage is never earlier than this many flip intervals.
   lateStageMinFlipIntervals: 2
-  # Baste length as a fraction of the raw budget, clamped below, in seconds.
+
+  # 【淋黄油（baste）时长】= 总时长 × basteRatio，再夹取到 min/max 之间，单位秒。
+  # basteRatio 取值范围 (0, 1]。
   basteRatio: 0.16
   minBasteDuration: 0.8
   maxBasteDuration: 75
-  # Finishing estimate leans slightly on how far the budget deviated from base.
+
+  # 【收尾时长估算的预算修正】把「实际预算与基准的差」按比例折算进收尾估算。
+  # 修正量 = clamp((实际预算 - baseCookingBudget) × budgetFinishAdjustmentRatio,
+  #               minSeconds, maxSeconds)，单位秒。
+  # 取值范围 [0, 1]；min 必须小于 max。
   budgetFinishAdjustmentRatio: 0.08
   budgetFinishAdjustmentMinSeconds: -15
   budgetFinishAdjustmentMaxSeconds: 30
-  # A fat cap always gets at least this long, in seconds.
+
+  # 【脂肪边最短煎制时长】单位秒，防止算出的脂肪边时长过短而没有效果。
   minFatCapDuration: 0.5
 
+# ============================================================================
+# cuts —— 按牛排部位区分的行为参数（部位差异是产品规则的一部分）
+# ============================================================================
 cuts:
+  # 肉眼牛排 Ribeye：油脂丰富、通常不需要单独煎脂肪边。
   ribeye:
+    # 【时长偏移】在这个部位的最终时长上直接加减，单位秒。
+    # 正数 = 该部位需要更久（更厚实/更耐煎）。
     cookingBudgetOffset: 12
+    # 【是否需要煎脂肪边】true 时必须同时给出 fatCapDuration；
+    # false 时 fatCapDuration 必须为 null（生成期强制检查）。
     needsFatCap: false
+    # 【脂肪边时长】仅在 needsFatCap 为 true 时有效，单位秒；否则必须为 null。
     fatCapDuration: null
+    # 【推荐厚度】首次进入设置页时给该部位预设的厚度，单位 cm，范围 [0.5, 10]。
     recommendedThickness: 3
+
+  # 纽约客 New York Strip：一侧有厚脂肪边，需要立起来煎。
   strip:
     cookingBudgetOffset: 0
+    # 这是三个部位中唯一需要煎脂肪边的。
     needsFatCap: true
     fatCapDuration: 40
     recommendedThickness: 3
+
+  # 菲力 Filet：最嫩最瘦，需要的时间更短、通常更厚。
   tenderloin:
     cookingBudgetOffset: -12
     needsFatCap: false
     fatCapDuration: null
     recommendedThickness: 4
 
+# ============================================================================
+# doneness —— 按熟度区分的目标温度、出锅温度与时长系数
+# 【产品概念区分】pull（出锅温度）与 target（目标温度）是两个不同概念：
+#   pull   = 离开锅时的中心温度，之后靠余温继续升温；
+#   target = 最终想达到的中心温度。
+#   因此必须满足 pullTemperatureC < targetTemperatureC（生成期强制检查）。
+# 并且 targetTemperatureC 必须随熟度单调递增（越熟温度越高），否则生成期报错。
+# ============================================================================
 doneness:
+  # 一分熟
   rare:
     targetTemperatureC: 52
     pullTemperatureC: 49
+    # 【时长系数】乘在基准时长上：1.0 表示与基准相同。
+    # 值越大需要的时间越长。取值范围 (0, 3]。
     cookingBudgetFactor: 0.88
+  # 三分熟（默认）
   mediumRare:
     targetTemperatureC: 54
     pullTemperatureC: 52
     cookingBudgetFactor: 1.0
+  # 五分熟
   medium:
     targetTemperatureC: 60
     pullTemperatureC: 57
     cookingBudgetFactor: 1.14
+  # 七分熟
   mediumWell:
     targetTemperatureC: 65
     pullTemperatureC: 62
     cookingBudgetFactor: 1.28
+  # 全熟
   wellDone:
     targetTemperatureC: 71
     pullTemperatureC: 68
     cookingBudgetFactor: 1.42
 
+# ============================================================================
+# calibration —— 用户反馈的「学习」规则：反馈如何转化为下次的修正量
+# 校准按 (部位 × 厚度档 × 熟度) 分别记录，互不干扰。
+# 两条反馈各自只影响一个维度，这是产品不变量：
+#   熟度反馈 → 影响 cookingTimeAdjustment（时长）
+#   焦壳反馈 → 影响 searBias（煎制/后段时间）
+# ============================================================================
 calibration:
-  # Seconds of budget added/removed per step of doneness feedback.
+  # 【熟度反馈每档步长】用户每反馈一档（如「太生」），时长修正加减多少秒。
+  # 步长越大，用户一次反馈带来的改变越明显。
   donenessStepSeconds: 12
-  # Seconds of sear bias added/removed per step of crust feedback.
+
+  # 【焦壳反馈每档步长】用户反馈「焦壳太浅/太深」时，searBias 加减多少秒。
+  # 该值直接改变后段（黄油/脂肪边）的开始时间。
   crustStepSeconds: 8
-  # Learned adjustments are clamped to these magnitudes, in seconds.
+
+  # 【时长修正的夹取上限】累计学习量不得超过此绝对值，单位秒。
+  # 防止多次反馈累积出离谱的时长。必须大于 0。
   maxCookingAdjustment: 60
+
+  # 【焦壳偏好修正的夹取上限】同上，作用于 searBias，单位秒。
   maxSearAdjustment: 24
 
+# ============================================================================
+# finishing —— 收尾（静置/余温）阶段的估算参数
+# 【诚实性原则】收尾是「估算」而非「实测」：
+#   有温度计读数时只展示最后读数 + 余温区间（不合成假温度）；
+#   没有读数时只给分钟区间。绝不绘制假的精确温度曲线。
+# ============================================================================
 finishing:
-  # lowerBound = (base + thickness * perCM + donenessAdjustment + budgetAdjustment) * timeScale
+  # 【收尾估算下限的基准】单位秒。
+  # 下限 = (baseAdjustmentSeconds
+  #        + 厚度 × thicknessAdjustmentPerCM
+  #        + 该熟度的调整值
+  #        + 预算修正) 再乘时间缩放
   baseAdjustmentSeconds: 65
+
+  # 【每厘米厚度增加的收尾时间】单位秒。厚牛排需要更久让余温传到中心。
   thicknessAdjustmentPerCM: 15
+
+  # 【按熟度的收尾调整】单位秒，对应各熟度额外加/减的时间。
+  # 例如五分熟中心更厚实，需要更久，因此为 +15。
   donenessAdjustment:
     rare: 0
     mediumRare: 0
     medium: 15
     mediumWell: 0
     wellDone: 0
-  # upperBound = lowerBound + spread.
+
+  # 【估算区间的宽度】上限 = 下限 + 本值，单位秒。
+  # 用户看到的是「下限 ~ 上限」这样一个诚实的区间，而不是一个精确秒数。
   spreadSeconds: 105
-  # The estimate never collapses below these, in seconds.
+
+  # 【下限/下限的保底值】单位秒，防止估算塌缩成 0 或负数。
+  # 要求：minLowerBoundSeconds < minUpperBoundSeconds。
   minLowerBoundSeconds: 1
   minUpperBoundSeconds: 2
-  # Estimated carryover rise shown while finishing, in degrees Celsius.
+
+  # 【余温升温区间】收尾期间展示的「预计还会升多少度」，单位 °C。
+  # 这是估算区间，不是测量值。要求 min ≤ max。
   carryoverMinC: 1
   carryoverMaxC: 3
-  # Manual-reading adjustment: seconds added per degree still to climb.
+
+  # 【手动读数对估算的调整】每还差 1°C 需要额外多少秒，单位秒/度。
+  # 调整量 = min(maxManualAdjustmentSeconds, 还差度数 × remainingRiseSecondsPerDegree)
   remainingRiseSecondsPerDegree: 6
   maxManualAdjustmentSeconds: 30
-  # Idle guidance shown before a session starts, in seconds.
+
+  # 【空闲估算区间】尚未开始烹饪时（setup 阶段）展示的参考区间，单位秒。
+  # 要求 min < max，且均大于 0。
   idleEstimateMinSeconds: 120
   idleEstimateMaxSeconds: 225
 
+# ============================================================================
+# notifications —— 通知 / 实时活动（Live Activity）的阈值与延迟
+# ============================================================================
 notifications:
-  # Guidance turns into a FLIP prompt this many seconds before the boundary.
+  # 【提前提醒阈值】距离动作还有多少秒时开始提示「即将翻面」，单位秒。
+  # 取值范围 (0, 60]。
   approachingThresholdSeconds: 5
-  # Live Activity marks the countdown urgent at this remaining time.
+
+  # 【紧急阈值】剩余时间小于等于此值时，实时活动标记为紧急样式，单位秒。
+  # 取值范围 (0, 60]。
   urgentThresholdSeconds: 5
-  # Countdown haptics: light at this many seconds left, heavy below it.
+
+  # 【触感提醒时点】剩余秒数达到 light 时轻触感，达到 heavy 时重触感。
+  # 要求：hapticHeavySeconds < hapticLightSeconds（越接近动作越重）。
   hapticLightSeconds: 3
   hapticHeavySeconds: 2
-  # Live Activity content is considered stale this long after the boundary.
+
+  # 【实时活动的过期时间】在动作时间点之后多少秒，内容视为过期，单位秒。
   staleDelaySeconds: 30
-  # How long the final activity lingers, in seconds.
+
+  # 【结束后的消失延迟】单位秒。
+  # finished（正常完成）→ 停留久一点，让用户看到结果；
+  # cancelled（取消/重新开始）→ 尽快消失，且文案绝不显示 READY。
   finishedDismissalSeconds: 60
   cancelledDismissalSeconds: 4
 
+# ============================================================================
+# motion —— 动效时长与回弹（全部由 MotionDirector / 视图读取）
+# 说明：这里的数值只控制「动画表现」。动画完成永远不会推进 CookingPhase，
+#       这是产品不变量，不接受配置。
+# 时长单位：秒，允许为 0（表示不使用该段动画）。回弹类取值 [0, 1]。
+# ============================================================================
 motion:
-  subtle: 0.12
-  responsive: 0.22
-  emphasis: 0.38
-  action: 0.55
-  cinematic: 0.95
-  stageTransition: 0.7
-  flipLift: 0.10
-  flipRotate: 0.15
-  flipLand: 0.23
-  flipSettle: 0.07
-  compactFlipOut: 0.16
-  compactFlipLand: 0.22
-  takeOutLift: 0.18
-  takeOutHold: 0.20
-  takeOutSettle: 0.24
+  # 基础时长档位
+  subtle: 0.12            # 极轻微反馈（如按压缩放）
+  responsive: 0.22        # 常规响应（如进度条、轻微提示）
+  emphasis: 0.38          # 强调（如轻微注意力提示）
+  action: 0.55            # 主要动作（如翻面）
+  cinematic: 0.95         # 电影感转场（如完成时刻）
+  stageTransition: 0.7    # 阶段之间的整屏切换
+
+  # 翻面动作分解（首次翻面为 hero，后续为 compact）
+  flipLift: 0.10          # 抬起
+  flipRotate: 0.15        # 翻转
+  flipLand: 0.23          # 落回
+  flipSettle: 0.07        # 稳定
+  compactFlipOut: 0.16    # 紧凑翻面：起势
+  compactFlipLand: 0.22   # 紧凑翻面：落回
+
+  # 出锅（TAKE IT OUT）动作分解：要果断，不做俏皮的弹跳
+  takeOutLift: 0.18       # 抬起
+  takeOutHold: 0.20       # 保持
+  takeOutSettle: 0.24     # 收束
+
+  # 完成（READY）揭示延迟：从高温氛围过渡到平静的成功感
   readyRevealDelay: 0.26
+
+  # 回弹强度（越大越弹，0 表示不弹）
   emphasisBounce: 0.16
   actionBounce: 0.22
-  stageSceneCrossfade: 0.58
-  sessionPhaseChange: 0.5
-  progressRailSpring: 0.52
-  progressRailBounce: 0.12
-  resultAppear: 0.65
+
+  # 具体界面元素
+  stageSceneCrossfade: 0.58   # 烹饪舞台素材交叉淡入
+  sessionPhaseChange: 0.5     # 会话内阶段变化
+  progressRailSpring: 0.52    # 进度轨弹簧时长
+  progressRailBounce: 0.12    # 进度轨弹簧回弹
+  resultAppear: 0.65          # 结果页入场

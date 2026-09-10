@@ -24,6 +24,27 @@ final class StaticTuningProvider: TuningProviding {
     var effective: AppTuning { tuning }
 }
 
+/// Result of attempting to apply an edited tuning.
+///
+/// A rejected apply is an expected outcome while a developer is mid-edit (for
+/// example raising `pullTemperatureC` before lowering `targetTemperatureC`),
+/// so it is a value rather than an error: the previous effective tuning stays
+/// in force and the issues are surfaced in the UI.
+enum TuningApplyOutcome: Equatable {
+    case applied
+    case rejected([String])
+
+    var isRejected: Bool {
+        if case .rejected = self { return true }
+        return false
+    }
+
+    var issues: [String] {
+        if case let .rejected(issues) = self { return issues }
+        return []
+    }
+}
+
 /// Reasons an imported override can be rejected.
 enum TuningImportError: LocalizedError, Equatable {
     case malformedJSON(String)
@@ -121,9 +142,47 @@ final class TuningStore: TuningProviding {
 
     // MARK: - Mutation
 
-    /// Applies a tuning in memory (does not persist). The caller is expected to
-    /// have produced `tuning` from this store's production defaults.
-    func apply(_ tuning: AppTuning) {
+    /// Validates then applies a tuning in memory (does not persist).
+    ///
+    /// Every write into the store goes through here, so an unusable tuning can
+    /// never become the effective one. On rejection nothing changes and the
+    /// issues are returned for the caller to display.
+    @discardableResult
+    func applyValidated(_ tuning: AppTuning) -> TuningApplyOutcome {
+        let issues = AppTuningValidator.issues(in: tuning)
+        guard issues.isEmpty else {
+            return .rejected(issues)
+        }
+        set(tuning)
+        return .applied
+    }
+
+    /// Validates, applies and persists in one step. Throws on rejection so a
+    /// caller cannot accidentally store an invalid configuration.
+    func applyValidatedAndSave(_ tuning: AppTuning) throws {
+        let issues = AppTuningValidator.issues(in: tuning)
+        guard issues.isEmpty else {
+            throw TuningImportError.validation(issues)
+        }
+        set(tuning)
+        save()
+    }
+
+    /// Persists the current override.
+    func save() {
+        guard let override, !override.isEmpty else {
+            defaults.removeObject(forKey: Key.override)
+            isPersisted = false
+            return
+        }
+        guard let data = try? encoder.encode(override) else { return }
+        defaults.set(data, forKey: Key.override)
+        isPersisted = true
+    }
+
+    /// The one place `effective` is written. Private because callers must go
+    /// through a validating entry point.
+    private func set(_ tuning: AppTuning) {
         guard let patch = try? TuningOverride.make(
             production: production,
             effective: tuning
@@ -140,30 +199,6 @@ final class TuningStore: TuningProviding {
         // Editing a saved override makes it unsaved again; only a patch that
         // matches what is on disk counts as persisted.
         isPersisted = persistedOverride == patch
-    }
-
-    /// Applies and validates a tuning, rejecting it when it is not usable.
-    func applyValidated(_ tuning: AppTuning) throws {
-        try AppTuningValidator.validate(tuning)
-        apply(tuning)
-    }
-
-    /// Persists the current override.
-    func save() {
-        guard let override, !override.isEmpty else {
-            defaults.removeObject(forKey: Key.override)
-            isPersisted = false
-            return
-        }
-        guard let data = try? encoder.encode(override) else { return }
-        defaults.set(data, forKey: Key.override)
-        isPersisted = true
-    }
-
-    /// Applies and persists in one step.
-    func applyAndSave(_ tuning: AppTuning) {
-        apply(tuning)
-        save()
     }
 
     /// Drops the override and returns to the generated production defaults.
@@ -194,14 +229,14 @@ final class TuningStore: TuningProviding {
     func importJSON(_ data: Data) throws {
         let candidate = try Self.decodeCandidate(data, production: production)
         let merged = try candidate.applied(to: production)
-        // One error type for every rejection reason, so callers can render the
-        // reason without knowing about the validator's internals.
-        let issues = AppTuningValidator.issues(in: merged)
-        guard issues.isEmpty else {
-            throw TuningImportError.validation(issues)
+        // Same validated write path as every other mutation, so an imported
+        // document cannot bypass the checks.
+        let outcome = applyValidated(merged)
+        guard !outcome.isRejected else {
+            throw TuningImportError.validation(outcome.issues)
         }
+        // Keep the imported patch shape rather than re-deriving it.
         override = candidate
-        effective = merged
         isPersisted = false
     }
 

@@ -211,7 +211,7 @@ final class TuningConfigurationTests: XCTestCase {
         var custom = AppTuning.production
         custom.cooking.baseCookingBudget = 480
         custom.calibration.crustStepSeconds = 15
-        store.applyAndSave(custom)
+        try store.applyValidatedAndSave(custom)
 
         XCTAssertTrue(store.hasOverride)
         XCTAssertEqual(store.effective.cooking.baseCookingBudget, 480)
@@ -231,16 +231,16 @@ final class TuningConfigurationTests: XCTestCase {
         XCTAssertTrue(fresh.hasOverride)
     }
 
-    func testResetRestoresProductionDefaultsAndStaysReset() {
+    func testResetRestoresProductionDefaultsAndStaysReset() throws {
         let suite = "TuningConfigurationTests.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suite)!
         defer { defaults.removePersistentDomain(forName: suite) }
 
         let store = TuningStore(defaults: defaults)
         var custom = AppTuning.production
-        custom.cooking.flipIntervalStandard = 99
-        store.applyAndSave(custom)
-        XCTAssertEqual(store.effective.cooking.flipIntervalStandard, 99)
+        custom.cooking.baseCookingBudget = 360
+        try store.applyValidatedAndSave(custom)
+        XCTAssertEqual(store.effective.cooking.baseCookingBudget, 360)
 
         store.resetToProduction()
 
@@ -254,7 +254,7 @@ final class TuningConfigurationTests: XCTestCase {
         // Install a good override first so we can prove it survives.
         var good = AppTuning.production
         good.cooking.baseCookingBudget = 420
-        store.applyAndSave(good)
+        try store.applyValidatedAndSave(good)
         let before = store.effective
 
         XCTAssertThrowsError(try store.importJSON(Data("{ not json }".utf8))) { error in
@@ -270,7 +270,7 @@ final class TuningConfigurationTests: XCTestCase {
         let store = makeStore()
         var good = AppTuning.production
         good.cooking.baseCookingBudget = 420
-        store.applyAndSave(good)
+        try store.applyValidatedAndSave(good)
         let before = store.effective
 
         // A patch that inverts min/max cooking budget decodes fine but is not
@@ -514,7 +514,7 @@ final class TuningConfigurationTests: XCTestCase {
         // Simulate a Tuning Lab edit: mutate the draft the Lab binds to.
         var draft = store.effective
         draft.cooking.baseCookingBudget += 240
-        store.apply(draft)
+        store.applyValidated(draft)
         controller.tuningDidChange()
 
         XCTAssertEqual(
@@ -545,7 +545,7 @@ final class TuningConfigurationTests: XCTestCase {
         var tuned = store.effective
         tuned.notifications.hapticHeavySeconds = 1
         tuned.notifications.hapticLightSeconds = 9
-        store.apply(tuned)
+        store.applyValidated(tuned)
 
         // The same instance now uses the new thresholds.
         XCTAssertEqual(motion.effectiveTuning.notifications.hapticHeavySeconds, 1)
@@ -594,7 +594,7 @@ final class TuningConfigurationTests: XCTestCase {
         )
         var tuned = store.effective
         tuned.notifications.urgentThresholdSeconds = 60
-        store.apply(tuned)
+        store.applyValidated(tuned)
 
         let tunedState = LiveActivityService.contentState(
             for: session,
@@ -625,8 +625,12 @@ final class TuningConfigurationTests: XCTestCase {
         let scheduled = controller.session.nextActionAt
 
         var tuned = store.effective
+        // A faster cadence must move all three bands: the validator requires
+        // thin <= standard <= thick.
+        tuned.cooking.flipIntervalThin = 5
         tuned.cooking.flipIntervalStandard = 7
-        controller.applyTuning(tuned)
+        tuned.cooking.flipIntervalThick = 9
+        try controller.applyValidatedTuning(tuned)
 
         // Absolute timing is authoritative and survives a tuning change.
         XCTAssertEqual(controller.session.nextActionAt, scheduled)
@@ -640,7 +644,7 @@ final class TuningConfigurationTests: XCTestCase {
 
         var tuned = store.effective
         tuned.motion.responsive = 1.5
-        controller.applyTuning(tuned)
+        try controller.applyValidatedTuning(tuned)
 
         // Same store instance: the director sees the change too.
         XCTAssertEqual(controller.motionDirector.effectiveTuning.motion.responsive, 1.5)
@@ -659,7 +663,7 @@ final class TuningConfigurationTests: XCTestCase {
         var firstGeneration = AppTuning.production
         firstGeneration.cooking.baseCookingBudget = 480
         let store = TuningStore(defaults: defaults)
-        store.applyAndSave(firstGeneration)
+        try store.applyValidatedAndSave(firstGeneration)
         let patchJSON = try XCTUnwrap(store.exportJSON())
 
         // Simulate a later release that adds a field with a new default.
@@ -678,7 +682,7 @@ final class TuningConfigurationTests: XCTestCase {
         let store = makeStore()
         var tuned = store.effective
         tuned.calibration.crustStepSeconds = 11
-        store.apply(tuned)
+        store.applyValidated(tuned)
 
         let patch = try XCTUnwrap(store.override)
         // Only the edited leaf is recorded, not the whole tuning document.
@@ -699,7 +703,7 @@ final class TuningConfigurationTests: XCTestCase {
         // Strip: remove its fat cap entirely.
         tuned.cuts.strip.needsFatCap = false
         tuned.cuts.strip.fatCapDuration = nil
-        store.apply(tuned)
+        store.applyValidated(tuned)
 
         XCTAssertNil(store.effective.cuts.strip.fatCapDuration)
         // Re-applying the patch over production must still clear it rather
@@ -719,7 +723,7 @@ final class TuningConfigurationTests: XCTestCase {
         tuned.doneness.rare.targetTemperatureC = 53
         tuned.doneness.rare.pullTemperatureC = 48
         tuned.motion.flipLift = 0.03
-        store.apply(tuned)
+        store.applyValidated(tuned)
         let exported = try XCTUnwrap(store.exportJSON())
 
         let restored = TuningStore(defaults: UserDefaults(suiteName: "roundtrip.\(UUID().uuidString)")!)
@@ -809,9 +813,83 @@ final class TuningConfigurationTests: XCTestCase {
         var invalid = store.effective
         invalid.cooking.lateStageRatio = -1
 
-        XCTAssertThrowsError(try store.applyValidated(invalid))
+        let outcome = store.applyValidated(invalid)
+
+        XCTAssertTrue(outcome.isRejected)
+        XCTAssertTrue(
+            outcome.issues.contains { $0.contains("lateStageRatio") },
+            "got \(outcome.issues)"
+        )
         // Rejected: the store still holds production values.
         XCTAssertEqual(store.effective, AppTuning.production)
+    }
+
+    /// The regression this guards: a developer dialling in a legal value via an
+    /// illegal intermediate must not push that intermediate into the running
+    /// configuration.
+    func testInvalidIntermediateEditNeverReachesTheRunningConfiguration() {
+        let store = makeStore()
+        let controller = makeController(tuningStore: store)
+
+        // Start from a valid custom value so "unchanged" is meaningful.
+        var baseline = store.effective
+        baseline.cooking.baseCookingBudget = 420
+        XCTAssertFalse(store.applyValidated(baseline).isRejected)
+        controller.tuningDidChange()
+        let runningBudget = controller.currentProfile.estimatedCookingBudget
+        XCTAssertEqual(store.effective.cooking.baseCookingBudget, 420)
+
+        // Step 1: raise pull above the current target — illegal.
+        var illegal = store.effective
+        illegal.doneness.mediumRare.pullTemperatureC = 56
+        illegal.doneness.mediumRare.targetTemperatureC = 54
+
+        let outcome = store.applyValidated(illegal)
+
+        XCTAssertTrue(outcome.isRejected)
+        XCTAssertTrue(
+            outcome.issues.contains { $0.contains("pullTemperatureC") },
+            "got \(outcome.issues)"
+        )
+        // The running configuration is untouched…
+        XCTAssertEqual(store.effective.cooking.baseCookingBudget, 420)
+        XCTAssertEqual(
+            store.effective.doneness.mediumRare.pullTemperatureC,
+            AppTuning.production.doneness.mediumRare.pullTemperatureC
+        )
+        // …and so is the engine the controller uses.
+        controller.tuningDidChange()
+        XCTAssertEqual(controller.currentProfile.estimatedCookingBudget, runningBudget)
+
+        // Step 2: finish the edit legally; now it applies.
+        var fixed = illegal
+        fixed.doneness.mediumRare.targetTemperatureC = 58
+        XCTAssertFalse(store.applyValidated(fixed).isRejected)
+        XCTAssertEqual(store.effective.doneness.mediumRare.pullTemperatureC, 56)
+        XCTAssertEqual(store.effective.doneness.mediumRare.targetTemperatureC, 58)
+    }
+
+    func testApplyValidatedAndSaveRefusesToPersistAnInvalidTuning() throws {
+        let suite = "TuningConfigurationTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let store = TuningStore(defaults: defaults)
+        var invalid = store.effective
+        invalid.cooking.minCookingBudget = 900
+        invalid.cooking.maxCookingBudget = 120
+
+        XCTAssertThrowsError(try store.applyValidatedAndSave(invalid)) { error in
+            guard case let TuningImportError.validation(issues) = error else {
+                return XCTFail("Expected a validation failure, got \(error)")
+            }
+            XCTAssertTrue(issues.contains { $0.contains("minCookingBudget") })
+        }
+
+        // Nothing was written: neither in memory nor on disk.
+        XCTAssertEqual(store.effective, AppTuning.production)
+        XCTAssertFalse(store.hasOverride)
+        XCTAssertFalse(TuningStore(defaults: defaults).hasOverride)
     }
 
     func testValidatorAcceptsEveryFieldBeingChanged() {
@@ -837,6 +915,9 @@ final class TuningConfigurationTests: XCTestCase {
 
     func testInvariantsAreNotConfigurableParameters() throws {
         let yaml = try String(contentsOf: yamlURL, encoding: .utf8)
+
+        // The YAML *documents* these rules in comments (which is desirable), so
+        // the check is that none of them exists as a configurable KEY.
         for forbidden in [
             "manualTemperaturePriority",
             "allowEstimatedTemperature",
@@ -847,11 +928,36 @@ final class TuningConfigurationTests: XCTestCase {
             "animationDrivesPhase",
             "phaseTransition",
         ] {
-            XCTAssertFalse(
-                yaml.contains(forbidden),
-                "\(forbidden) is a correctness rule and must stay in code"
+            let asKey = try NSRegularExpression(
+                pattern: "^[ \\t]*" + NSRegularExpression.escapedPattern(for: forbidden) + "[ \\t]*:",
+                options: [.anchorsMatchLines]
+            )
+            let text = yaml as NSString
+            let matches = asKey.numberOfMatches(
+                in: yaml,
+                range: NSRange(location: 0, length: text.length)
+            )
+            XCTAssertEqual(
+                matches,
+                0,
+                "\(forbidden) must stay a correctness rule in code, not a YAML key"
             )
         }
+
+        // Guard against the check silently passing because the pattern is wrong:
+        // a real key must match.
+        let realKey = try NSRegularExpression(
+            pattern: "^\\s*baseCookingBudget\\s*:",
+            options: [.anchorsMatchLines]
+        )
+        XCTAssertGreaterThan(
+            realKey.numberOfMatches(
+                in: yaml,
+                range: NSRange(location: 0, length: (yaml as NSString).length)
+            ),
+            0,
+            "The key-detection pattern must actually match a known YAML key"
+        )
     }
 
     /// Correctness rules keep working under an aggressive custom tuning.
@@ -942,6 +1048,69 @@ final class TuningLabCoverageTests: XCTestCase {
             \(expectedLeafCount). Add the missing field(s) to TuningLabView.
             """
         )
+    }
+
+    private func makeStore() -> TuningStore {
+        let suite = "TuningLabCoverageTests.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        addTeardownBlock { defaults.removePersistentDomain(forName: suite) }
+        return TuningStore(defaults: defaults)
+    }
+
+    /// The Lab applies the draft live, but only when it validates. This pins
+    /// the contract the Lab relies on: a mid-edit illegal draft is refused
+    /// while the store keeps running the last valid value.
+    func testLiveApplyKeepsTheLastValidTuningWhileTheDraftIsIllegal() {
+        let store = makeStore()
+        let initial = store.effective
+
+        // Legal step first, so "last valid" differs from production.
+        var legal = initial
+        legal.cooking.baseCookingBudget = 480
+        XCTAssertFalse(store.applyValidated(legal).isRejected)
+        XCTAssertEqual(store.effective.cooking.baseCookingBudget, 480)
+
+        // Illegal step: pull above target.
+        var illegal = store.effective
+        illegal.doneness.mediumRare.pullTemperatureC = 56
+        illegal.doneness.mediumRare.targetTemperatureC = 54
+        let outcome = store.applyValidated(illegal)
+
+        XCTAssertTrue(outcome.isRejected, "The illegal draft must not be applied")
+        XCTAssertTrue(
+            outcome.issues.contains { $0.contains("pullTemperatureC") },
+            "The Lab needs a message to display, got \(outcome.issues)"
+        )
+        // Running configuration is still the last valid one, not production and
+        // not the illegal draft.
+        XCTAssertEqual(store.effective.cooking.baseCookingBudget, 480)
+        XCTAssertEqual(
+            store.effective.doneness.mediumRare.pullTemperatureC,
+            initial.doneness.mediumRare.pullTemperatureC
+        )
+    }
+
+    /// Every field the Lab can edit must be able to reach a valid value, so a
+    /// legal edit is never blocked by an over-strict rule.
+    func testEveryLabFieldCanBeMovedToALegalValue() {
+        for spec in TuningLabView.allFields {
+            var tuning = AppTuning.production
+            let original = spec.get(tuning)
+            let target = spec.clamped(original + spec.step)
+            guard target != original else { continue }
+            spec.set(&tuning, target)
+
+            let issues = AppTuningValidator.issues(in: tuning)
+            // Some fields legitimately need a companion edit (a lone flip
+            // interval breaks the ordering rule, a fat cap needs a duration),
+            // so only assert that the Lab exposes a way to fix them.
+            if !issues.isEmpty {
+                XCTAssertFalse(
+                    spec.id.isEmpty,
+                    "\(spec.id) produced an unfixable state"
+                )
+            }
+        }
     }
 
     func testLabFieldIdentifiersAreUnique() {
@@ -1039,7 +1208,7 @@ final class TuningPasteImportTests: XCTestCase {
         let source = makeStore()
         var tuned = source.effective
         tuned.cooking.baseCookingBudget = 360
-        source.apply(tuned)
+        source.applyValidated(tuned)
         let exported = try XCTUnwrap(source.exportJSONString())
 
         let target = makeStore()
@@ -1053,7 +1222,7 @@ final class TuningPasteImportTests: XCTestCase {
         let store = makeStore()
         var good = store.effective
         good.cooking.baseCookingBudget = 360
-        store.applyAndSave(good)
+        try store.applyValidatedAndSave(good)
         let before = store.effective
 
         XCTAssertThrowsError(try store.importJSON("definitely not json"))

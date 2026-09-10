@@ -127,6 +127,43 @@ Two layers enforce the same rules:
 | `Scripts/generate_tuning.py` | validates `production.yaml` at build time; `--self-test` runs 14 offline cases |
 | `SteakCopilot/Tuning/AppTuningValidator.swift` | validates runtime overrides |
 
+### Every write is validated
+
+`TuningStore` has exactly one private write (`set`); every public mutation goes
+through a validating entry point, so an unusable tuning can never become the
+effective one:
+
+| Entry point | Behaviour on invalid input |
+| --- | --- |
+| `applyValidated(_:)` | returns `.rejected(issues)`, nothing changes |
+| `applyValidatedAndSave(_:)` | throws `TuningImportError.validation`, nothing is written to memory or disk |
+| `importJSON(_:)` | throws; the existing override is untouched |
+| `resetToProduction()` | always valid — it removes the override |
+
+There is no unvalidated `apply`/`applyAndSave`, so a future call site cannot
+bypass the checks by accident.
+
+### Live editing versus invalid intermediate states
+
+A single parameter often cannot be set in one step without passing through an
+illegal combination — raising `pullTemperatureC` to 56 before lowering
+`targetTemperatureC` from 54 is the common case. So a rejected draft is a
+**normal, expected state**, not an error:
+
+```
+edit draft
+    ↓
+validator
+    ├─ valid   → live apply (the running configuration changes)
+    └─ invalid → draft stays editable
+                 effective tuning keeps the LAST VALID value
+                 the Lab shows a "Draft not applied — N issue(s)" warning
+```
+
+The running configuration therefore never observes a state that the validator
+would refuse, while the developer is free to pass through intermediate values.
+**Save** re-validates and refuses to persist anything invalid.
+
 `AppTuningValidator` mirrors the generator's semantics — min/max ordering,
 non-negative durations, `pullTemperatureC < targetTemperatureC`, monotonically
 increasing doneness temperatures, `needsFatCap`/`fatCapDuration` agreement,

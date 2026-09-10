@@ -664,7 +664,11 @@ def emit(root: dict[str, Any], fingerprint: str) -> str:
     add("import Foundation")
     add("")
     add("enum ProductionTuning {")
-    add("    /// SHA-256 of the production.yaml this file was generated from.")
+    add("    /// SHA-256 of the production.yaml text this file was generated from.")
+    add("    ///")
+    add("    /// The hash covers the whole file, comments included, so it identifies")
+    add("    /// the exact source revision. A comment-only edit therefore changes")
+    add("    /// this line and requires regenerating, even though no value moved.")
     add(f'    static let sourceFingerprint = "{fingerprint}"')
     add("")
     add("    static let production = AppTuning(")
@@ -750,6 +754,8 @@ def load_config(
     parsed = parse_yaml(text)
     root = require_mapping(parsed, "config")
     validate(root)
+    # Hashes the file text (comments included), so the generated artifact can
+    # be traced to an exact source revision rather than just to a value set.
     fingerprint = hashlib.sha256(text.encode("utf-8")).hexdigest()
     return root, fingerprint
 

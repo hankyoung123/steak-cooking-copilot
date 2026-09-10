@@ -22,6 +22,10 @@ struct TuningLabView: View {
     @State private var importText = ""
     @State private var message: LabMessage?
     @State private var showsFileImporter = false
+    /// Validation problems with the current draft. While this is non-empty the
+    /// draft is ahead of the running configuration: editing continues, but the
+    /// effective tuning stays at the last valid value.
+    @State private var draftIssues: [String] = []
     /// Suppresses the live-apply hook while we set `draft` programmatically.
     @State private var isSyncingDraft = false
 
@@ -55,9 +59,14 @@ struct TuningLabView: View {
         }
         .onChange(of: draft) { _, newValue in
             guard !isSyncingDraft else { return }
-            // Live apply: editing a value changes what the app runs on
-            // straight away; "Save" only persists it across launches.
-            store.apply(newValue)
+            // Live apply, validated. A single parameter often cannot be set in
+            // one step without passing through an illegal combination (for
+            // example raising pullTemperatureC before lowering
+            // targetTemperatureC), so a rejected draft is a normal state:
+            // keep editing, leave the running configuration on the last valid
+            // value, and show what is wrong.
+            let outcome = store.applyValidated(newValue)
+            draftIssues = outcome.issues
             onApply()
         }
         .fileImporter(
@@ -78,7 +87,7 @@ struct TuningLabView: View {
     private var sourceSection: some View {
         Section("Source") {
             LabeledContent("Production defaults", value: "production.yaml")
-            LabeledContent("Override", value: store.stateDescription)
+            LabeledContent("Running", value: store.stateDescription)
             LabeledContent(
                 "Changed fields",
                 value: "\(store.overriddenFieldCount)"
@@ -87,6 +96,25 @@ struct TuningLabView: View {
                 .font(.caption.monospaced())
                 .foregroundStyle(.secondary)
                 .accessibilityIdentifier("tuningLab.fingerprint")
+
+            if !draftIssues.isEmpty {
+                // The draft is not running: it failed validation, so the app is
+                // still on the last valid configuration.
+                VStack(alignment: .leading, spacing: 4) {
+                    Label(
+                        "Draft not applied — \(draftIssues.count) issue(s)",
+                        systemImage: "exclamationmark.triangle.fill"
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .accessibilityIdentifier("tuningLab.validationWarning")
+
+                    Text(draftIssues.joined(separator: "\n"))
+                        .font(.caption2.monospaced())
+                        .foregroundStyle(.secondary)
+                        .accessibilityIdentifier("tuningLab.validationIssues")
+                }
+            }
         }
     }
 
@@ -372,17 +400,21 @@ struct TuningLabView: View {
     // MARK: - Override actions
 
     private func save() {
-        let issues = AppTuningValidator.issues(in: draft)
-        guard issues.isEmpty else {
-            // Live editing stays permissive (so a value can be dialled in), but
-            // saving refuses to persist an unusable combination.
-            message = .failure(
-                "Cannot save — fix these first:\n" + issues.joined(separator: "\n")
+        do {
+            // The store validates; an invalid draft cannot be persisted.
+            try store.applyValidatedAndSave(draft)
+            draftIssues = []
+            message = .success(
+                "Override saved (\(store.overriddenFieldCount) fields)."
             )
-            return
+        } catch let error as TuningImportError {
+            draftIssues = error.issues
+            message = .failure(
+                "Cannot save — fix these first:\n" + error.issues.joined(separator: "\n")
+            )
+        } catch {
+            message = .failure(error.localizedDescription)
         }
-        store.applyAndSave(draft)
-        message = .success("Override saved (\(store.overriddenFieldCount) fields).")
     }
 
     private func reset() {
@@ -445,6 +477,7 @@ struct TuningLabView: View {
     private func syncDraftFromStore() {
         isSyncingDraft = true
         draft = store.effective
+        draftIssues = []
         onApply()
         isSyncingDraft = false
     }

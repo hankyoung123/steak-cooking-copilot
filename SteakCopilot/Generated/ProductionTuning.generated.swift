@@ -12,8 +12,12 @@
 import Foundation
 
 enum ProductionTuning {
-    /// SHA-256 of the production.yaml this file was generated from.
-    static let sourceFingerprint = "8f59868d951c0cbe04bb9576dda7eef1493b4e840f6bff28e940f56a5857245e"
+    /// SHA-256 of the production.yaml text this file was generated from.
+    ///
+    /// The hash covers the whole file, comments included, so it identifies
+    /// the exact source revision. A comment-only edit therefore changes
+    /// this line and requires regenerating, even though no value moved.
+    static let sourceFingerprint = "bf4c8dfd9edde251893436c6cc64998d4585c7c52136b21e7a864f82e8c87e0c"
 
     static let production = AppTuning(
         cooking: CookingTuning(
