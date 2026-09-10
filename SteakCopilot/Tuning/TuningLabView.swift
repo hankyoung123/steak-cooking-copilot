@@ -151,6 +151,15 @@ struct TuningLabView: View {
                             "tuningLab.\(cut.rawValue).needsFatCap"
                         )
 
+                    numberRow(
+                        Self.number(
+                            "\(cut.rawValue).basteMultiplier",
+                            "Baste multiplier",
+                            Self.cutKeyPath(cut).appending(path: \.basteMultiplier),
+                            step: 0.05, range: 0.05...2, decimals: 2
+                        )
+                    )
+
                     if draft.cuts[cut].needsFatCap {
                         numberRow(
                             Self.optionalNumber(
@@ -385,10 +394,12 @@ struct TuningLabView: View {
 
     private func cutValueSummary(_ cut: SteakCut) -> String {
         let spec = draft.cuts[cut]
+        let baste = format(spec.basteMultiplier, decimals: 2)
         if spec.needsFatCap {
-            return "fat cap \(format(spec.fatCapDuration ?? 0, decimals: 0))s"
+            let duration = format(spec.fatCapDuration ?? 0, decimals: 0)
+            return "fat cap \(duration)s · baste ×\(baste)"
         }
-        return "no fat cap"
+        return "no fat cap · baste ×\(baste)"
     }
 
     private func donenessValueSummary(_ doneness: Doneness) -> String {
@@ -732,6 +743,14 @@ extension TuningLabView {
             )
         }
         for cut in SteakCut.allCases {
+            fields.append(
+                number(
+                    "\(cut.rawValue).basteMultiplier",
+                    "Baste multiplier",
+                    cutKeyPath(cut).appending(path: \.basteMultiplier),
+                    step: 0.05, range: 0.05...2, decimals: 2
+                )
+            )
             fields.append(
                 optionalNumber(
                     "\(cut.rawValue).fatCapDuration",

@@ -118,6 +118,47 @@ Pass `-resetTuning` to force shipped production values (UI tests do this).
 Overrides are stored as JSON under the `steak.tuning.override.v1` key. They are a
 development convenience and are never required for the app to work.
 
+## Cut profiles and what the numbers mean
+
+The three cuts differ only through secondary corrections. Centre temperature is
+driven by thickness and doneness; the cut adjusts the time budget slightly, the
+fat-cap stage and the baste length.
+
+| | offset | recommended | fat cap | baste × |
+| --- | --- | --- | --- | --- |
+| Ribeye | +5 s | 3.5 cm | off | 0.80 |
+| Strip | 0 s | 3.0 cm | 35 s | 1.00 |
+| Tenderloin | −8 s | 4.0 cm | off | 1.10 |
+
+**Why these shapes.** Ribeye is heavily marbled, so it does not depend on a long
+butter baste and has no distinct external fat edge. Strip is the baseline cut and
+the only one with a fat cap worth standing up (`FAT CAP → ADD BUTTER → BASTE`
+only for it). Tenderloin is lean and usually cut thicker, so its recommended
+thickness is *higher* than strip's: the −8 s offset is far smaller than the
+thickness difference, which keeps thickness in charge of the centre.
+
+`basteMultiplier` multiplies the shared `CookingTuning.basteRatio`:
+
+```
+basteDuration = clamp(rawBudget × basteRatio × cut.basteMultiplier,
+                      minBasteDuration, maxBasteDuration)
+```
+
+**Research-backed direction vs empirical baseline.** Separating the cuts by
+structure (marbling, external fat edge, leanness) and keeping one shared doneness
+temperature scale are the defensible parts. The exact numbers — and in
+particular `cookingBudgetOffset`, `basteMultiplier` and `fatCapDuration` — are
+**V1 empirical baselines**, not authoritative constants. They need calibration
+from real cook feedback once enough sessions exist.
+
+**Known interaction to be aware of.** With `basteRatio: 0.16` and
+`maxBasteDuration: 45`, the raw baste at the recommended thicknesses is 58–75 s,
+so the cap binds and all three cuts clamp to 45 s. The multiplier only
+differentiates cuts below roughly 2.2–2.9 cm. This is asserted by
+`CutProfileTests.testBasteMultiplierIsAbsorbedByTheClampAtRecommendedThickness`,
+so raising the cap or the ratio fails a test rather than silently changing the
+intended ribeye-shorter/tenderloin-longer behaviour.
+
 ## Validation
 
 Two layers enforce the same rules:

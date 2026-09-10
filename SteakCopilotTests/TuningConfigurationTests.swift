@@ -93,6 +93,9 @@ final class TuningConfigurationTests: XCTestCase {
             (String(tuning.calibration.crustStepSeconds), "crustStepSeconds: 8"),
             (String(tuning.notifications.staleDelaySeconds), "staleDelaySeconds: 30"),
             (String(tuning.motion.stageTransition), "stageTransition: 0.7"),
+            (String(tuning.cuts.strip.fatCapDuration ?? 0), "fatCapDuration: 35"),
+            (String(tuning.cuts.ribeye.basteMultiplier), "basteMultiplier: 0.8"),
+            (String(tuning.cooking.maxBasteDuration), "maxBasteDuration: 45"),
         ]
 
         for expectation in expectations {
@@ -116,10 +119,15 @@ final class TuningConfigurationTests: XCTestCase {
         XCTAssertEqual(tuning.cooking.flipIntervalThick, 40)
         XCTAssertEqual(tuning.cooking.lateStageRatio, 0.65)
         XCTAssertEqual(tuning.cooking.basteRatio, 0.16)
-        XCTAssertEqual(tuning.cuts.strip.fatCapDuration, 40)
-        XCTAssertEqual(tuning.cuts.tenderloin.recommendedThickness, 4)
+        XCTAssertEqual(tuning.cuts.strip.fatCapDuration, 35)
+        XCTAssertEqual(tuning.cuts.tenderloin.recommendedThickness, 4.0)
+        XCTAssertEqual(tuning.cuts.ribeye.recommendedThickness, 3.5)
+        XCTAssertEqual(tuning.cuts.strip.basteMultiplier, 1.0)
+        XCTAssertEqual(tuning.cuts.ribeye.basteMultiplier, 0.8)
+        XCTAssertEqual(tuning.cuts.tenderloin.basteMultiplier, 1.1)
+        XCTAssertEqual(tuning.cooking.maxBasteDuration, 45)
         XCTAssertEqual(tuning.doneness.mediumRare.pullTemperatureC, 52)
-        XCTAssertEqual(tuning.doneness.mediumRare.targetTemperatureC, 54)
+        XCTAssertEqual(tuning.doneness.mediumRare.targetTemperatureC, 55)
         XCTAssertEqual(tuning.calibration.donenessStepSeconds, 12)
         XCTAssertEqual(tuning.calibration.crustStepSeconds, 8)
         XCTAssertEqual(tuning.calibration.maxSearAdjustment, 24)
@@ -141,14 +149,16 @@ final class TuningConfigurationTests: XCTestCase {
             doneness: .mediumRare
         )
 
-        // 300 * (3 / 2.5) * 1.0 + 12 (ribeye offset) = 372
+        // 300 * (3 / 2.5) * 1.0 + 5 (ribeye offset) = 365
         let profile = engine.profile(for: configuration, calibration: .neutral)
-        XCTAssertEqual(profile.estimatedCookingBudget, 372, accuracy: 0.001)
+        XCTAssertEqual(profile.estimatedCookingBudget, 365, accuracy: 0.001)
         XCTAssertEqual(engine.flipInterval(for: configuration), 30, accuracy: 0.001)
         XCTAssertEqual(profile.pullTemperatureC, 52, accuracy: 0.001)
-        XCTAssertEqual(profile.targetTemperatureC, 54, accuracy: 0.001)
-        // late stage = max(flip * 2, budget * 0.65) = 241.8
-        XCTAssertEqual(profile.lateStageDateOffset, 241.8, accuracy: 0.001)
+        XCTAssertEqual(profile.targetTemperatureC, 55, accuracy: 0.001)
+        // late stage = max(flip * 2, 365 * 0.65) = 237.25
+        XCTAssertEqual(profile.lateStageDateOffset, 237.25, accuracy: 0.001)
+        // baste = 365 * 0.16 * 0.8 (ribeye) = 46.72, clamped to 45
+        XCTAssertEqual(profile.basteDuration, 45, accuracy: 0.001)
     }
 
     // MARK: - No double defaults
@@ -914,10 +924,8 @@ final class TuningConfigurationTests: XCTestCase {
     // MARK: - Business invariants stay in code
 
     func testInvariantsAreNotConfigurableParameters() throws {
-        let yaml = try String(contentsOf: yamlURL, encoding: .utf8)
-
-        // The YAML *documents* these rules in comments (which is desirable), so
-        // the check is that none of them exists as a configurable KEY.
+        // The YAML documents these rules in comments, so the check is that none
+        // of them is a configured KEY.
         for forbidden in [
             "manualTemperaturePriority",
             "allowEstimatedTemperature",
@@ -928,35 +936,16 @@ final class TuningConfigurationTests: XCTestCase {
             "animationDrivesPhase",
             "phaseTransition",
         ] {
-            let asKey = try NSRegularExpression(
-                pattern: "^[ \\t]*" + NSRegularExpression.escapedPattern(for: forbidden) + "[ \\t]*:",
-                options: [.anchorsMatchLines]
-            )
-            let text = yaml as NSString
-            let matches = asKey.numberOfMatches(
-                in: yaml,
-                range: NSRange(location: 0, length: text.length)
-            )
-            XCTAssertEqual(
-                matches,
-                0,
+            XCTAssertFalse(
+                try ProductionYAML.hasKey(forbidden),
                 "\(forbidden) must stay a correctness rule in code, not a YAML key"
             )
         }
 
-        // Guard against the check silently passing because the pattern is wrong:
-        // a real key must match.
-        let realKey = try NSRegularExpression(
-            pattern: "^\\s*baseCookingBudget\\s*:",
-            options: [.anchorsMatchLines]
-        )
-        XCTAssertGreaterThan(
-            realKey.numberOfMatches(
-                in: yaml,
-                range: NSRange(location: 0, length: (yaml as NSString).length)
-            ),
-            0,
-            "The key-detection pattern must actually match a known YAML key"
+        // Guard against the check silently passing because it found no keys.
+        XCTAssertTrue(
+            try ProductionYAML.hasKey("baseCookingBudget"),
+            "The key scanner must actually read the configuration"
         )
     }
 
@@ -1035,7 +1024,7 @@ final class TuningConfigurationTests: XCTestCase {
 final class TuningLabCoverageTests: XCTestCase {
     /// Leaves in Config/production.yaml. Kept in step by
     /// `Scripts/generate_tuning.py`, whose `--self-test` runs in CI.
-    private let expectedLeafCount = 99
+    private let expectedLeafCount = 102
 
     func testLabExposesEveryTunableParameter() {
         let ids = TuningLabView.allFieldIDs

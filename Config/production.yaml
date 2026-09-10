@@ -103,11 +103,22 @@ cooking:
   lateStageRatio: 0.65
   lateStageMinFlipIntervals: 2
 
-  # 【淋黄油（baste）时长】= 总时长 × basteRatio，再夹取到 min/max 之间，单位秒。
+  # 【淋黄油（baste）基准时长】单位秒。
+  # 计算方式（见 CookingEngine）：
+  #   时长 = clamp(原始时长 × basteRatio × 该部位 basteMultiplier,
+  #               minBasteDuration, maxBasteDuration)
+  # 即 basteRatio 是全体基准比例，部位差异交给 cuts.*.basteMultiplier。
   # basteRatio 取值范围 (0, 1]。
   basteRatio: 0.16
+
+  # 【淋黄油时长下限】单位秒。低于此值则淋油没有实际意义。
   minBasteDuration: 0.8
-  maxBasteDuration: 75
+
+  # 【淋黄油时长上限】单位秒，45 秒。
+  # 说明：黄油淋浇时间过长会从「补充风味」变成「持续加热」，
+  # 对偏瘦的部位尤其容易过头，因此上限收紧到 45 秒。
+  # 计算时先做 clamp 再乘时间缩放（timeScale），保持测试缩放行为不变。
+  maxBasteDuration: 45
 
   # 【收尾时长估算的预算修正】把「实际预算与基准的差」按比例折算进收尾估算。
   # 修正量 = clamp((实际预算 - baseCookingBudget) × budgetFinishAdjustmentRatio,
@@ -123,37 +134,95 @@ cooking:
 # ============================================================================
 # cuts —— 按牛排部位区分的行为参数（部位差异是产品规则的一部分）
 # ============================================================================
+# ============================================================================
+# cuts —— 按部位区分的「二级修正」参数
+#
+# 【定位：这是二级修正，不是一级变量】
+#   中心升温时间主要由「厚度」和「熟度」决定：
+#       baseCookingBudget × 厚度系数 × 熟度系数 + 部位偏移 + 校准修正
+#   部位只做小幅修正。cookingBudgetOffset 的量级（个位数到十几秒）
+#   远小于厚度带来的差异（例如 2.5cm 与 4cm 之间相差数分钟），
+#   这是刻意的：绝不能让「换个部位」比「换个厚度」影响更大。
+#
+# 【这些数值的性质：V1 经验基线（empirical baseline）】
+#   下面的 cookingBudgetOffset / basteMultiplier / fatCapDuration
+#   都是基于常见厨房经验的初始值，**不是权威科学常数**，
+#   也没有经过本项目的实测验证。
+#   它们的作用是给出一个合理的起点，后续必须通过真实烹饪反馈
+#   （FeedbackView 收集的熟度/焦壳反馈，以及温度计实测读数）来校准。
+#   请不要把这些精确数字当作精确预测。
+# ============================================================================
 cuts:
-  # 肉眼牛排 Ribeye：油脂丰富、通常不需要单独煎脂肪边。
+  # --------------------------------------------------------------------------
+  # 肉眼牛排 Ribeye
+  #   结构特点：高油花、脂肪分布在肌肉内部（marbling）。
+  #   设计含义：内部脂肪在加热时会融化并带来风味与润泽感，
+  #             因此不需要额外的长时间黄油淋浇来补足；
+  #             也通常没有一整条需要单独立起来煎的外部脂肪边，
+  #             所以不加 FAT CAP 阶段。
+  #             默认厚度给得比 Strip 稍厚（3.5cm），符合常见肉眼切法。
+  # --------------------------------------------------------------------------
   ribeye:
-    # 【时长偏移】在这个部位的最终时长上直接加减，单位秒。
-    # 正数 = 该部位需要更久（更厚实/更耐煎）。
-    cookingBudgetOffset: 12
-    # 【是否需要煎脂肪边】true 时必须同时给出 fatCapDuration；
-    # false 时 fatCapDuration 必须为 null（生成期强制检查）。
+    # 【时长偏移】单位秒。+5 只是「略厚一点的常见切法」带来的小修正，
+    # 主体时长仍然由厚度与熟度决定。
+    cookingBudgetOffset: 5
+    # 【是否需要煎脂肪边】false = 不进入 FAT CAP 阶段。
+    # 规则：true 时必须同时给出 fatCapDuration；false 时必须为 null（生成期强制）。
     needsFatCap: false
     # 【脂肪边时长】仅在 needsFatCap 为 true 时有效，单位秒；否则必须为 null。
     fatCapDuration: null
-    # 【推荐厚度】首次进入设置页时给该部位预设的厚度，单位 cm，范围 [0.5, 10]。
-    recommendedThickness: 3
+    # 【推荐厚度】设置页首次进入时的预设厚度，单位 cm，范围 [0.5, 10]。
+    recommendedThickness: 3.5
+    # 【黄油淋浇倍率】乘在全体基准 basteRatio 上，取值 (0, 2]。
+    # 0.8 = 比基准更短：高油花部位本身油脂充足，长时间淋黄油容易过腻、过熟。
+    basteMultiplier: 0.8
 
-  # 纽约客 New York Strip：一侧有厚脂肪边，需要立起来煎。
+  # --------------------------------------------------------------------------
+  # 纽约客 New York Strip
+  #   结构特点：一侧有较厚的外部脂肪边（fat cap）。
+  #   设计含义：作为本项目的**基准部位**（所有偏移以它为 0 点），
+  #             需要把脂肪边立起来煎到焦香，因此保留 FAT CAP 阶段。
+  #             黄油淋浇按基准时长（倍率 1.0）。
+  # --------------------------------------------------------------------------
   strip:
     cookingBudgetOffset: 0
-    # 这是三个部位中唯一需要煎脂肪边的。
+    # 三个部位中唯一需要煎脂肪边的。
     needsFatCap: true
-    fatCapDuration: 40
-    recommendedThickness: 3
+    # 【脂肪边时长】35 秒是 V1 经验基线：足够把外部脂肪边煎上色，
+    # 又不至于把整块牛排拖到过熟。
+    fatCapDuration: 35
+    recommendedThickness: 3.0
+    # 1.0 = 基准。
+    basteMultiplier: 1.0
 
-  # 菲力 Filet：最嫩最瘦，需要的时间更短、通常更厚。
+  # --------------------------------------------------------------------------
+  # 菲力 Filet / Tenderloin
+  #   结构特点：最瘦、脂肪最少，几乎没有需要单独煎的外部脂肪边。
+  #   设计含义：通常切得更厚（推荐 4.0cm），
+  #             因此**推荐厚度高于 Strip**；
+  #             虽然 cookingBudgetOffset 略负（-8），
+  #             但厚度带来的时长增加远大于这 8 秒的减少，
+  #             中心升温时间仍然由厚度主导——不要因为「瘦」就以为它更快熟。
+  #             本身缺乏脂肪，所以黄油淋浇相对更有价值，倍率略高（1.1）。
+  # --------------------------------------------------------------------------
   tenderloin:
-    cookingBudgetOffset: -12
+    cookingBudgetOffset: -8
     needsFatCap: false
     fatCapDuration: null
-    recommendedThickness: 4
+    recommendedThickness: 4.0
+    # 1.1 = 比基准略长，用于补足瘦肉的油脂与风味。
+    basteMultiplier: 1.1
 
 # ============================================================================
 # doneness —— 按熟度区分的目标温度、出锅温度与时长系数
+#
+# 【关键原则：熟度语义与部位无关】
+#   Medium Rare 就是 Medium Rare，不因部位不同而改变含义。
+#   因此这里刻意 **不提供** 按部位区分的温度，例如不存在：
+#       ribeye.mediumRareTarget / strip.mediumRareTarget / tenderloin.mediumRareTarget
+#   部位差异只通过下面的 cuts（时长偏移、脂肪边、黄油倍率）做二级修正，
+#   绝不篡改目标中心温度。
+#
 # 【产品概念区分】pull（出锅温度）与 target（目标温度）是两个不同概念：
 #   pull   = 离开锅时的中心温度，之后靠余温继续升温；
 #   target = 最终想达到的中心温度。
@@ -169,8 +238,9 @@ doneness:
     # 值越大需要的时间越长。取值范围 (0, 3]。
     cookingBudgetFactor: 0.88
   # 三分熟（默认）
+  # target 55 与 pull 52 之间的 3°C 差值，就是留给「余温（carryover）」的空间。
   mediumRare:
-    targetTemperatureC: 54
+    targetTemperatureC: 55
     pullTemperatureC: 52
     cookingBudgetFactor: 1.0
   # 五分熟

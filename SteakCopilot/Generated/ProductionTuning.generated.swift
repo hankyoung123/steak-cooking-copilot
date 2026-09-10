@@ -17,7 +17,7 @@ enum ProductionTuning {
     /// The hash covers the whole file, comments included, so it identifies
     /// the exact source revision. A comment-only edit therefore changes
     /// this line and requires regenerating, even though no value moved.
-    static let sourceFingerprint = "bf4c8dfd9edde251893436c6cc64998d4585c7c52136b21e7a864f82e8c87e0c"
+    static let sourceFingerprint = "e904e0dd804245375ee9f938d72769e87f85b9441d03567411a61c3b3214c659"
 
     static let production = AppTuning(
         cooking: CookingTuning(
@@ -38,7 +38,7 @@ enum ProductionTuning {
             lateStageMinFlipIntervals: 2,
             basteRatio: 0.16,
             minBasteDuration: 0.8,
-            maxBasteDuration: 75,
+            maxBasteDuration: 45,
             budgetFinishAdjustmentRatio: 0.08,
             budgetFinishAdjustmentMinSeconds: -15,
             budgetFinishAdjustmentMaxSeconds: 30,
@@ -46,22 +46,25 @@ enum ProductionTuning {
         ),
         cuts: CutTuning(
             ribeye: CutSpecTuning(
-                cookingBudgetOffset: 12,
+                cookingBudgetOffset: 5,
                 needsFatCap: false,
                 fatCapDuration: nil,
-                recommendedThickness: 3
+                recommendedThickness: 3.5,
+                basteMultiplier: 0.8
             ),
             strip: CutSpecTuning(
                 cookingBudgetOffset: 0,
                 needsFatCap: true,
-                fatCapDuration: 40,
-                recommendedThickness: 3
+                fatCapDuration: 35,
+                recommendedThickness: 3.0,
+                basteMultiplier: 1.0
             ),
             tenderloin: CutSpecTuning(
-                cookingBudgetOffset: -12,
+                cookingBudgetOffset: -8,
                 needsFatCap: false,
                 fatCapDuration: nil,
-                recommendedThickness: 4
+                recommendedThickness: 4.0,
+                basteMultiplier: 1.1
             ),
         ),
         doneness: DonenessTuning(
@@ -71,7 +74,7 @@ enum ProductionTuning {
                 cookingBudgetFactor: 0.88
             ),
             mediumRare: DonenessSpecTuning(
-                targetTemperatureC: 54,
+                targetTemperatureC: 55,
                 pullTemperatureC: 52,
                 cookingBudgetFactor: 1.0
             ),

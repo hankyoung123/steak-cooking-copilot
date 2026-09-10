@@ -144,6 +144,11 @@ enum AppTuningValidator {
             case (false, nil):
                 break
             }
+            // Mirrors the generator's bound on config.cuts.*.basteMultiplier.
+            require(
+                spec.basteMultiplier > 0 && spec.basteMultiplier <= 2,
+                "\(path).basteMultiplier must be in (0, 2]"
+            )
         }
 
         // MARK: Doneness

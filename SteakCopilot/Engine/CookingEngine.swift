@@ -146,7 +146,9 @@ struct CookingEngine: Sendable {
                 cooking.minBasteDuration,
                 min(
                     cooking.maxBasteDuration,
-                    rawBudget * cooking.basteRatio
+                    // Shared baseline ratio, adjusted per cut. Clamp order
+                    // (clamp, then time-scale) is unchanged.
+                    rawBudget * cooking.basteRatio * cut.basteMultiplier
                 ) * scale
             ),
             targetTemperatureC: doneness.targetTemperatureC,

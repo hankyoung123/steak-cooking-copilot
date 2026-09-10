@@ -263,7 +263,12 @@ CUT_KEYS = [
     "needsFatCap",
     "fatCapDuration",
     "recommendedThickness",
+    "basteMultiplier",
 ]
+
+# Bounds shared with AppTuningValidator: 0 < basteMultiplier <= 2.
+BASte_MULTIPLIER_MUST_EXCEED = 0.0
+BASte_MULTIPLIER_MAXIMUM = 2.0
 
 DONENESS_KEYS = ["targetTemperatureC", "pullTemperatureC", "cookingBudgetFactor"]
 
@@ -482,6 +487,21 @@ def validate(root: dict[str, Any]) -> dict[str, Any]:
                 fat_cap, f"config.cuts.{name}.fatCapDuration", maximum=600.0
             )
 
+        # Multiplies the shared basteRatio, so a cut can lean longer or shorter
+        # than the baseline without inventing a second absolute duration.
+        baste_multiplier = require_number(
+            cut, "basteMultiplier", f"config.cuts.{name}"
+        )
+        require_range(
+            baste_multiplier,
+            f"config.cuts.{name}.basteMultiplier",
+            maximum=BASte_MULTIPLIER_MAXIMUM,
+        )
+        if baste_multiplier <= BASte_MULTIPLIER_MUST_EXCEED:
+            raise ConfigError(
+                f"config.cuts.{name}.basteMultiplier must be greater than 0"
+            )
+
     doneness = require_mapping(root["doneness"], "config.doneness")
     require_keys(doneness, DONENESS_NAMES, "config.doneness")
     previous_target = None
@@ -691,7 +711,11 @@ def emit(root: dict[str, Any], fingerprint: str) -> str:
         )
         add(
             "                recommendedThickness: "
-            f"{swift_number(cut['recommendedThickness'])}",
+            f"{swift_number(cut['recommendedThickness'])},",
+        )
+        add(
+            "                basteMultiplier: "
+            f"{swift_number(cut['basteMultiplier'])}",
         )
         add("            ),")
     add("        ),")
@@ -806,14 +830,30 @@ SELF_TEST_CASES: list[tuple[str, list[tuple[str, str]], str]] = [
         "tenderloin",
     ),
     (
+        # Rare is 52, so dropping mediumRare to 40 breaks the monotonic rule.
         "non-increasing doneness temperatures",
-        [("  mediumRare:\n    targetTemperatureC: 54", "  mediumRare:\n    targetTemperatureC: 40")],
+        [("    targetTemperatureC: 55", "    targetTemperatureC: 40")],
         "targetTemperatureC",
     ),
     (
         "unsupported schema version",
         [("version: 1", "version: 2")],
         "version",
+    ),
+    (
+        "basteMultiplier above the maximum",
+        [("    basteMultiplier: 1.0", "    basteMultiplier: 2.5")],
+        "basteMultiplier",
+    ),
+    (
+        "basteMultiplier not greater than zero",
+        [("    basteMultiplier: 0.8", "    basteMultiplier: 0")],
+        "basteMultiplier",
+    ),
+    (
+        "missing basteMultiplier",
+        [("    basteMultiplier: 1.1\n", "")],
+        "basteMultiplier",
     ),
     (
         "tabs used for indentation",
@@ -824,6 +864,7 @@ SELF_TEST_CASES: list[tuple[str, list[tuple[str, str]], str]] = [
 
 VALID_CASES: list[tuple[str, list[tuple[str, str]]]] = [
     ("identical values", [("  baseCookingBudget: 300", "  baseCookingBudget: 300")]),
+    ("basteMultiplier at the inclusive maximum", [("    basteMultiplier: 0.8", "    basteMultiplier: 2.0")]),
     ("comment-only change", [("  referenceThickness: 2.5", "  referenceThickness: 2.5 # unchanged")]),
 ]
 

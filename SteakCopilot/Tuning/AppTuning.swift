@@ -82,6 +82,10 @@ struct CutSpecTuning: Codable, Equatable, Sendable {
     var needsFatCap: Bool
     var fatCapDuration: TimeInterval?
     var recommendedThickness: Double
+    /// Multiplies the shared `CookingTuning.basteRatio`, so a cut can lean
+    /// longer or shorter than the baseline without needing its own absolute
+    /// duration. Valid range: `0 < basteMultiplier <= 2`.
+    var basteMultiplier: Double
 
     var profile: SteakCutProfile {
         SteakCutProfile(
