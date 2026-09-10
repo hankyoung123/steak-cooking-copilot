@@ -259,10 +259,10 @@ struct CookingSessionView: View {
                         .font(.system(size: 8, weight: .medium))
                         .tracking(1.1)
                         .foregroundStyle(secondaryText)
-                    Text(estimatedFinishRange)
-                        .font(.system(size: 26, weight: .regular, design: .serif))
-                        .monospacedDigit()
+                    Text("No thermometer reading recorded")
+                        .font(.system(size: 12, weight: .regular, design: .serif))
                         .foregroundStyle(primaryText.opacity(0.84))
+                        .multilineTextAlignment(.center)
                 }
             }
 
@@ -283,21 +283,16 @@ struct CookingSessionView: View {
     }
 
     /// Abstract finishing-heat progress derived from estimated time
-    /// (phaseStartedAt → nextActionAt), never from a temperature.
+    /// (phaseStartedAt → nextActionAt), never from a temperature. No
+    /// percentage is shown: carryover is an estimate, not a measurement.
     private func finishingHeatIndicator(at date: Date) -> some View {
         let progress = finishingProgress(at: date)
         return VStack(spacing: 6) {
-            HStack {
-                Label("Finishing heat", systemImage: "flame")
-                    .font(.system(size: 9, weight: .medium))
-                    .tracking(1.1)
-                    .foregroundStyle(secondaryText)
-                Spacer()
-                Text("\(Int((progress * 100).rounded()))%")
-                    .font(.system(size: 10, weight: .regular, design: .serif))
-                    .monospacedDigit()
-                    .foregroundStyle(primaryText.opacity(0.7))
-            }
+            Label("Finishing heat", systemImage: "flame")
+                .font(.system(size: 9, weight: .medium))
+                .tracking(1.1)
+                .foregroundStyle(secondaryText)
+                .frame(maxWidth: .infinity, alignment: .leading)
             GeometryReader { proxy in
                 ZStack(alignment: .leading) {
                     Capsule()
@@ -332,14 +327,7 @@ struct CookingSessionView: View {
     }
 
     private var estimatedFinishRange: String {
-        let range = controller.guidance.finishingEstimate
-        let lower = max(1, Int(ceil(range.lowerBound / 60)))
-        let upper = max(lower + 1, Int(ceil(range.upperBound / 60)))
-        return String(
-            format: String(localized: "%lld–%lld min"),
-            Int64(lower),
-            Int64(upper)
-        )
+        FinishingDisplay.rangeText(for: controller.guidance.finishingEstimate)
     }
 
     private var telemetry: some View {
@@ -480,9 +468,10 @@ struct CookingSessionView: View {
 
     private func usesTimer(at date: Date) -> Bool {
         switch controller.session.phase {
-        case .sear, .fatCap, .baste, .finishing:
+        case .sear, .fatCap, .baste:
             remaining(at: date) > 0
         default:
+            // FINISHING is an estimate, never a precise second countdown.
             false
         }
     }
@@ -492,7 +481,7 @@ struct CookingSessionView: View {
         case .prep: String(localized: "Ready the steak")
         case .heat: String(localized: "Heat the pan")
         case .checkTemperature: String(localized: "Check doneness")
-        case .finishing: countdown(at: date)
+        case .finishing: estimatedFinishRange
         default: instructionTitle(at: date)
         }
     }
@@ -621,5 +610,20 @@ struct CookingSessionView: View {
             guard !Task.isCancelled else { return }
             controller.refresh(at: .now)
         }
+    }
+}
+
+/// Honest finishing presentation. Carryover is estimated, so the UI shows a
+/// minute range — never a precise second-level countdown that would imply
+/// temperature-level accuracy.
+enum FinishingDisplay {
+    static func rangeText(for estimate: ClosedRange<TimeInterval>) -> String {
+        let lower = max(1, Int(ceil(estimate.lowerBound / 60)))
+        let upper = max(lower + 1, Int(ceil(estimate.upperBound / 60)))
+        return String(
+            format: String(localized: "%lld–%lld min"),
+            Int64(lower),
+            Int64(upper)
+        )
     }
 }

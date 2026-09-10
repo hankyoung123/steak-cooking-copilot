@@ -1,5 +1,5 @@
+@preconcurrency import UserNotifications
 import Foundation
-import UserNotifications
 
 @MainActor
 protocol CookingNotificationServing: AnyObject {
@@ -10,6 +10,8 @@ protocol CookingNotificationServing: AnyObject {
 
 @MainActor
 final class NotificationService: CookingNotificationServing {
+    private static let nextActionIdentifier = "next-cooking-action"
+
     private let center: UNUserNotificationCenter
     private let isEnabled: Bool
 
@@ -20,20 +22,40 @@ final class NotificationService: CookingNotificationServing {
 
     func requestAuthorization() async -> Bool {
         guard isEnabled else { return false }
-        return (try? await center.requestAuthorization(options: [.alert, .sound, .badge])) ?? false
+        // The completion-handler API is used through a continuation so the
+        // non-Sendable UNUserNotificationCenter never crosses an isolation
+        // boundary via a nonisolated async method call (Swift 6 strict
+        // concurrency). `@preconcurrency import` covers the remaining
+        // framework sendability annotations.
+        return await withCheckedContinuation { continuation in
+            center.requestAuthorization(
+                options: [.alert, .sound, .badge]
+            ) { granted, _ in
+                continuation.resume(returning: granted)
+            }
+        }
     }
 
     func scheduleNextAction(guidance: CookingGuidance) async {
         guard isEnabled else { return }
-        center.removePendingNotificationRequests(withIdentifiers: ["next-cooking-action"])
-        guard let fireDate = guidance.nextActionAt,
-              let action = guidance.nextAction
-        else { return }
+        center.removePendingNotificationRequests(
+            withIdentifiers: [Self.nextActionIdentifier]
+        )
+        guard let fireDate = guidance.nextActionAt else { return }
+        guard guidance.announcedNextAction != .wait else { return }
         guard fireDate > .now else { return }
+
+        // Same announced action the Live Activity and the in-app
+        // instruction use, so a notification can never promise a different
+        // step than the app performs at that moment.
+        let action = guidance.announcedNextAction
 
         let content = UNMutableNotificationContent()
         content.title = notificationTitle(for: action)
-        content.body = notificationBody(for: action, target: guidance.pullTemperatureC)
+        content.body = notificationBody(
+            for: action,
+            target: guidance.pullTemperatureC
+        )
         content.sound = .default
         content.interruptionLevel = .timeSensitive
 
@@ -42,19 +64,35 @@ final class NotificationService: CookingNotificationServing {
             repeats: false
         )
         let request = UNNotificationRequest(
-            identifier: "next-cooking-action",
+            identifier: Self.nextActionIdentifier,
             content: content,
             trigger: trigger
         )
-        try? await center.add(request)
+        await withCheckedContinuation { continuation in
+            center.add(request) { _ in
+                continuation.resume()
+            }
+        }
     }
 
     func clearCookingNotifications() {
         guard isEnabled else { return }
-        center.removePendingNotificationRequests(withIdentifiers: ["next-cooking-action"])
+        center.removePendingNotificationRequests(
+            withIdentifiers: [Self.nextActionIdentifier]
+        )
     }
 
     private func notificationTitle(for action: CookingAction) -> String {
+        Self.title(for: action)
+    }
+
+    private func notificationBody(for action: CookingAction, target: Double) -> String {
+        Self.body(for: action, target: target)
+    }
+
+    /// Internal so tests can prove the notification copy follows the same
+    /// announced action the app performs.
+    static func title(for action: CookingAction) -> String {
         switch action {
         case .flip: String(localized: "FLIP NOW")
         case .standFatCap: String(localized: "STAND THE FAT CAP")
@@ -67,7 +105,7 @@ final class NotificationService: CookingNotificationServing {
         }
     }
 
-    private func notificationBody(for action: CookingAction, target: Double) -> String {
+    static func body(for action: CookingAction, target: Double) -> String {
         switch action {
         case .checkTemperature:
             String(

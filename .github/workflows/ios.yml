@@ -7,26 +7,80 @@ on:
 
 jobs:
   test:
-    # macOS 15 GitHub-hosted runners ship Xcode 16.x, which supports the
-    # project's object version (Xcode 16.3+), Swift 6 and the iOS 18 SDK.
-    # The project's LastSwiftUpdateCheck marker (Xcode 26.x) is metadata
-    # only and does not require a newer Xcode. This assumption is
-    # documented in docs/asset-audit.md.
+    # macOS 15 GitHub-hosted runners ship Xcode 16.3+ (objectVersion 77),
+    # the iOS 18.x SDK and matching simulators. The project's
+    # LastSwiftUpdateCheck marker (Xcode 26.x) is metadata only and does not
+    # require Xcode 26. See docs/asset-audit.md §5.
     runs-on: macos-15
     timeout-minutes: 60
+    env:
+      PROJECT: SteakCopilot.xcodeproj
+      SCHEME: SteakCopilot
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Select newest installed Xcode
+        run: |
+          set -euo pipefail
+          latest=$(ls -d /Applications/Xcode*.app 2>/dev/null | sort -V | tail -n 1 || true)
+          if [ -n "$latest" ]; then
+            echo "DEVELOPER_DIR=$latest/Contents/Developer" >> "$GITHUB_ENV"
+          fi
 
       - name: Show toolchain
         run: |
           xcodebuild -version
           xcrun simctl list runtimes
 
+      - name: Resolve an available iPhone simulator
+        id: simulator
+        run: |
+          set -euo pipefail
+          udid=$(xcrun simctl list devices available --json | /usr/bin/python3 -c '
+          import json, sys
+
+          preferred = [
+              "iPhone 16 Pro",
+              "iPhone 16",
+              "iPhone 15 Pro",
+              "iPhone 15",
+              "iPhone 14 Pro",
+              "iPhone 14",
+          ]
+
+          devices = json.load(sys.stdin)["devices"]
+          available = []
+          for runtime in sorted(devices, reverse=True):
+              if "iOS" not in runtime:
+                  continue
+              for device in devices[runtime]:
+                  if device.get("isAvailable") and "iPhone" in device.get("name", ""):
+                      available.append(device)
+
+          if not available:
+              sys.exit("No available iPhone simulator found")
+
+          def rank(device):
+              name = device["name"]
+              for index, candidate in enumerate(preferred):
+                  if name == candidate:
+                      return (0, index)
+              for index, candidate in enumerate(preferred):
+                  if name.startswith(candidate + " "):
+                      return (1, index)
+              return (2, name)
+
+          print(sorted(available, key=rank)[0]["udid"])
+          ')
+          echo "Using simulator $udid"
+          xcrun simctl list devices | grep "$udid" || true
+          echo "udid=$udid" >> "$GITHUB_OUTPUT"
+
       - name: Build and test
         run: |
           xcodebuild test \
-            -project SteakCopilot.xcodeproj \
-            -scheme SteakCopilot \
-            -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+            -project "$PROJECT" \
+            -scheme "$SCHEME" \
+            -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
             CODE_SIGNING_ALLOWED=NO

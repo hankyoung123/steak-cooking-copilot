@@ -296,21 +296,14 @@ final class CookingSessionController {
     /// earliest of the next flip, the calibrated late-stage date, and —
     /// in the no-thermometer fallback — the estimated pull date, so a
     /// small searBias or a near pull boundary never waits out a full
-    /// extra flip interval.
+    /// extra flip interval. The engine owns the selection, so the action
+    /// announced for this date is always the action performed at it.
     func nextSearBoundary(from date: Date) -> Date {
-        let profile = currentProfile
-        var candidates = [date.addingTimeInterval(profile.flipInterval)]
-        if session.butterAddedAt == nil {
-            candidates.append(
-                engine.lateStageDate(for: session, profile: profile)
-            )
-        }
-        if session.thermometerUnavailableAt != nil {
-            candidates.append(
-                engine.estimatedPullDate(for: session, profile: profile)
-            )
-        }
-        return candidates.min() ?? date
+        engine.searBoundary(
+            for: session,
+            profile: currentProfile,
+            from: date
+        ).date
     }
 
     private func makeGuidance(at date: Date) -> CookingGuidance {

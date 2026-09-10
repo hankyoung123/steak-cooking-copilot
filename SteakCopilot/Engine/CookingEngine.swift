@@ -36,6 +36,45 @@ struct CookingGuidance: Equatable, Sendable {
     }
 }
 
+/// Which candidate produced a scheduled sear-stage boundary. The kind is
+/// derived by comparing dates against the same candidates the boundary was
+/// scheduled from, so the announced next action and `nextActionAt` always
+/// agree.
+enum SearBoundaryKind: String, Equatable, Sendable {
+    case estimatedPull
+    case lateStage
+    case flip
+
+    /// Lower priority wins on an exact tie, so the user is never told to
+    /// flip when the pull boundary or the late stage has already come due.
+    var tieBreakPriority: Int {
+        switch self {
+        case .estimatedPull: 0
+        case .lateStage: 1
+        case .flip: 2
+        }
+    }
+}
+
+struct SearBoundary: Equatable, Sendable {
+    let kind: SearBoundaryKind
+    let date: Date
+}
+
+extension CookingGuidance {
+    /// The action the user will actually be asked to perform when
+    /// `nextActionAt` arrives. Notifications, the Live Activity and the
+    /// in-app instruction all read this, so none of them can promise a
+    /// different action than the app presents at that moment.
+    ///
+    /// While a stage timer is running (sear wait, fat cap, baste, finishing)
+    /// the scheduled action is `nextAction`; once the boundary has passed
+    /// the current action already is the pending one.
+    var announcedNextAction: CookingAction {
+        nextAction ?? currentAction
+    }
+}
+
 struct CookingEngine: Sendable {
     func flipInterval(for configuration: SteakConfiguration) -> TimeInterval {
         switch configuration.thicknessCM {
@@ -122,7 +161,7 @@ struct CookingEngine: Sendable {
             for: session,
             action: action,
             at: date,
-            lateStageAt: lateStageAt
+            profile: profile
         )
         let finishingEstimate = finishingEstimate(
             for: session,
@@ -169,6 +208,93 @@ struct CookingEngine: Sendable {
     ) -> Date {
         (session.startedAt ?? session.phaseStartedAt)
             .addingTimeInterval(profile.estimatedCookingBudget)
+    }
+
+    /// Candidate boundaries for the frequent-flip sear stage, in tie-break
+    /// priority order (pull, late stage, flip).
+    func searBoundaryCandidates(
+        for session: CookingSession,
+        profile: CookingProfile,
+        from date: Date
+    ) -> [SearBoundary] {
+        var candidates = [
+            SearBoundary(
+                kind: .flip,
+                date: date.addingTimeInterval(profile.flipInterval)
+            )
+        ]
+        if session.butterAddedAt == nil {
+            candidates.append(
+                SearBoundary(
+                    kind: .lateStage,
+                    date: lateStageDate(for: session, profile: profile)
+                )
+            )
+        }
+        if session.thermometerUnavailableAt != nil {
+            candidates.append(
+                SearBoundary(
+                    kind: .estimatedPull,
+                    date: estimatedPullDate(for: session, profile: profile)
+                )
+            )
+        }
+        return candidates
+    }
+
+    /// The authoritative earliest sear boundary. The controller schedules
+    /// `nextActionAt` from this, and the announced action is derived from
+    /// the resulting kind, so both always describe the same moment.
+    func searBoundary(
+        for session: CookingSession,
+        profile: CookingProfile,
+        from date: Date
+    ) -> SearBoundary {
+        let fallback = SearBoundary(
+            kind: .flip,
+            date: date.addingTimeInterval(profile.flipInterval)
+        )
+        return searBoundaryCandidates(for: session, profile: profile, from: date)
+            .reduce(fallback) { earliest, candidate in
+                if candidate.date < earliest.date { return candidate }
+                if candidate.date == earliest.date,
+                   candidate.kind.tieBreakPriority < earliest.kind.tieBreakPriority {
+                    return candidate
+                }
+                return earliest
+            }
+    }
+
+    /// Which kind of boundary `session.nextActionAt` currently represents.
+    /// Boundaries are scheduled from `searBoundary`, so the scheduled date
+    /// equals one of these candidates exactly.
+    func scheduledSearBoundaryKind(
+        for session: CookingSession,
+        profile: CookingProfile
+    ) -> SearBoundaryKind {
+        guard let nextActionAt = session.nextActionAt else { return .flip }
+        if session.thermometerUnavailableAt != nil,
+           estimatedPullDate(for: session, profile: profile) <= nextActionAt {
+            return .estimatedPull
+        }
+        if session.butterAddedAt == nil,
+           lateStageDate(for: session, profile: profile) <= nextActionAt {
+            return .lateStage
+        }
+        return .flip
+    }
+
+    /// The action a sear boundary of the given kind actually performs.
+    func action(
+        for kind: SearBoundaryKind,
+        configuration: SteakConfiguration
+    ) -> CookingAction {
+        switch kind {
+        case .flip: .flip
+        case .lateStage:
+            configuration.cut.profile.needsFatCap ? .standFatCap : .addButter
+        case .estimatedPull: .takeOut
+        }
     }
 
     private func pullRecommendation(
@@ -250,29 +376,33 @@ struct CookingEngine: Sendable {
         for session: CookingSession,
         action: CookingAction,
         at date: Date,
-        lateStageAt: Date
+        profile: CookingProfile
     ) -> CookingAction? {
         switch session.phase {
         case .sear where action == .wait:
-            if session.butterAddedAt != nil {
+            if session.butterAddedAt != nil,
+               session.thermometerUnavailableAt == nil {
+                // Manual path: after a low reading, flip once more and then
+                // ask for another reading.
                 if let temperatureAt = session.lastManualTemperatureAt,
-                   (session.lastFlipAt ?? .distantPast) <= temperatureAt,
-                   session.thermometerUnavailableAt == nil {
+                   (session.lastFlipAt ?? .distantPast) <= temperatureAt {
                     return .flip
                 }
-                return session.thermometerUnavailableAt == nil
-                    ? .checkTemperature
-                    : .flip
+                return .checkTemperature
             }
-            if date >= lateStageAt {
-                return session.configuration.cut.profile.needsFatCap
-                    ? .standFatCap
-                    : .addButter
-            }
-            return .flip
+            // Announce exactly the action the scheduled boundary performs.
+            return self.action(
+                for: scheduledSearBoundaryKind(for: session, profile: profile),
+                configuration: session.configuration
+            )
         case .fatCap where action == .standFatCap:
-            return .addButter
+            return fallbackPullIsDue(session: session, profile: profile)
+                ? .takeOut
+                : .addButter
         case .baste where action == .baste:
+            if fallbackPullIsDue(session: session, profile: profile) {
+                return .takeOut
+            }
             return session.thermometerUnavailableAt == nil
                 ? .checkTemperature
                 : .flip
@@ -281,6 +411,18 @@ struct CookingEngine: Sendable {
         default:
             return nil
         }
+    }
+
+    /// In the no-thermometer fallback the estimated pull boundary can fall
+    /// inside a late-stage timer (fat cap / baste). When it does, the next
+    /// action is TAKE IT OUT — matching what the app shows at that moment.
+    private func fallbackPullIsDue(
+        session: CookingSession,
+        profile: CookingProfile
+    ) -> Bool {
+        guard session.thermometerUnavailableAt != nil,
+              let nextActionAt = session.nextActionAt else { return false }
+        return estimatedPullDate(for: session, profile: profile) <= nextActionAt
     }
 
     private func event(

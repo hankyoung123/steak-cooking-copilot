@@ -45,7 +45,7 @@ final class LiveActivityService: CookingLiveActivityServing {
 
         let attributes = SteakActivityAttributes(sessionID: session.id)
         let content = ActivityContent(
-            state: contentState(for: session, guidance: guidance),
+            state: Self.contentState(for: session, guidance: guidance),
             staleDate: guidance.nextActionAt?.addingTimeInterval(30)
         )
         activity = try? Activity.request(
@@ -62,7 +62,7 @@ final class LiveActivityService: CookingLiveActivityServing {
         }
         guard let activity else { return }
         let content = ActivityContent(
-            state: contentState(for: session, guidance: guidance),
+            state: Self.contentState(for: session, guidance: guidance),
             staleDate: guidance.nextActionAt?.addingTimeInterval(30)
         )
         await activity.update(content)
@@ -93,13 +93,17 @@ final class LiveActivityService: CookingLiveActivityServing {
         }
     }
 
-    private func contentState(
+    /// Internal so tests can prove the Live Activity announces exactly the
+    /// same action as the notification and the in-app instruction.
+    static func contentState(
         for session: CookingSession,
         guidance: CookingGuidance
     ) -> SteakActivityAttributes.ContentState {
         SteakActivityAttributes.ContentState(
             phaseTitle: phaseTitle(for: session.phase),
-            actionTitle: guidance.currentAction.title,
+            // Same announced action the notification and the in-app
+            // instruction use, so they can never disagree.
+            actionTitle: guidance.announcedNextAction.title,
             actionDate: guidance.nextActionAt,
             isUrgent: guidance.remainingTime <= 5
         )
@@ -117,7 +121,7 @@ final class LiveActivityService: CookingLiveActivityServing {
         }
     }
 
-    private func phaseTitle(for phase: CookingPhase) -> String {
+    private static func phaseTitle(for phase: CookingPhase) -> String {
         switch phase {
         case .sear: String(localized: "SEAR")
         case .fatCap: String(localized: "FAT CAP")
