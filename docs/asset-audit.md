@@ -58,11 +58,24 @@ run artifact and is safe to delete at any time.
 `codex-sync/` is a generated mirror (ignored by git per commit `adddc28`); it is not
 part of the build and needs no action.
 
-## 5. CI assumption (documented)
+## 5. CI (verified)
 
-`.github/workflows/ios.yml` targets `macos-15` GitHub-hosted runners. These runners
-ship Xcode 16.x, which supports this project's `objectVersion = 77` (Xcode 16.3+),
-Swift 6 mode, and the iOS 18.0 deployment target. The project's
-`LastSwiftUpdateCheck = 2620` marker is metadata written by the local Xcode 26.2 and
-does not require Xcode 26 to build. If a future runner image changes its default
-Xcode or simulator set, adjust the destination/`DEVELOPER_DIR` accordingly.
+`.github/workflows/ios.yml` targets `macos-15` GitHub-hosted runners and runs
+`xcodebuild test` for the `SteakCopilot` scheme with `CODE_SIGNING_ALLOWED=NO`.
+
+The workflow deliberately does not pin a specific Xcode or simulator, because
+runner images change over time:
+
+- It selects the newest installed Xcode via `DEVELOPER_DIR`, falling back to the
+  image default.
+- It resolves an available iPhone simulator at run time from
+  `xcrun simctl list devices available --json`, preferring standard models
+  (iPhone 16 Pro → … → iPhone 14), and passes the resolved UDID to
+  `-destination`.
+
+Verified run: [34454185032](https://github.com/hankyoung123/steak-cooking-copilot/actions/runs/34454185032)
+— Xcode 26.3, resolved `iPhone 16 Pro`, unit suite + 9 UI tests, 0 failures,
+`TEST SUCCEEDED`, and no Swift 6 concurrency diagnostics.
+
+The project's `LastSwiftUpdateCheck = 2620` marker is metadata only and does not
+require a specific local Xcode to build.
