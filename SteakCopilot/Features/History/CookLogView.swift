@@ -4,6 +4,9 @@ struct CookLogView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppTheme.self) private var theme
     let records: [FeedbackRecord]
+    /// Target temperatures come from production tuning, so the log shows the
+    /// same values the cook actually targeted.
+    let tuning: AppTuning
 
     var body: some View {
         ZStack {
@@ -24,7 +27,7 @@ struct CookLogView: View {
                             emptyState
                         } else {
                             ForEach(records) { record in
-                                CookLogRow(record: record)
+                                CookLogRow(record: record, tuning: tuning)
                             }
                         }
                     }
@@ -75,6 +78,7 @@ struct CookLogView: View {
 private struct CookLogRow: View {
     @Environment(AppTheme.self) private var theme
     let record: FeedbackRecord
+    let tuning: AppTuning
 
     var body: some View {
         HStack(spacing: 14) {
@@ -86,7 +90,14 @@ private struct CookLogRow: View {
                     .font(.system(size: 11))
                     .foregroundStyle(.white.opacity(0.46))
                 HStack {
-                    Text(String(format: "%.0f°C", record.configuration.doneness.targetTemperatureC))
+                    Text(
+                        String(
+                            format: "%.0f°C",
+                            tuning.doneness[
+                                record.configuration.doneness
+                            ].targetTemperatureC
+                        )
+                    )
                         .font(.system(size: 13, weight: .regular, design: .serif))
                     Spacer()
                     Text(record.date.formatted(date: .abbreviated, time: .omitted))

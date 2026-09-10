@@ -17,9 +17,11 @@ protocol CookingLiveActivityServing: AnyObject {
 final class LiveActivityService: CookingLiveActivityServing {
     private var activity: Activity<SteakActivityAttributes>?
     private let isEnabled: Bool
+    private let tuning: AppTuning
 
-    init(isEnabled: Bool = true) {
+    init(isEnabled: Bool = true, tuning: AppTuning = .production) {
         self.isEnabled = isEnabled
+        self.tuning = tuning
     }
 
     func recover(for session: CookingSession, guidance: CookingGuidance) async {
@@ -45,8 +47,14 @@ final class LiveActivityService: CookingLiveActivityServing {
 
         let attributes = SteakActivityAttributes(sessionID: session.id)
         let content = ActivityContent(
-            state: Self.contentState(for: session, guidance: guidance),
-            staleDate: guidance.nextActionAt?.addingTimeInterval(30)
+            state: Self.contentState(
+                for: session,
+                guidance: guidance,
+                tuning: tuning
+            ),
+            staleDate: guidance.nextActionAt?.addingTimeInterval(
+                tuning.notifications.staleDelaySeconds
+            )
         )
         activity = try? Activity.request(
             attributes: attributes,
@@ -62,8 +70,14 @@ final class LiveActivityService: CookingLiveActivityServing {
         }
         guard let activity else { return }
         let content = ActivityContent(
-            state: Self.contentState(for: session, guidance: guidance),
-            staleDate: guidance.nextActionAt?.addingTimeInterval(30)
+            state: Self.contentState(
+                for: session,
+                guidance: guidance,
+                tuning: tuning
+            ),
+            staleDate: guidance.nextActionAt?.addingTimeInterval(
+                tuning.notifications.staleDelaySeconds
+            )
         )
         await activity.update(content)
     }
@@ -97,7 +111,8 @@ final class LiveActivityService: CookingLiveActivityServing {
     /// same action as the notification and the in-app instruction.
     static func contentState(
         for session: CookingSession,
-        guidance: CookingGuidance
+        guidance: CookingGuidance,
+        tuning: AppTuning = .production
     ) -> SteakActivityAttributes.ContentState {
         SteakActivityAttributes.ContentState(
             phaseTitle: phaseTitle(for: session.phase),
@@ -105,7 +120,8 @@ final class LiveActivityService: CookingLiveActivityServing {
             // instruction use, so they can never disagree.
             actionTitle: guidance.announcedNextAction.title,
             actionDate: guidance.nextActionAt,
-            isUrgent: guidance.remainingTime <= 5
+            isUrgent: guidance.remainingTime
+                <= tuning.notifications.urgentThresholdSeconds
         )
     }
 
@@ -115,9 +131,9 @@ final class LiveActivityService: CookingLiveActivityServing {
         switch reason {
         case .finished:
             // Celebration lingers briefly so the user can see the result.
-            .after(.now.addingTimeInterval(60))
+            .after(.now.addingTimeInterval(tuning.notifications.finishedDismissalSeconds))
         case .cancelled:
-            .after(.now.addingTimeInterval(4))
+            .after(.now.addingTimeInterval(tuning.notifications.cancelledDismissalSeconds))
         }
     }
 

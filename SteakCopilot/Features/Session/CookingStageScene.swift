@@ -153,7 +153,9 @@ struct CookingStageScene: View {
         .clipped()
         .contentTransition(.opacity)
         .animation(
-            reduceMotion ? nil : .easeInOut(duration: 0.58),
+            reduceMotion
+                ? nil
+                : .easeInOut(duration: controller.tuning.motion.stageSceneCrossfade),
             value: sceneAsset
         )
         .onChange(of: controller.motionDirector.sequence) { _, _ in
@@ -222,7 +224,8 @@ struct CookingStageScene: View {
                 .modifier(
                     StageCompositionResponseModifier(
                         trigger: motionTrigger,
-                        response: motion
+                        response: motion,
+                        timing: controller.tuning.motion
                     )
                 )
 
@@ -298,6 +301,7 @@ struct CookingStageScene: View {
 private struct StageCompositionResponseModifier: ViewModifier {
     let trigger: Int
     let response: StageMotionResponse
+    let timing: MotionTuning
 
     func body(content: Content) -> some View {
         content.keyframeAnimator(
@@ -309,12 +313,12 @@ private struct StageCompositionResponseModifier: ViewModifier {
                 .brightness(value.brightness)
         } keyframes: { _ in
             KeyframeTrack(\.scale) {
-                CubicKeyframe(peakScale, duration: MotionTiming.responsive)
-                SpringKeyframe(1, duration: MotionTiming.emphasis, spring: .smooth)
+                CubicKeyframe(peakScale, duration: timing.responsive)
+                SpringKeyframe(1, duration: timing.emphasis, spring: .smooth)
             }
             KeyframeTrack(\.brightness) {
-                CubicKeyframe(peakBrightness, duration: MotionTiming.responsive)
-                LinearKeyframe(0, duration: MotionTiming.emphasis)
+                CubicKeyframe(peakBrightness, duration: timing.responsive)
+                LinearKeyframe(0, duration: timing.emphasis)
             }
         }
     }

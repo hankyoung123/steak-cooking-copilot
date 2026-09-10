@@ -63,12 +63,17 @@ struct CookingStore {
         encode(records, forKey: Key.feedback)
     }
 
-    func loadSetupPreferences(for cut: SteakCut) -> SteakSetupPreferences {
+    /// Falls back to the recommended setup for the cut, whose thickness comes
+    /// from production tuning.
+    func loadSetupPreferences(
+        for cut: SteakCut,
+        tuning: AppTuning = .production
+    ) -> SteakSetupPreferences {
         let saved = decode(
             [SteakCut: SteakSetupPreferences].self,
             forKey: Key.setupPreferences
         ) ?? [:]
-        return saved[cut] ?? .recommended(for: cut)
+        return saved[cut] ?? .recommended(for: cut, tuning: tuning)
     }
 
     func save(setupPreferences: SteakSetupPreferences) {

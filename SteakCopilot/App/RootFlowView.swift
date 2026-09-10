@@ -5,7 +5,10 @@ struct RootFlowView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var pendingControl: SessionControlConfirmation?
+    @State private var showsTuningLab = false
     let controller: CookingSessionController
+    /// Development-only parameter override store (`-tuningLab`).
+    var tuningStore: TuningStore?
 
     var body: some View {
         ZStack {
@@ -49,14 +52,25 @@ struct RootFlowView: View {
         .foregroundStyle(theme.foreground(for: controller.flowStage))
         .animation(
             reduceMotion
-                ? .easeOut(duration: MotionTiming.subtle)
-                : .smooth(duration: MotionTiming.stageTransition),
+                ? .easeOut(duration: controller.tuning.motion.subtle)
+                : .smooth(duration: controller.tuning.motion.stageTransition),
             value: controller.flowStage
         )
         .preferredColorScheme(
             usesDarkCanvas ? .dark : .light
         )
         .alert(item: $pendingControl, content: controlAlert)
+        .sheet(isPresented: $showsTuningLab) {
+            if let tuningStore {
+                TuningLabView(
+                    store: tuningStore,
+                    onApply: { controller.applyTuning($0) }
+                )
+            }
+        }
+        .onAppear {
+            showsTuningLab = ProcessInfo.processInfo.arguments.contains("-tuningLab")
+        }
         .onChange(of: scenePhase) { _, phase in
             if phase == .active {
                 controller.refresh(at: .now)

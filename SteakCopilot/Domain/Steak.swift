@@ -20,17 +20,14 @@ enum SteakCut: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var profile: SteakCutProfile {
-        switch self {
-        case .ribeye:
-            SteakCutProfile(needsFatCap: false, fatCapDuration: nil)
-        case .strip:
-            SteakCutProfile(needsFatCap: true, fatCapDuration: 40)
-        case .tenderloin:
-            SteakCutProfile(needsFatCap: false, fatCapDuration: nil)
-        }
+    /// Behaviour parameters for this cut, from the production tuning
+    /// generated from `Config/production.yaml`.
+    func spec(in tuning: AppTuning) -> CutSpecTuning {
+        tuning.cuts[self]
     }
 
+    /// Asset name for the setup carousel. Artwork identity is not a tunable
+    /// parameter, so it stays in code.
     var heroAssetName: String {
         switch self {
         case .ribeye: "RawRibeye"
@@ -45,33 +42,45 @@ enum ThicknessBucket: String, Codable, Hashable, Sendable {
     case standard
     case thick
 
-    init(thicknessCM: Double) {
-        switch thicknessCM {
-        case ..<2.5: self = .thin
-        case ...3.5: self = .standard
-        default: self = .thick
-        }
+    /// Bucket boundaries are tunable, so the tuning must be supplied.
+    init(thicknessCM: Double, in tuning: AppTuning) {
+        self = tuning.cooking.thicknessBucket(thicknessCM: thicknessCM)
     }
 }
 
 struct SteakConfiguration: Codable, Equatable, Sendable {
-    var cut: SteakCut = .ribeye
-    var thicknessCM: Double = 3
-    var doneness: Doneness = .mediumRare
+    var cut: SteakCut
+    var thicknessCM: Double
+    var doneness: Doneness
 
-    var thicknessBucket: ThicknessBucket {
-        ThicknessBucket(thicknessCM: thicknessCM)
+    init(
+        cut: SteakCut = .ribeye,
+        thicknessCM: Double = 3,
+        doneness: Doneness = .mediumRare
+    ) {
+        self.cut = cut
+        self.thicknessCM = thicknessCM
+        self.doneness = doneness
+    }
+
+    func thicknessBucket(in tuning: AppTuning) -> ThicknessBucket {
+        ThicknessBucket(thicknessCM: thicknessCM, in: tuning)
     }
 }
 
 struct SteakSetupPreferences: Codable, Equatable, Sendable {
     var configuration: SteakConfiguration
 
-    static func recommended(for cut: SteakCut) -> SteakSetupPreferences {
+    /// Recommended starting configuration for a cut, using the recommended
+    /// thickness from production tuning.
+    static func recommended(
+        for cut: SteakCut,
+        tuning: AppTuning = .production
+    ) -> SteakSetupPreferences {
         SteakSetupPreferences(
             configuration: SteakConfiguration(
                 cut: cut,
-                thicknessCM: cut == .tenderloin ? 4 : 3,
+                thicknessCM: cut.spec(in: tuning).recommendedThickness,
                 doneness: .mediumRare
             )
         )

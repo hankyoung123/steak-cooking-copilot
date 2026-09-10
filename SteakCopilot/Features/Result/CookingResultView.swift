@@ -92,7 +92,10 @@ struct CookingResultView: View {
             .scrollIndicators(.hidden)
         }
         .sheet(isPresented: $showsHistory) {
-            CookLogView(records: controller.cookHistory)
+            CookLogView(
+                records: controller.cookHistory,
+                tuning: controller.tuning
+            )
                 .presentationDetents([.large])
                 .presentationCornerRadius(28)
         }
@@ -101,7 +104,7 @@ struct CookingResultView: View {
                 appeared = true
                 return
             }
-            withAnimation(.easeOut(duration: 0.65)) {
+            withAnimation(.easeOut(duration: controller.tuning.motion.resultAppear)) {
                 appeared = true
             }
         }
@@ -245,7 +248,9 @@ struct CookingResultView: View {
 
     private var finalTemperature: String {
         let value = controller.session.lastManualTemperatureC
-            ?? controller.session.configuration.doneness.targetTemperatureC
+            ?? controller.tuning.doneness[
+                controller.session.configuration.doneness
+            ].targetTemperatureC
         return String(format: "%.0f°C", value)
     }
 

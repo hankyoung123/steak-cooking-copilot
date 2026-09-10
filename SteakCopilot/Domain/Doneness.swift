@@ -29,34 +29,12 @@ enum Doneness: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    var targetTemperatureC: Double {
-        switch self {
-        case .rare: 52
-        case .mediumRare: 54
-        case .medium: 60
-        case .mediumWell: 65
-        case .wellDone: 71
-        }
-    }
-
-    var pullTemperatureC: Double {
-        switch self {
-        case .rare: 49
-        case .mediumRare: 52
-        case .medium: 57
-        case .mediumWell: 62
-        case .wellDone: 68
-        }
-    }
-
-    var cookingBudgetFactor: Double {
-        switch self {
-        case .rare: 0.88
-        case .mediumRare: 1
-        case .medium: 1.14
-        case .mediumWell: 1.28
-        case .wellDone: 1.42
-        }
+    /// Temperature and cooking-budget parameters. These come from the
+    /// production tuning generated from `Config/production.yaml`; there are no
+    /// numeric defaults here on purpose, so tunable values have exactly one
+    /// source of truth.
+    func spec(in tuning: AppTuning) -> DonenessSpecTuning {
+        tuning.doneness[self]
     }
 }
 

@@ -15,10 +15,10 @@ struct CalibrationKey: Codable, Hashable, Sendable {
         self.doneness = doneness
     }
 
-    init(configuration: SteakConfiguration) {
+    init(configuration: SteakConfiguration, tuning: AppTuning = .production) {
         self.init(
             cut: configuration.cut,
-            thicknessBucket: configuration.thicknessBucket,
+            thicknessBucket: configuration.thicknessBucket(in: tuning),
             doneness: configuration.doneness
         )
     }
@@ -33,17 +33,30 @@ struct CookingCalibration: Codable, Equatable, Sendable {
         searBias: 0
     )
 
+    /// Learns from feedback. Step sizes and clamps are tunable; the rule that
+    /// doneness feedback moves the budget and crust feedback moves the sear
+    /// bias is a product invariant and stays here.
     func applying(
         doneness: DonenessFeedback,
-        crust: CrustFeedback
+        crust: CrustFeedback,
+        tuning: AppTuning = .production
     ) -> CookingCalibration {
-        let cookingDelta = TimeInterval(-doneness.rawValue * 12)
-        let searDelta = TimeInterval(-crust.rawValue * 8)
+        let calibration = tuning.calibration
+        let cookingDelta = TimeInterval(
+            -Double(doneness.rawValue) * calibration.donenessStepSeconds
+        )
+        let searDelta = TimeInterval(
+            -Double(crust.rawValue) * calibration.crustStepSeconds
+        )
         return CookingCalibration(
             cookingTimeAdjustment: (
                 cookingTimeAdjustment + cookingDelta
-            ).clamped(to: -60...60),
-            searBias: (searBias + searDelta).clamped(to: -24...24)
+            ).clamped(
+                to: -calibration.maxCookingAdjustment...calibration.maxCookingAdjustment
+            ),
+            searBias: (searBias + searDelta).clamped(
+                to: -calibration.maxSearAdjustment...calibration.maxSearAdjustment
+            )
         )
     }
 }

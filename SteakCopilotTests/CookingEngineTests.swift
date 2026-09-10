@@ -2,6 +2,9 @@ import XCTest
 @testable import SteakCopilot
 
 final class CookingEngineTests: XCTestCase {
+    /// Production parameters generated from Config/production.yaml.
+    private let tuning = AppTuning.production
+
     private let engine = CookingEngine()
 
     func testDonenessOffersFiveOrderedLevels() {
@@ -16,23 +19,23 @@ final class CookingEngineTests: XCTestCase {
 
         for level in levels {
             XCTAssertGreaterThan(
-                level.targetTemperatureC,
-                level.pullTemperatureC
+                tuning.doneness[level].targetTemperatureC,
+                tuning.doneness[level].pullTemperatureC
             )
         }
 
         for (lower, higher) in zip(levels, levels.dropFirst()) {
             XCTAssertGreaterThan(
-                higher.targetTemperatureC,
-                lower.targetTemperatureC
+                tuning.doneness[higher].targetTemperatureC,
+                tuning.doneness[lower].targetTemperatureC
             )
             XCTAssertGreaterThan(
-                higher.pullTemperatureC,
-                lower.pullTemperatureC
+                tuning.doneness[higher].pullTemperatureC,
+                tuning.doneness[lower].pullTemperatureC
             )
             XCTAssertGreaterThan(
-                higher.cookingBudgetFactor,
-                lower.cookingBudgetFactor
+                tuning.doneness[higher].cookingBudgetFactor,
+                tuning.doneness[lower].cookingBudgetFactor
             )
         }
     }
@@ -86,7 +89,7 @@ final class CookingEngineTests: XCTestCase {
             at: start.addingTimeInterval(300)
         )
 
-        XCTAssertFalse(session.configuration.cut.profile.needsFatCap)
+        XCTAssertFalse(tuning.cuts[session.configuration.cut].needsFatCap)
         XCTAssertEqual(guidance.currentAction, .addButter)
     }
 
@@ -109,7 +112,7 @@ final class CookingEngineTests: XCTestCase {
             at: start.addingTimeInterval(400)
         )
 
-        XCTAssertTrue(session.configuration.cut.profile.needsFatCap)
+        XCTAssertTrue(tuning.cuts[session.configuration.cut].needsFatCap)
         XCTAssertEqual(guidance.currentAction, .standFatCap)
     }
 
@@ -120,7 +123,7 @@ final class CookingEngineTests: XCTestCase {
             phaseStartedAt: start,
             nextActionAt: nil
         )
-        session.lastManualTemperatureC = Doneness.mediumRare.pullTemperatureC
+        session.lastManualTemperatureC = tuning.doneness[.mediumRare].pullTemperatureC
         session.lastManualTemperatureAt = start
 
         let guidance = engine.guidance(for: session, at: start)
@@ -150,8 +153,8 @@ final class CookingEngineTests: XCTestCase {
 
     func testTargetAndPullTemperaturesAreSeparate() {
         XCTAssertGreaterThan(
-            Doneness.mediumRare.targetTemperatureC,
-            Doneness.mediumRare.pullTemperatureC
+            tuning.doneness[.mediumRare].targetTemperatureC,
+            tuning.doneness[.mediumRare].pullTemperatureC
         )
     }
 
@@ -177,7 +180,7 @@ final class CookingEngineTests: XCTestCase {
             phaseStartedAt: start,
             nextActionAt: nil
         )
-        session.lastManualTemperatureC = Doneness.mediumRare.pullTemperatureC - 1
+        session.lastManualTemperatureC = tuning.doneness[.mediumRare].pullTemperatureC - 1
         session.lastManualTemperatureAt = start
 
         let guidance = engine.guidance(for: session, at: start)
@@ -194,7 +197,7 @@ final class CookingEngineTests: XCTestCase {
             phaseStartedAt: start,
             nextActionAt: nil
         )
-        session.lastManualTemperatureC = Doneness.mediumRare.pullTemperatureC + 0.5
+        session.lastManualTemperatureC = tuning.doneness[.mediumRare].pullTemperatureC + 0.5
         session.lastManualTemperatureAt = start
 
         let guidance = engine.guidance(for: session, at: start)
@@ -212,7 +215,7 @@ final class CookingEngineTests: XCTestCase {
             nextActionAt: start.addingTimeInterval(500)
         )
         session.startedAt = start
-        session.lastManualTemperatureC = Doneness.mediumRare.pullTemperatureC - 3
+        session.lastManualTemperatureC = tuning.doneness[.mediumRare].pullTemperatureC - 3
         session.lastManualTemperatureAt = start.addingTimeInterval(100)
 
         let guidance = engine.guidance(for: session, at: start.addingTimeInterval(101))
@@ -391,8 +394,8 @@ final class CookingEngineTests: XCTestCase {
         // No synthesized “current” temperature exists in the model: the
         // only measured value is the manual reading, and target/pull are
         // static configuration values.
-        XCTAssertEqual(guidance.targetTemperatureC, Doneness.mediumRare.targetTemperatureC)
-        XCTAssertEqual(guidance.pullTemperatureC, Doneness.mediumRare.pullTemperatureC)
+        XCTAssertEqual(guidance.targetTemperatureC, tuning.doneness[.mediumRare].targetTemperatureC)
+        XCTAssertEqual(guidance.pullTemperatureC, tuning.doneness[.mediumRare].pullTemperatureC)
         XCTAssertNotEqual(guidance.lastManualTemperatureC, 54)
     }
 

@@ -5,15 +5,18 @@ struct AdvancedSettingsSheet: View {
     @Environment(AppTheme.self) private var theme
     @State private var draft: SteakSetupPreferences
     let estimate: (SteakConfiguration) -> TimeInterval
+    let targetTemperature: (Doneness) -> Double
     let onSave: (SteakSetupPreferences) -> Void
 
     init(
         preferences: SteakSetupPreferences,
         estimate: @escaping (SteakConfiguration) -> TimeInterval,
+        targetTemperature: @escaping (Doneness) -> Double,
         onSave: @escaping (SteakSetupPreferences) -> Void
     ) {
         _draft = State(initialValue: preferences)
         self.estimate = estimate
+        self.targetTemperature = targetTemperature
         self.onSave = onSave
     }
 
@@ -189,7 +192,10 @@ struct AdvancedSettingsSheet: View {
     }
 
     private var targetText: String {
-        String(format: "%.0f°C", draft.configuration.doneness.targetTemperatureC)
+        String(
+            format: "%.0f°C",
+            targetTemperature(draft.configuration.doneness)
+        )
     }
 
     /// Recomputed from the live draft so doneness/thickness changes are

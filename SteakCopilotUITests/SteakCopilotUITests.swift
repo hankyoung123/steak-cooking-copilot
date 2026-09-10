@@ -291,6 +291,7 @@ final class SteakCopilotUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchArguments = [
             "-resetSession",
+            "-resetTuning",
             "-disableNotifications",
             "-disableLiveActivity",
             "-quietFeedback"

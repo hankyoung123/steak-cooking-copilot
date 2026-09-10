@@ -6,6 +6,7 @@ import Observation
 final class MotionDirector {
     private let haptics: HapticService
     private let sounds: SoundService
+    private let tuning: AppTuning
 
     private(set) var cue = MotionCue(
         visual: .none,
@@ -17,14 +18,16 @@ final class MotionDirector {
 
     init(
         haptics: HapticService = HapticService(),
-        sounds: SoundService = SoundService()
+        sounds: SoundService = SoundService(),
+        tuning: AppTuning = .production
     ) {
         self.haptics = haptics
         self.sounds = sounds
+        self.tuning = tuning
     }
 
     func handle(_ event: CookingEvent) {
-        cue = Self.cue(for: event)
+        cue = Self.cue(for: event, tuning: tuning)
         sequence += 1
         haptics.fire(cue.haptic)
         sounds.play(cue.sound)
@@ -40,12 +43,18 @@ final class MotionDirector {
         sequence += 1
     }
 
-    static func cue(for event: CookingEvent) -> MotionCue {
+    static func cue(
+        for event: CookingEvent,
+        tuning: AppTuning = .production
+    ) -> MotionCue {
         switch event {
         case let .flipApproaching(seconds):
-            let haptic: HapticPreset = seconds <= 2
+            let thresholds = tuning.notifications
+            let heavy = Int(thresholds.hapticHeavySeconds)
+            let light = Int(thresholds.hapticLightSeconds)
+            let haptic: HapticPreset = seconds <= heavy
                 ? .mediumImpact
-                : (seconds == 3 ? .lightImpact : .none)
+                : (seconds <= light ? .lightImpact : .none)
             return MotionCue(
                 visual: .attention(seconds: seconds),
                 preset: .emphasis,

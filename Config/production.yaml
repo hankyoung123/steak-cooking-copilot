@@ -1,0 +1,166 @@
+# Production cooking parameters — the ONLY source of truth for tunable values.
+#
+# These values are compiled into the app at build time by
+#   Scripts/generate_tuning.py
+# which emits SteakCopilot/Generated/ProductionTuning.generated.swift.
+#
+# The YAML is validated at generation time: missing keys, wrong types and
+# out-of-range values fail the build with a clear error. Do not add tuning
+# defaults in Swift — a parameter exists here or not at all.
+#
+# Business invariants (manual temperature priority, no-thermometer never
+# fabricating a temperature, boundary priority, session identity, state
+# transitions, Reduce Motion, accessibility identifiers) are deliberately NOT
+# configurable and stay in code.
+
+version: 1
+
+cooking:
+  # Estimated cooking budget before calibration, in seconds.
+  baseCookingBudget: 300
+  # Thickness at which the thickness factor is 1.0, in centimetres.
+  referenceThickness: 2.5
+  # Floors the thickness factor so very thin cuts still get a sane budget.
+  minThicknessFactor: 0.72
+  # Absolute clamp for the estimated budget, in seconds.
+  minCookingBudget: 180
+  maxCookingBudget: 720
+  # Frequent-flip cadence by thickness, in seconds.
+  flipIntervalThin: 25
+  flipIntervalStandard: 30
+  flipIntervalThick: 40
+  # Thickness above which the standard flip cadence no longer applies.
+  flipIntervalStandardMaxThickness: 4
+  # Never schedule a flip sooner than this, in seconds.
+  minFlipInterval: 0.3
+  # Estimated budget is never shorter than this many flip intervals.
+  minBudgetInFlipIntervals: 3
+  # Thickness bucket boundaries, in centimetres.
+  thinMaxThickness: 2.5
+  standardMaxThickness: 3.5
+  # Late stage (fat cap / butter) begins at this fraction of the budget.
+  lateStageRatio: 0.65
+  # The late stage is never earlier than this many flip intervals.
+  lateStageMinFlipIntervals: 2
+  # Baste length as a fraction of the raw budget, clamped below, in seconds.
+  basteRatio: 0.16
+  minBasteDuration: 0.8
+  maxBasteDuration: 75
+  # Finishing estimate leans slightly on how far the budget deviated from base.
+  budgetFinishAdjustmentRatio: 0.08
+  budgetFinishAdjustmentMinSeconds: -15
+  budgetFinishAdjustmentMaxSeconds: 30
+  # A fat cap always gets at least this long, in seconds.
+  minFatCapDuration: 0.5
+
+cuts:
+  ribeye:
+    cookingBudgetOffset: 12
+    needsFatCap: false
+    fatCapDuration: null
+    recommendedThickness: 3
+  strip:
+    cookingBudgetOffset: 0
+    needsFatCap: true
+    fatCapDuration: 40
+    recommendedThickness: 3
+  tenderloin:
+    cookingBudgetOffset: -12
+    needsFatCap: false
+    fatCapDuration: null
+    recommendedThickness: 4
+
+doneness:
+  rare:
+    targetTemperatureC: 52
+    pullTemperatureC: 49
+    cookingBudgetFactor: 0.88
+  mediumRare:
+    targetTemperatureC: 54
+    pullTemperatureC: 52
+    cookingBudgetFactor: 1.0
+  medium:
+    targetTemperatureC: 60
+    pullTemperatureC: 57
+    cookingBudgetFactor: 1.14
+  mediumWell:
+    targetTemperatureC: 65
+    pullTemperatureC: 62
+    cookingBudgetFactor: 1.28
+  wellDone:
+    targetTemperatureC: 71
+    pullTemperatureC: 68
+    cookingBudgetFactor: 1.42
+
+calibration:
+  # Seconds of budget added/removed per step of doneness feedback.
+  donenessStepSeconds: 12
+  # Seconds of sear bias added/removed per step of crust feedback.
+  crustStepSeconds: 8
+  # Learned adjustments are clamped to these magnitudes, in seconds.
+  maxCookingAdjustment: 60
+  maxSearAdjustment: 24
+
+finishing:
+  # lowerBound = (base + thickness * perCM + donenessAdjustment + budgetAdjustment) * timeScale
+  baseAdjustmentSeconds: 65
+  thicknessAdjustmentPerCM: 15
+  donenessAdjustment:
+    rare: 0
+    mediumRare: 0
+    medium: 15
+    mediumWell: 0
+    wellDone: 0
+  # upperBound = lowerBound + spread.
+  spreadSeconds: 105
+  # The estimate never collapses below these, in seconds.
+  minLowerBoundSeconds: 1
+  minUpperBoundSeconds: 2
+  # Estimated carryover rise shown while finishing, in degrees Celsius.
+  carryoverMinC: 1
+  carryoverMaxC: 3
+  # Manual-reading adjustment: seconds added per degree still to climb.
+  remainingRiseSecondsPerDegree: 6
+  maxManualAdjustmentSeconds: 30
+  # Idle guidance shown before a session starts, in seconds.
+  idleEstimateMinSeconds: 120
+  idleEstimateMaxSeconds: 225
+
+notifications:
+  # Guidance turns into a FLIP prompt this many seconds before the boundary.
+  approachingThresholdSeconds: 5
+  # Live Activity marks the countdown urgent at this remaining time.
+  urgentThresholdSeconds: 5
+  # Countdown haptics: light at this many seconds left, heavy below it.
+  hapticLightSeconds: 3
+  hapticHeavySeconds: 2
+  # Live Activity content is considered stale this long after the boundary.
+  staleDelaySeconds: 30
+  # How long the final activity lingers, in seconds.
+  finishedDismissalSeconds: 60
+  cancelledDismissalSeconds: 4
+
+motion:
+  subtle: 0.12
+  responsive: 0.22
+  emphasis: 0.38
+  action: 0.55
+  cinematic: 0.95
+  stageTransition: 0.7
+  flipLift: 0.10
+  flipRotate: 0.15
+  flipLand: 0.23
+  flipSettle: 0.07
+  compactFlipOut: 0.16
+  compactFlipLand: 0.22
+  takeOutLift: 0.18
+  takeOutHold: 0.20
+  takeOutSettle: 0.24
+  readyRevealDelay: 0.26
+  emphasisBounce: 0.16
+  actionBounce: 0.22
+  stageSceneCrossfade: 0.58
+  sessionPhaseChange: 0.5
+  progressRailSpring: 0.52
+  progressRailBounce: 0.12
+  resultAppear: 0.65

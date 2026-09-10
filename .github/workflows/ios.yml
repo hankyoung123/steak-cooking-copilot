@@ -32,6 +32,32 @@ jobs:
         run: |
           xcodebuild -version
           xcrun simctl list runtimes
+          python3 --version
+
+      # Config/production.yaml is the single source of truth for tunable
+      # parameters. Generation is offline (the generator ships its own YAML
+      # subset parser — no PyYAML, no pip install).
+      - name: Validate tuning configuration
+        run: python3 Scripts/generate_tuning.py --self-test
+
+      - name: Regenerate tuning from production.yaml
+        run: python3 Scripts/generate_tuning.py
+
+      # The generated Swift is committed, so a stale artifact (or one missing
+      # from git) must fail CI instead of silently shipping outdated parameters.
+      - name: Fail if generated tuning is stale
+        run: |
+          set -euo pipefail
+          generated="SteakCopilot/Generated/ProductionTuning.generated.swift"
+          # `git status --porcelain` also reports untracked files, which
+          # `git diff` would miss.
+          if [ -n "$(git status --porcelain -- "$generated")" ]; then
+            echo "::error::ProductionTuning.generated.swift is out of date with Config/production.yaml."
+            echo "Run: python3 Scripts/generate_tuning.py and commit the result."
+            git --no-pager diff -- "$generated" || true
+            exit 1
+          fi
+          echo "Generated tuning matches Config/production.yaml."
 
       - name: Resolve an available iPhone simulator
         id: simulator

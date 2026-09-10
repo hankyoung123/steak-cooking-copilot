@@ -10,7 +10,8 @@ struct CookingProfile: Equatable, Sendable {
     let pullTemperatureC: Double
     let finishingEstimate: ClosedRange<TimeInterval>
 
-    var lateStageDateOffset: TimeInterval {
-        max(flipInterval * 2, estimatedCookingBudget * 0.65 + initialSearBias)
-    }
+    /// Absolute offset from the cook start at which the late stage (fat cap /
+    /// butter) begins. Computed by `CookingEngine` from tunable values:
+    /// `lateStageRatio`, `lateStageMinFlipIntervals` and the learned sear bias.
+    let lateStageDateOffset: TimeInterval
 }

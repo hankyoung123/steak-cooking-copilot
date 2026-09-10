@@ -1353,7 +1353,6 @@
       }
     },
     "No thermometer reading recorded" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {

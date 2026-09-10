@@ -16,10 +16,10 @@ struct CookingGuidance: Equatable, Sendable {
 
     static func idle(
         phase: CookingPhase = .setup,
-        targetTemperatureC: Double = 54,
-        pullTemperatureC: Double = 52
+        tuning: AppTuning = .production
     ) -> CookingGuidance {
-        CookingGuidance(
+        let baseline = tuning.doneness[.mediumRare]
+        return CookingGuidance(
             phase: phase,
             currentAction: .wait,
             nextAction: nil,
@@ -27,10 +27,10 @@ struct CookingGuidance: Equatable, Sendable {
             remainingTime: 0,
             estimatedProgress: 0,
             pullRecommendation: .keepCooking,
-            targetTemperatureC: targetTemperatureC,
-            pullTemperatureC: pullTemperatureC,
+            targetTemperatureC: baseline.targetTemperatureC,
+            pullTemperatureC: baseline.pullTemperatureC,
             lastManualTemperatureC: nil,
-            finishingEstimate: 120...225,
+            finishingEstimate: tuning.finishing.idleEstimate,
             event: nil
         )
     }
@@ -76,12 +76,16 @@ extension CookingGuidance {
 }
 
 struct CookingEngine: Sendable {
+    /// Production tuning generated from Config/production.yaml. Every tunable
+    /// number in this engine comes from here; there are no literals to drift.
+    let tuning: AppTuning
+
+    init(tuning: AppTuning = .production) {
+        self.tuning = tuning
+    }
+
     func flipInterval(for configuration: SteakConfiguration) -> TimeInterval {
-        switch configuration.thicknessCM {
-        case ..<2.5: 25
-        case ...4: 30
-        default: 40
-        }
+        tuning.cooking.flipInterval(thicknessCM: configuration.thicknessCM)
     }
 
     func profile(
@@ -89,43 +93,72 @@ struct CookingEngine: Sendable {
         calibration: CookingCalibration,
         timeScale: Double = 1
     ) -> CookingProfile {
+        let cooking = tuning.cooking
+        let doneness = configuration.doneness.spec(in: tuning)
+        let cut = configuration.cut.spec(in: tuning)
         let scale = max(0.01, timeScale)
-        let thicknessFactor = max(0.72, configuration.thicknessCM / 2.5)
-        let cutBudgetOffset: TimeInterval = switch configuration.cut {
-        case .ribeye: 12
-        case .strip: 0
-        case .tenderloin: -12
-        }
-        let rawBudget = 300
+        let thicknessFactor = max(
+            cooking.minThicknessFactor,
+            configuration.thicknessCM / cooking.referenceThickness
+        )
+        let rawBudget = cooking.baseCookingBudget
             * thicknessFactor
-            * configuration.doneness.cookingBudgetFactor
-            + cutBudgetOffset
+            * doneness.cookingBudgetFactor
+            + cut.cookingBudgetOffset
             + calibration.cookingTimeAdjustment
-        let budget = min(max(rawBudget, 180), 720) * scale
+        let budget = min(
+            max(rawBudget, cooking.minCookingBudget),
+            cooking.maxCookingBudget
+        ) * scale
         let flip = flipInterval(for: configuration) * scale
         let budgetFinishAdjustment = min(
-            max((rawBudget - 300) * 0.08, -15),
-            30
+            max(
+                (rawBudget - cooking.baseCookingBudget)
+                    * cooking.budgetFinishAdjustmentRatio,
+                cooking.budgetFinishAdjustmentMinSeconds
+            ),
+            cooking.budgetFinishAdjustmentMaxSeconds
         )
+        let finishing = tuning.finishing
         let lowerFinish = (
-            65
-                + configuration.thicknessCM * 15
-                + (configuration.doneness == .medium ? 15 : 0)
+            finishing.baseAdjustmentSeconds
+                + configuration.thicknessCM * finishing.thicknessAdjustmentPerCM
+                + finishing.donenessAdjustment[configuration.doneness]
                 + budgetFinishAdjustment
         ) * scale
+        let estimatedBudget = max(
+            flip * cooking.minBudgetInFlipIntervals,
+            budget
+        )
+        let lateStageDateOffset = max(
+            max(cooking.minFlipInterval, flip) * cooking.lateStageMinFlipIntervals,
+            estimatedBudget * cooking.lateStageRatio + calibration.searBias * scale
+        )
 
         return CookingProfile(
-            flipInterval: max(0.3, flip),
-            estimatedCookingBudget: max(flip * 3, budget),
+            flipInterval: max(cooking.minFlipInterval, flip),
+            estimatedCookingBudget: estimatedBudget,
             initialSearBias: calibration.searBias * scale,
-            fatCapDuration: configuration.cut.profile.fatCapDuration.map { max(0.5, $0 * scale) },
-            basteDuration: max(0.8, min(75, rawBudget * 0.16) * scale),
-            targetTemperatureC: configuration.doneness.targetTemperatureC,
-            pullTemperatureC: configuration.doneness.pullTemperatureC,
-            finishingEstimate: max(1, lowerFinish)...max(
-                2,
-                lowerFinish + 105 * scale
-            )
+            fatCapDuration: cut.fatCapDuration.map {
+                max(cooking.minFatCapDuration, $0 * scale)
+            },
+            basteDuration: max(
+                cooking.minBasteDuration,
+                min(
+                    cooking.maxBasteDuration,
+                    rawBudget * cooking.basteRatio
+                ) * scale
+            ),
+            targetTemperatureC: doneness.targetTemperatureC,
+            pullTemperatureC: doneness.pullTemperatureC,
+            finishingEstimate: max(
+                finishing.minLowerBoundSeconds,
+                lowerFinish
+            )...max(
+                finishing.minUpperBoundSeconds,
+                lowerFinish + finishing.spreadSeconds * scale
+            ),
+            lateStageDateOffset: lateStageDateOffset
         )
     }
 
@@ -292,9 +325,14 @@ struct CookingEngine: Sendable {
         switch kind {
         case .flip: .flip
         case .lateStage:
-            configuration.cut.profile.needsFatCap ? .standFatCap : .addButter
+            needsFatCap(for: configuration) ? .standFatCap : .addButter
         case .estimatedPull: .takeOut
         }
+    }
+
+    /// Whether this cut needs a fat-cap stage, from production tuning.
+    func needsFatCap(for configuration: SteakConfiguration) -> Bool {
+        configuration.cut.spec(in: tuning).needsFatCap
     }
 
     private func pullRecommendation(
@@ -348,7 +386,7 @@ struct CookingEngine: Sendable {
                     : .flip
             }
             guard date < lateStageAt else {
-                return session.configuration.cut.profile.needsFatCap
+                return needsFatCap(for: session.configuration)
                     ? .standFatCap
                     : .addButter
             }
@@ -436,7 +474,8 @@ struct CookingEngine: Sendable {
         if action == .flip {
             return .flipNow(style: session.flipCount == 0 ? .hero : .compact)
         }
-        if nextAction == .flip, remaining <= 5, remaining > 0 {
+        let approaching = tuning.notifications.approachingThresholdSeconds
+        if nextAction == .flip, remaining <= approaching, remaining > 0 {
             return .flipApproaching(seconds: max(1, Int(ceil(remaining))))
         }
 
@@ -456,8 +495,12 @@ struct CookingEngine: Sendable {
         guard let temperature = session.lastManualTemperatureC else {
             return profile.finishingEstimate
         }
+        let finishing = tuning.finishing
         let remainingRise = max(0, profile.targetTemperatureC - temperature)
-        let adjustment = min(30, remainingRise * 6)
+        let adjustment = min(
+            finishing.maxManualAdjustmentSeconds,
+            remainingRise * finishing.remainingRiseSecondsPerDegree
+        )
         return (profile.finishingEstimate.lowerBound + adjustment)...(
             profile.finishingEstimate.upperBound + adjustment
         )

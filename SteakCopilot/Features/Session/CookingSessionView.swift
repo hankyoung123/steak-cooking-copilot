@@ -117,7 +117,7 @@ struct CookingSessionView: View {
             await refreshAtKeyBoundaries()
         }
         .animation(
-            reduceMotion ? nil : .smooth(duration: 0.5),
+            reduceMotion ? nil : .smooth(duration: controller.tuning.motion.sessionPhaseChange),
             value: controller.session.phase
         )
     }
@@ -220,7 +220,12 @@ struct CookingSessionView: View {
         }
         .frame(height: 12)
         .animation(
-            reduceMotion ? nil : .spring(duration: 0.52, bounce: 0.12),
+            reduceMotion
+                ? nil
+                : .spring(
+                    duration: controller.tuning.motion.progressRailSpring,
+                    bounce: controller.tuning.motion.progressRailBounce
+                ),
             value: overallProgress
         )
         .accessibilityHidden(true)
@@ -250,7 +255,15 @@ struct CookingSessionView: View {
                         value: String(format: "%.0f°C", controller.guidance.targetTemperatureC)
                     )
                 }
-                Text("Expected carryover +1–3°C · Estimated")
+                Text(
+                    String(
+                        format: String(
+                            localized: "Expected carryover +%lld–%lld°C · Estimated"
+                        ),
+                        Int64(controller.tuning.finishing.carryoverMinC.rounded()),
+                        Int64(controller.tuning.finishing.carryoverMaxC.rounded())
+                    )
+                )
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundStyle(accentColor.opacity(0.92))
             } else {
@@ -310,7 +323,9 @@ struct CookingSessionView: View {
             }
             .frame(height: 5)
             .animation(
-                reduceMotion ? nil : .easeOut(duration: MotionTiming.responsive),
+                reduceMotion
+                    ? nil
+                    : .easeOut(duration: controller.tuning.motion.responsive),
                 value: progress
             )
         }
@@ -334,7 +349,7 @@ struct CookingSessionView: View {
         HStack(spacing: 0) {
             sessionMetric(
                 label: "TARGET TEMP",
-                value: String(format: "%.0f°C", controller.session.configuration.doneness.targetTemperatureC)
+                value: String(format: "%.0f°C", controller.guidance.targetTemperatureC)
             )
             Rectangle()
                 .fill(hairlineColor.opacity(0.72))

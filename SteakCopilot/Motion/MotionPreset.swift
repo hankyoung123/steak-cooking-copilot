@@ -7,13 +7,15 @@ enum MotionPreset: Equatable, Sendable {
     case action
     case cinematic
 
-    var animation: Animation {
+    /// Animation curves are built from tunable durations; the mapping from
+    /// preset to curve is not a tunable parameter.
+    func animation(using motion: MotionTuning) -> Animation {
         switch self {
-        case .subtle: .easeOut(duration: MotionTiming.subtle)
-        case .responsive: .snappy(duration: MotionTiming.responsive)
-        case .emphasis: .spring(duration: MotionTiming.emphasis, bounce: 0.16)
-        case .action: .spring(duration: MotionTiming.action, bounce: 0.22)
-        case .cinematic: .easeInOut(duration: MotionTiming.cinematic)
+        case .subtle: .easeOut(duration: motion.subtle)
+        case .responsive: .snappy(duration: motion.responsive)
+        case .emphasis: .spring(duration: motion.emphasis, bounce: motion.emphasisBounce)
+        case .action: .spring(duration: motion.action, bounce: motion.actionBounce)
+        case .cinematic: .easeInOut(duration: motion.cinematic)
         }
     }
 }

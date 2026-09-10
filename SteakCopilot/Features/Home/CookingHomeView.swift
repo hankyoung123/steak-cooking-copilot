@@ -88,12 +88,18 @@ struct CookingHomeView: View {
                 AdvancedSettingsSheet(
                     preferences: preferences,
                     estimate: { controller.estimatedCookingBudget(for: $0) },
+                    targetTemperature: {
+                        controller.tuning.doneness[$0].targetTemperatureC
+                    },
                     onSave: save
                 )
                 .presentationDetents([.large])
                 .presentationCornerRadius(28)
             case .history:
-                CookLogView(records: controller.cookHistory)
+                CookLogView(
+                    records: controller.cookHistory,
+                    tuning: controller.tuning
+                )
                     .presentationDetents([.large])
                     .presentationCornerRadius(28)
             }
@@ -194,7 +200,14 @@ struct CookingHomeView: View {
                 Image(systemName: "clock")
                 Text(durationText)
                 Text("·")
-                Text(String(format: "%.0f°C", preferences.configuration.doneness.pullTemperatureC))
+                Text(
+                    String(
+                        format: "%.0f°C",
+                        controller.tuning.doneness[
+                            preferences.configuration.doneness
+                        ].pullTemperatureC
+                    )
+                )
                 Text(String(localized: "Pull target"))
             }
             .font(.system(size: 11, weight: .regular))

@@ -4,7 +4,7 @@ import Observation
 @MainActor
 @Observable
 final class CookingSessionController {
-    private let engine: CookingEngine
+    private var engine: CookingEngine
     private let store: CookingStore
     private let timeScale: Double
     private let notificationService: any CookingNotificationServing
@@ -16,18 +16,25 @@ final class CookingSessionController {
     private(set) var calibrations: [CalibrationKey: CookingCalibration]
     let motionDirector: MotionDirector
 
+    /// Effective tuning: production defaults (generated from
+    /// Config/production.yaml) merged with any local development override.
+    private(set) var tuning: AppTuning
+
     var flowStage: CookingFlowStage { session.phase.flowStage }
 
     init(
-        engine: CookingEngine = CookingEngine(),
+        engine: CookingEngine? = nil,
         store: CookingStore = CookingStore(),
         motionDirector: MotionDirector = MotionDirector(),
         notificationService: any CookingNotificationServing = NotificationService(),
         liveActivityService: any CookingLiveActivityServing = LiveActivityService(),
+        tuning: AppTuning = .production,
         timeScale: Double = 1,
         now: Date = .now
     ) {
-        self.engine = engine
+        let resolvedEngine = engine ?? CookingEngine(tuning: tuning)
+        self.engine = resolvedEngine
+        self.tuning = tuning
         self.store = store
         self.motionDirector = motionDirector
         self.notificationService = notificationService
@@ -38,9 +45,9 @@ final class CookingSessionController {
         let restored = store.loadSession() ?? CookingSession.fresh(at: now)
         session = restored
         let restoredCalibration = restoredCalibrations[
-            CalibrationKey(configuration: restored.configuration)
+            CalibrationKey(configuration: restored.configuration, tuning: tuning)
         ] ?? .neutral
-        guidance = engine.guidance(
+        guidance = resolvedEngine.guidance(
             for: restored,
             at: now,
             calibration: restoredCalibration,
@@ -63,7 +70,7 @@ final class CookingSessionController {
     }
 
     func setupPreferences(for cut: SteakCut) -> SteakSetupPreferences {
-        store.loadSetupPreferences(for: cut)
+        store.loadSetupPreferences(for: cut, tuning: tuning)
     }
 
     func updateSetupPreferences(_ preferences: SteakSetupPreferences) {
@@ -82,7 +89,9 @@ final class CookingSessionController {
     func estimatedCookingBudget(for configuration: SteakConfiguration) -> TimeInterval {
         engine.profile(
             for: configuration,
-            calibration: calibrations[CalibrationKey(configuration: configuration)] ?? .neutral,
+            calibration: calibrations[
+                CalibrationKey(configuration: configuration, tuning: tuning)
+            ] ?? .neutral,
             timeScale: timeScale
         ).estimatedCookingBudget
     }
@@ -244,10 +253,11 @@ final class CookingSessionController {
                 configuration: session.configuration
             )
         )
-        let calibrationKey = CalibrationKey(configuration: session.configuration)
+        let calibrationKey = CalibrationKey(configuration: session.configuration, tuning: tuning)
         let updatedCalibration = currentCalibration.applying(
             doneness: doneness,
-            crust: crust
+            crust: crust,
+            tuning: tuning
         )
         calibrations[calibrationKey] = updatedCalibration
         store.save(calibration: updatedCalibration, for: calibrationKey)
@@ -284,6 +294,15 @@ final class CookingSessionController {
         refresh(at: date)
     }
 
+    /// Applies a new effective tuning (production defaults plus a local
+    /// override) without disturbing the running session: the absolute
+    /// `nextActionAt` is preserved, so only future boundaries are affected.
+    func applyTuning(_ newTuning: AppTuning) {
+        tuning = newTuning
+        engine = CookingEngine(tuning: newTuning)
+        refresh(at: .now)
+    }
+
     var currentProfile: CookingProfile {
         engine.profile(
             for: session.configuration,
@@ -317,7 +336,7 @@ final class CookingSessionController {
 
     private var currentCalibration: CookingCalibration {
         calibrations[
-            CalibrationKey(configuration: session.configuration)
+            CalibrationKey(configuration: session.configuration, tuning: tuning)
         ] ?? .neutral
     }
 
