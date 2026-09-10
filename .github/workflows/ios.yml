@@ -70,6 +70,20 @@ jobs:
           fi
           echo "Generated tuning matches Config/production.yaml."
 
+      # A cold build dominates the run (~9 of ~10 minutes), while the unit
+      # suite itself takes under a minute. Restoring DerivedData makes the
+      # build incremental across runs. The key is based on the project file
+      # rather than the sources on purpose: a source change should still
+      # *restore* the previous build products, which is what makes the build
+      # incremental. `restore-keys` covers project-file changes.
+      - name: Restore build cache
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Developer/Xcode/DerivedData
+          key: derived-${{ runner.os }}-${{ hashFiles('SteakCopilot.xcodeproj/project.pbxproj') }}
+          restore-keys: |
+            derived-${{ runner.os }}-
+
       - name: Resolve an available iPhone simulator
         id: simulator
         run: |

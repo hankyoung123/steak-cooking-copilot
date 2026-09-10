@@ -30,6 +30,11 @@ UI suite drives the real cook flow and takes several minutes, so it is a manual
 run: **Actions → iOS → Run workflow** (choose `full` for unit + UI, or `unit`).
 Run `make test-ui` locally when you touch the cook UI.
 
+Measured CI cost breakdown (unit-only run): verification steps ~27s, the unit
+suite itself ~57s, and the **cold build ~9 minutes**. The build, not the tests,
+is what makes a run long, so the workflow caches `DerivedData` to keep it
+incremental across runs.
+
 ## The rule: no double defaults
 
 A parameter exists in `production.yaml` or it does not exist.
