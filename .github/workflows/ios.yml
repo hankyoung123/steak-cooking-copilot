@@ -4,6 +4,17 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Manual run. The UI suite walks real cooking flows and takes several
+  # minutes, so it is opt-in - see the "suite" input.
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Which tests to run
+        type: choice
+        options:
+          - unit
+          - full
+        default: full
 
 jobs:
   test:
@@ -103,10 +114,25 @@ jobs:
           xcrun simctl list devices | grep "$udid" || true
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
 
+      # Push/PR runs the unit suite only: it is ~1 minute and catches the
+      # logic, tuning and Swift 6 issues that actually break a change. The UI
+      # suite drives the real cook flow and takes several minutes, so it runs
+      # when someone asks for it (Actions -> iOS -> Run workflow).
       - name: Build and test
         run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] \
+             && [ "${{ inputs.suite }}" = "full" ]; then
+            echo "Manual run: full suite (unit + UI)."
+            scope=""
+          else
+            echo "Default run: unit tests only."
+            echo "The UI suite runs on a manual dispatch (Actions -> iOS -> Run workflow)."
+            scope="-only-testing:SteakCopilotTests"
+          fi
           xcodebuild test \
             -project "$PROJECT" \
             -scheme "$SCHEME" \
             -destination "platform=iOS Simulator,id=${{ steps.simulator.outputs.udid }}" \
-            CODE_SIGNING_ALLOWED=NO
+            CODE_SIGNING_ALLOWED=NO \
+            $scope

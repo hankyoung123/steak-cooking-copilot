@@ -20,8 +20,15 @@ AppTuning.production                       typed defaults read by business code
 make tuning         # regenerate after editing production.yaml
 make check-tuning   # self-test + freshness check (this is what CI runs)
 make test-unit      # ~1 minute
+make test-ui        # UI suite, several minutes
 make test           # full suite
 ```
+
+CI runs the **unit** suite on push and pull requests because it is ~1 minute and
+catches the logic, tuning and Swift 6 problems that actually break a change. The
+UI suite drives the real cook flow and takes several minutes, so it is a manual
+run: **Actions → iOS → Run workflow** (choose `full` for unit + UI, or `unit`).
+Run `make test-ui` locally when you touch the cook UI.
 
 ## The rule: no double defaults
 

@@ -63,6 +63,11 @@ part of the build and needs no action.
 `.github/workflows/ios.yml` targets `macos-15` GitHub-hosted runners and runs
 `xcodebuild test` for the `SteakCopilot` scheme with `CODE_SIGNING_ALLOWED=NO`.
 
+Test scope: **push/pull request runs the unit suite only** (fast, and enough to
+catch logic, tuning and Swift 6 breakage). The UI suite walks real cooking flows
+and takes several minutes, so it is opt-in via a manual dispatch
+(`workflow_dispatch`, input `suite`: `full` or `unit`).
+
 The workflow deliberately does not pin a specific Xcode or simulator, because
 runner images change over time:
 
