@@ -139,7 +139,12 @@ final class LocalizationTests: XCTestCase {
             "CANCELLED": "已取消",
             "Oil should shimmer and the steak should sizzle immediately on contact.":
                 "油面应微微泛光，牛排入锅应立即发出滋滋声。",
-            "Carryover heat will finish the center.": "余温会继续加热中心。"
+            "Carryover heat will finish the center.": "余温会继续加热中心。",
+            // The finishing card builds this line with String(format:), so the
+            // catalog key has to be the *format* string. It used to be stored
+            // with the production numbers already substituted (+1–3°C), so the
+            // lookup missed and the Chinese UI silently fell back to English.
+            "Expected carryover +%lld–%lld°C": "预计余温升温 +%lld–%lld°C"
         ]
         for (key, translation) in cookingCopy {
             XCTAssertEqual(

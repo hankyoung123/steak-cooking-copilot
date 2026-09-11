@@ -152,22 +152,19 @@ struct RootFlowView: View {
         }
     }
 
+    /// A pure cross-fade between major flow stages.
+    ///
+    /// This used to scale the whole page (1.015 in, 0.985 out). Combined with
+    /// `.id(flowStage)` — which re-creates the page for PREP / HEAT / COOK /
+    /// FINISH — the scale made every element appear to shift, which reads as
+    /// the header and the scene moving even though their slots never changed.
+    /// The session skeleton already carries the "this is a new stage" signal
+    /// through its phase title, hero and artwork, so the transition only has to
+    /// dissolve. Inside COOK the phase no longer re-creates anything at all:
+    /// SEAR → FLIP → FAT CAP → BASTE → CHECK TEMP is a content update of the
+    /// same view.
     private var stageTransition: AnyTransition {
-        if reduceMotion {
-            return .opacity
-        }
-
-        if controller.flowStage == .finish {
-            return .asymmetric(
-                insertion: .scale(scale: 1.02).combined(with: .opacity),
-                removal: .scale(scale: 0.98).combined(with: .opacity)
-            )
-        } else {
-            return .asymmetric(
-                insertion: .scale(scale: 1.015).combined(with: .opacity),
-                removal: .scale(scale: 0.985).combined(with: .opacity)
-            )
-        }
+        .opacity
     }
 
     private var usesDarkCanvas: Bool {

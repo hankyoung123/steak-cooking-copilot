@@ -829,12 +829,12 @@
         }
       }
     },
-    "Expected carryover +1–3°C · Estimated" : {
+    "Expected carryover +%lld–%lld°C" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "预计余温升温 +1–3°C"
+            "value" : "预计余温升温 +%lld–%lld°C"
           }
         }
       }

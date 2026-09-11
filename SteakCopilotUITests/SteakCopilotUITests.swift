@@ -346,6 +346,329 @@ final class SteakCopilotUITests: XCTestCase {
         attachScreenshot(named: "tuning-lab", app: app)
     }
 
+    /// Regression for the session layout skeleton.
+    ///
+    /// The session screen used to reflow on almost every phase change: the hero
+    /// switched between a 78pt countdown and a 40pt sentence, the instruction
+    /// kept or dropped its detail line, CHECK TEMP inserted a temperature
+    /// control into the middle of the column, and FINISHING replaced the
+    /// telemetry with a taller card. Every one of those pushed the rows below it.
+    ///
+    /// This test walks the real cooking sequence (a strip covers the fat-cap
+    /// stand, which ribeye and tenderloin skip) and asserts that the shared slots
+    /// keep one frame. The artwork band and the progress rail carry no
+    /// accessibility content on purpose, so they are measured through geometry
+    /// probes that only materialise under `-layoutProbes` — production VoiceOver
+    /// never announces a decorative photograph.
+    func testSessionSkeletonSlotsDoNotMoveBetweenCookingPhases() {
+        let app = launchApp(layoutProbes: true)
+        // Strip is the only cut with a fat-cap stand, so this covers
+        // SEAR wait → FLIP → FAT CAP → BASTE → CHECK TEMP → FINISHING.
+        app.buttons["home.nextCut"].tap()
+        startCooking(app)
+
+        var samples: [SessionSkeletonSample] = []
+        for _ in 0..<26 {
+            // Let the phase transition and the artwork crossfade settle, so a
+            // sample is never taken mid-animation.
+            settleArtwork(after: 0.3)
+            samples.append(captureSessionSkeleton(in: app))
+
+            if app.staticTexts["FINISHING"].exists { break }
+
+            let noThermometer = app.buttons["cook.noThermometer"]
+            if noThermometer.exists, noThermometer.isHittable {
+                noThermometer.tap()
+                continue
+            }
+
+            let confirm = app.buttons["cook.confirm"]
+            if confirm.waitForExistence(timeout: 4) {
+                tapWhenEnabled(confirm, timeout: 20)
+                continue
+            }
+
+            if app.buttons["cook.temperature.submit"].exists {
+                // The reading path is covered by the case tests; this test only
+                // needs the phase sequence, and that path has no confirm step.
+                break
+            }
+
+            XCTFail("Expected the next cook action or the finishing phase")
+            break
+        }
+
+        XCTAssertGreaterThanOrEqual(
+            samples.count,
+            6,
+            "The walk should have sampled several distinct cooking phases"
+        )
+
+        let titles = Set(samples.map(\.phaseTitle))
+        XCTAssertTrue(
+            titles.contains { $0.hasPrefix("SEAR") },
+            "Expected sear samples, saw \(titles.sorted())"
+        )
+        XCTAssertTrue(
+            titles.contains("CHECK"),
+            "Expected a CHECK TEMP sample, saw \(titles.sorted())"
+        )
+        XCTAssertTrue(
+            titles.contains("FINISHING"),
+            "Expected a FINISHING sample, saw \(titles.sorted())"
+        )
+
+        // Coverage guards: the assertions below are only meaningful if the
+        // samples really do span both states of the swapped status slot.
+        XCTAssertTrue(
+            samples.contains { $0.telemetry == nil },
+            "No sample without telemetry, so the status-slot swap is untested"
+        )
+        XCTAssertTrue(
+            samples.contains { $0.telemetry != nil },
+            "No sample with telemetry, so the status-slot swap is untested"
+        )
+
+        let tolerance: CGFloat = 2
+        assertStable(samples, "session.topControls", tolerance) { $0.topControls }
+        assertStable(samples, "session.scene", tolerance) { $0.scene }
+        assertStable(samples, "session.instruction", tolerance) { $0.instruction }
+        assertStable(samples, "session.primaryAction", tolerance) { $0.primaryAction }
+
+        // The progress rail is present in every phase except FINISHING (where
+        // carryover heat has no measurable progress), and the telemetry is
+        // swapped out for the reading entry and then the finishing card. Both
+        // must hold one frame in every phase that shows them.
+        assertStable(samples, "session.progress (while shown)", tolerance) { $0.progress }
+        assertStable(samples, "session.telemetry (while shown)", tolerance) { $0.telemetry }
+
+        // The hero is the one band whose *type size* legitimately changes: a
+        // 78pt countdown while a stage timer runs, a 40pt sentence when it has
+        // run out. Its container is fixed and its content is centred, so the
+        // invariant is the container's centre plus "the text never reaches the
+        // scene". Asserting a fixed minY/height here would be asserting that the
+        // countdown and the sentence must be the same size, which is not the
+        // design.
+        assertCentred(samples, "session.hero", tolerance)
+
+        attachScreenshot(named: "layout-skeleton-finishing", app: app)
+    }
+
+    /// Regression for the result screen's skeleton (READY → EAT → FEEDBACK).
+    ///
+    /// The feedback form is much taller than the "how it went" note it replaces.
+    /// The upper bands are fixed and the middle band is reserved for the taller
+    /// of the two, so the feedback controls must not push the top navigation, the
+    /// title, the hero or the summary card.
+    func testResultSkeletonSlotsDoNotMoveBetweenReadyEatFeedback() {
+        let app = launchApp(layoutProbes: true)
+        app.buttons["setup.primary"].tap()
+
+        // Skip PREP → HEAT → SEAR → FINISHING → READY.
+        for _ in 0..<4 { confirmSkip(in: app) }
+        XCTAssertTrue(app.buttons["ready.continue"].waitForExistence(timeout: 5))
+
+        var samples: [ResultSkeletonSample] = []
+        for _ in 0..<3 {
+            settleArtwork(after: 0.4)
+            samples.append(captureResultSkeleton(in: app))
+
+            if app.buttons["eat.feedback"].exists {
+                app.buttons["eat.feedback"].tap()
+            } else if app.buttons["ready.continue"].exists {
+                app.buttons["ready.continue"].tap()
+            } else {
+                break
+            }
+        }
+
+        XCTAssertEqual(
+            samples.count,
+            3,
+            "Expected a READY, an EAT and a FEEDBACK sample"
+        )
+        // WELL DONE covers READY and EAT, COOK COMPLETE is FEEDBACK.
+        XCTAssertEqual(
+            Set(samples.map(\.eyebrow)).count,
+            2,
+            "The samples should span all three result phases, saw \(samples.map(\.eyebrow))"
+        )
+
+        let tolerance: CGFloat = 2
+        assertStable(samples, "result.topControls", tolerance) { $0.topControls }
+        assertStable(samples, "result.title", tolerance) { $0.title }
+        assertStable(samples, "result.hero", tolerance) { $0.hero }
+        assertStable(samples, "result.summary", tolerance) { $0.summary }
+        assertStable(samples, "result.primaryAction", tolerance) { $0.primaryAction }
+
+        attachScreenshot(named: "layout-result-feedback", app: app)
+    }
+
+    // MARK: - Layout skeleton probes
+
+    private struct ResultSkeletonSample: LayoutSample {
+        let eyebrow: String
+        let topControls: CGRect
+        let title: CGRect
+        let hero: CGRect
+        let summary: CGRect
+        let primaryAction: CGRect
+
+        var phaseLabel: String { eyebrow }
+    }
+
+    private func captureResultSkeleton(in app: XCUIApplication) -> ResultSkeletonSample {
+        ResultSkeletonSample(
+            eyebrow: app.staticTexts["session.phase.title"].label,
+            topControls: layoutFrame("result.topControls", in: app),
+            title: layoutFrame("result.title", in: app),
+            hero: layoutFrame("result.hero", in: app),
+            summary: layoutFrame("result.summary", in: app),
+            primaryAction: layoutFrame("result.primaryAction", in: app)
+        )
+    }
+
+    private struct SessionSkeletonSample: LayoutSample {
+        let phaseTitle: String
+        let topControls: CGRect
+        let hero: CGRect
+        let scene: CGRect
+        let instruction: CGRect
+        let progress: CGRect?
+        let telemetry: CGRect?
+        let primaryAction: CGRect
+
+        var phaseLabel: String { phaseTitle }
+    }
+
+    private func captureSessionSkeleton(in app: XCUIApplication) -> SessionSkeletonSample {
+        SessionSkeletonSample(
+            phaseTitle: app.staticTexts["session.phase.title"].label,
+            topControls: layoutFrame("session.topControls", in: app),
+            hero: layoutFrame("session.hero", in: app),
+            scene: layoutFrame("session.scene", in: app),
+            instruction: layoutFrame("session.instruction", in: app),
+            progress: layoutFrameIfPresent("session.progress", in: app),
+            telemetry: layoutFrameIfPresent("session.telemetry", in: app),
+            primaryAction: layoutFrame("session.primaryAction", in: app)
+        )
+    }
+
+    /// Queries by identifier across every element type: the slots are exposed as
+    /// containers (`.contain`) or combined elements (`.combine`) depending on
+    /// what they hold, and the test must not care which.
+    private func layoutElement(
+        _ identifier: String,
+        in app: XCUIApplication
+    ) -> XCUIElement {
+        app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+    }
+
+    private func layoutFrame(
+        _ identifier: String,
+        in app: XCUIApplication
+    ) -> CGRect {
+        let element = layoutElement(identifier, in: app)
+        XCTAssertTrue(
+            element.waitForExistence(timeout: 3),
+            "Missing layout slot \(identifier)"
+        )
+        return element.frame
+    }
+
+    private func layoutFrameIfPresent(
+        _ identifier: String,
+        in app: XCUIApplication
+    ) -> CGRect? {
+        let element = layoutElement(identifier, in: app)
+        guard element.exists else { return nil }
+        let frame = element.frame
+        return frame.isEmpty ? nil : frame
+    }
+
+    /// A sampled layout state, so one stability assertion can serve the session
+    /// and the result screens.
+    private protocol LayoutSample {
+        var phaseLabel: String { get }
+    }
+
+    /// Every phase that shows this slot must place it at the same place, with
+    /// the same size. The tolerance is deliberately tight: the slots have fixed
+    /// heights, so any real drift is tens of points, while accessibility frame
+    /// rounding is sub-point. Slots a phase legitimately does not show (the rail
+    /// during FINISHING, the telemetry during reading entry) are skipped rather
+    /// than asserted to be at zero.
+    private func assertStable<S: LayoutSample>(
+        _ samples: [S],
+        _ name: String,
+        _ tolerance: CGFloat,
+        _ frame: (S) -> CGRect?
+    ) {
+        let present = samples.compactMap { sample in
+            frame(sample).map { (sample.phaseLabel, $0) }
+        }
+
+        guard let first = present.first else {
+            XCTFail("\(name) was never measurable")
+            return
+        }
+
+        for (phase, rect) in present {
+            XCTAssertEqual(
+                rect.minY,
+                first.1.minY,
+                accuracy: tolerance,
+                "\(name) moved vertically in \(phase)"
+            )
+            XCTAssertEqual(
+                rect.midX,
+                first.1.midX,
+                accuracy: tolerance,
+                "\(name) moved horizontally in \(phase)"
+            )
+            XCTAssertEqual(
+                rect.height,
+                first.1.height,
+                accuracy: tolerance,
+                "\(name) changed height in \(phase)"
+            )
+        }
+    }
+
+    /// The hero band's centre must not move, and its text must stay inside its
+    /// band (never reaching the artwork below it). The band's own bounds are
+    /// pinned by the `session.topControls` and `session.scene` assertions above.
+    private func assertCentred(
+        _ samples: [SessionSkeletonSample],
+        _ name: String,
+        _ tolerance: CGFloat
+    ) {
+        guard let first = samples.first else {
+            XCTFail("\(name) was never measurable")
+            return
+        }
+
+        for sample in samples {
+            XCTAssertEqual(
+                sample.hero.midY,
+                first.hero.midY,
+                accuracy: tolerance,
+                "\(name) centre moved vertically in \(sample.phaseTitle)"
+            )
+            XCTAssertEqual(
+                sample.hero.midX,
+                first.hero.midX,
+                accuracy: tolerance,
+                "\(name) centre moved horizontally in \(sample.phaseTitle)"
+            )
+            XCTAssertLessThanOrEqual(
+                sample.hero.maxY,
+                sample.scene.minY + tolerance,
+                "\(name) grew past its band into the scene in \(sample.phaseTitle)"
+            )
+        }
+    }
+
     private enum ScrollDirection {
         case up
         case down
@@ -405,7 +728,8 @@ final class SteakCopilotUITests: XCTestCase {
         locale: String? = "en_US",
         fastCook: Bool = true,
         visualCook: Bool = false,
-        tuningLab: Bool = false
+        tuningLab: Bool = false,
+        layoutProbes: Bool = false
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = [
@@ -416,6 +740,10 @@ final class SteakCopilotUITests: XCTestCase {
             "-quietFeedback"
         ]
         if tuningLab { app.launchArguments.append("-tuningLab") }
+        // Geometry anchors for the two decorative slots. Only the layout
+        // regression test passes this, so production VoiceOver never announces
+        // the stage photograph or the progress rail.
+        if layoutProbes { app.launchArguments.append("-layoutProbes") }
         if fastCook { app.launchArguments.append("-fastCook") }
         if visualCook { app.launchArguments.append("-visualCook") }
         if let language {

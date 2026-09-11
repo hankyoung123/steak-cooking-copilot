@@ -1,8 +1,19 @@
 import SwiftUI
 
+/// READY → EAT → FEEDBACK.
+///
+/// The bands use `SessionLayoutMetrics.Result`, which reuses the session's top
+/// rule: one control band, one title band, one hero band, one summary band, one
+/// reserved middle band, and the primary action pinned to the bottom action row.
+/// The middle band is the only one whose content changes length — the feedback
+/// form is taller than the result note — so its height is reserved for the
+/// taller of the two and its content is top aligned. That is what keeps the hero,
+/// the summary card and the CTA from moving when the form appears; previously the
+/// CTA sat *below* the form and dropped by more than a hundred points.
 struct CookingResultView: View {
     @Environment(AppTheme.self) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     let controller: CookingSessionController
     let onExit: () -> Void
     let onSkip: () -> Void
@@ -15,81 +26,19 @@ struct CookingResultView: View {
         ZStack {
             EditorialCanvas(dark: false)
 
-            ScrollView {
-                VStack(spacing: 0) {
-                    SessionStageControls(
-                        flowStage: controller.flowStage,
-                        phaseTitle: resultEyebrow,
-                        onExit: onExit,
-                        onSkip: onSkip
-                    )
-                    .padding(.horizontal, 18)
-
-                    VStack(spacing: 5) {
-                        Text(controller.session.configuration.doneness.title.uppercased())
-                            .font(.system(size: 9, weight: .semibold))
-                            .tracking(1.6)
-                            .foregroundStyle(theme.ember)
-                        Text(resultTitle)
-                            .editorialDisplayStyle(size: 43, color: theme.ink)
-                    }
-                    .padding(.top, 14)
-                    .offset(y: appeared ? 0 : 10)
-                    .opacity(appeared ? 1 : 0)
-
-                    Image("ResultHeroCutout")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 306)
-                        .padding(.horizontal, 14)
-                        .shadow(color: .black.opacity(0.13), radius: 18, y: 12)
-                        .scaleEffect(appeared ? 1 : 0.94)
-                        .opacity(appeared ? 1 : 0)
-                        .accessibilityLabel("Sliced steak")
-
-                    summaryCard
-                        .padding(.horizontal, 26)
-                        .offset(y: appeared ? 0 : 12)
-                        .opacity(appeared ? 1 : 0)
-
-                    if controller.session.phase == .feedback {
-                        feedbackControls
-                            .padding(.horizontal, 26)
-                            .padding(.top, 14)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                    } else {
-                        resultNote
-                            .padding(.horizontal, 26)
-                            .padding(.top, 14)
-                    }
-
-                    PrimaryActionButton(
-                        title: primaryTitle,
-                        icon: "arrow.right"
-                    ) {
-                        performPrimaryAction()
-                    }
-                    .accessibilityIdentifier(primaryIdentifier)
-                    .padding(.horizontal, 26)
-                    .padding(.top, 14)
-
-                    HStack(spacing: 12) {
-                        outlineButton("View Cook Log", icon: "chevron.right") {
-                            showsHistory = true
-                        }
-                        .accessibilityIdentifier("result.history")
-
-                        outlineButton("Cook Again", icon: "arrow.right") {
-                            Task { await controller.startOver() }
-                        }
-                    }
-                    .padding(.horizontal, 26)
-                    .padding(.top, 12)
-                    .padding(.bottom, 20)
+            GeometryReader { proxy in
+                let layout = SessionLayoutMetrics.Result.resolve(
+                    for: proxy.size,
+                    dynamicTypeSize: dynamicTypeSize
+                )
+                ScrollView {
+                    skeleton(layout: layout)
+                        .frame(width: proxy.size.width)
+                        .frame(minHeight: proxy.size.height, alignment: .top)
                 }
+                .scrollIndicators(.hidden)
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .scrollIndicators(.hidden)
         }
         .sheet(isPresented: $showsHistory) {
             CookLogView(
@@ -104,11 +53,143 @@ struct CookingResultView: View {
                 appeared = true
                 return
             }
+            // Fade only. A scale or offset here reads as the hero itself
+            // moving, which is the illusion the fixed skeleton removes.
             withAnimation(.easeOut(duration: controller.tuning.motion.resultAppear)) {
                 appeared = true
             }
         }
     }
+
+    // MARK: - Skeleton
+
+    private func skeleton(layout: SessionLayoutMetrics.Result) -> some View {
+        VStack(spacing: 0) {
+            topControlsSlot(layout)
+            titleSlot(layout)
+            heroSlot(layout)
+            summarySlot(layout)
+            middleSlot(layout)
+            Spacer(minLength: 0)
+            bottomActionSlot(layout)
+        }
+    }
+
+    private func topControlsSlot(_ layout: SessionLayoutMetrics.Result) -> some View {
+        SessionStageControls(
+            flowStage: controller.flowStage,
+            phaseTitle: resultEyebrow,
+            onExit: onExit,
+            onSkip: onSkip
+        )
+        .padding(.horizontal, layout.screenInset)
+        .frame(maxWidth: .infinity)
+        .frame(height: layout.topControlHeight)
+        .padding(.bottom, layout.controlsSpacing)
+        .sessionLayoutProbe(ResultLayoutID.topControls)
+    }
+
+    private func titleSlot(_ layout: SessionLayoutMetrics.Result) -> some View {
+        VStack(spacing: 5) {
+            Text(controller.session.configuration.doneness.title.uppercased())
+                .font(.system(size: 9, weight: .semibold))
+                .tracking(1.6)
+                .foregroundStyle(theme.ember)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(resultTitle)
+                .editorialDisplayStyle(size: 43, color: theme.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .opacity(appeared ? 1 : 0)
+        .padding(.horizontal, layout.contentInset)
+        .frame(maxWidth: .infinity)
+        .frame(height: layout.titleHeight)
+        .padding(.top, layout.titleSpacing)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(ResultLayoutID.title)
+    }
+
+    private func heroSlot(_ layout: SessionLayoutMetrics.Result) -> some View {
+        Image("ResultHeroCutout")
+            .resizable()
+            .scaledToFit()
+            .frame(maxWidth: .infinity)
+            .frame(height: layout.heroHeight)
+            .padding(.horizontal, layout.sceneInset)
+            .shadow(color: .black.opacity(0.13), radius: 18, y: 12)
+            .opacity(appeared ? 1 : 0)
+            .accessibilityLabel("Sliced steak")
+            .padding(.top, layout.heroSpacing)
+            .sessionLayoutProbe(ResultLayoutID.hero)
+    }
+
+    private func summarySlot(_ layout: SessionLayoutMetrics.Result) -> some View {
+        summaryCard
+            .padding(.horizontal, layout.contentInset)
+            .frame(height: layout.summaryHeight)
+            .opacity(appeared ? 1 : 0)
+            .padding(.top, layout.summarySpacing)
+            .sessionLayoutProbe(ResultLayoutID.summary)
+    }
+
+    /// The only band whose content length differs between phases ("how it went"
+    /// note vs the feedback form). Its height is reserved for the taller of the
+    /// two, and the content is top aligned inside it, so the feedback form
+    /// appearing never pushes the hero or the summary card.
+    private func middleSlot(_ layout: SessionLayoutMetrics.Result) -> some View {
+        Group {
+            if controller.session.phase == .feedback {
+                feedbackControls
+            } else {
+                resultNote
+            }
+        }
+        .padding(.horizontal, layout.contentInset)
+        .frame(maxWidth: .infinity)
+        .frame(height: layout.middleHeight, alignment: .top)
+        .contentTransition(.opacity)
+    }
+
+    private func bottomActionSlot(_ layout: SessionLayoutMetrics.Result) -> some View {
+        VStack(spacing: layout.bottomPrimarySpacing) {
+            Group {
+                HStack(spacing: 12) {
+                    outlineButton("View Cook Log", icon: "chevron.right") {
+                        showsHistory = true
+                    }
+                    .accessibilityIdentifier("result.history")
+
+                    outlineButton("Cook Again", icon: "arrow.right") {
+                        Task { await controller.startOver() }
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: layout.bottomSecondaryHeight)
+
+            Group {
+                PrimaryActionButton(
+                    title: primaryTitle,
+                    icon: "arrow.right"
+                ) {
+                    performPrimaryAction()
+                }
+                .accessibilityIdentifier(primaryIdentifier)
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: layout.bottomPrimaryHeight)
+            .sessionLayoutProbe(ResultLayoutID.primaryAction)
+        }
+        .padding(.horizontal, layout.contentInset)
+        .frame(maxWidth: .infinity)
+        .frame(height: layout.bottomActionHeight, alignment: .bottom)
+        .padding(.top, layout.bottomActionSpacing)
+    }
+
+    // MARK: - Band content
 
     private var summaryCard: some View {
         HStack(spacing: 0) {
@@ -119,6 +200,7 @@ struct CookingResultView: View {
             resultMetric("TIME", totalTime)
         }
         .padding(.vertical, 13)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(theme.card.opacity(0.78), in: RoundedRectangle(cornerRadius: 8))
         .overlay {
             RoundedRectangle(cornerRadius: 8)
@@ -206,7 +288,7 @@ struct CookingResultView: View {
             }
             .font(.system(size: 12, weight: .regular, design: .serif))
             .padding(.horizontal, 14)
-            .frame(maxWidth: .infinity, minHeight: 46)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .overlay {
                 RoundedRectangle(cornerRadius: 7)
                     .stroke(theme.ink.opacity(0.16), lineWidth: 0.8)
