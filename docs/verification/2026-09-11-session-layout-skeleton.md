@@ -90,6 +90,41 @@ the same test failed on `session.hero` in SEAR · FAT CAP, BUTTER · BASTE and
 CHECK with `minY 114.17 vs 138.0` — a 24pt shift caused purely by the hero
 swapping type size.
 
+## Fix found by reviewing the captured screenshots
+
+Reviewing the captures (rather than only the frame numbers) exposed a defect the
+geometry assertions could not see: the hero band printed **the same sentence as
+the instruction**, once at 40pt and again at 21pt, at every action moment.
+
+```
+FLIP      hero "Flip now."                       instruction "Flip now."
+FAT CAP   hero "Sear the fat edge."              instruction "Sear the fat edge."
+BUTTER    hero "Add butter and aromatics."       instruction "Add butter and aromatics."
+CHECK     hero "Insert probe in the thickest…"   instruction "Insert probe in the thickest…"
+```
+
+`heroValue` fell through to `instructionTitle` for the default case. That
+predates the skeleton work (verified against `c470ead`) and contradicts the
+editorial design, which specifies "a hero timer/readout … and one instruction".
+The hero is now a readout naming the action in flight (`CookingAction.title`,
+already translated in `Localizable.xcstrings`), falling back to the existing
+"Check doneness" readout for the CHECK TEMP action so the hero does not echo the
+CHECK TEMP button directly beneath it. The hero slot was already exempt from the
+fixed-`minY` assertion, so this changes the content of a fixed band without
+affecting any slot geometry.
+
+## Configuration note (harness, not app)
+
+The DSH harness declared the active model as text-only, so image reads were
+refused with "does not declare image input". The pi-ai adapter's per-model field
+is `input` — `inputModalities` is the *native* `llm-deepseek` spelling, ignored
+by `llm-pi-ai`, whose absent field defaults to `["text"]`. Both
+`deepseek/deepseek-v4.1-flash` and `deepseek/deepseek-v4-flash-vision-exp` were
+probed against the route and confirmed to answer correctly about a known image
+*before* being declared: over-claiming fails mid-turn after the message is
+durable, while under-claiming fails safely before attach. This is what allowed
+the captures above to be reviewed visually.
+
 ## Screenshots
 
 `docs/verification/screenshots/session-skeleton/` — 8 captures, one per distinct

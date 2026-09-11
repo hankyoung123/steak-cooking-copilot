@@ -645,13 +645,31 @@ struct CookingSessionView: View {
         }
     }
 
+    /// The hero band holds a **timer or readout**; the instruction band carries
+    /// the sentence (see the editorial design: "a hero timer/readout … and one
+    /// instruction").
+    ///
+    /// When no stage timer is running, the readout names the pending action.
+    /// It used to fall through to `instructionTitle`, which printed the same
+    /// sentence twice — once at 40pt and again at 21pt — at every action moment
+    /// (FLIP, FAT CAP, BUTTER, CHECK).
     private func heroValue(at date: Date) -> String {
         switch controller.session.phase {
         case .prep: String(localized: "Ready the steak")
         case .heat: String(localized: "Heat the pan")
         case .checkTemperature: String(localized: "Check doneness")
         case .finishing: estimatedFinishRange
-        default: instructionTitle(at: date)
+        default: heroReadout
+        }
+    }
+
+    /// The readout naming the action in flight. The CHECK TEMP action reuses the
+    /// phase's existing readout so the hero does not echo the CHECK TEMP button
+    /// label sitting right below it.
+    private var heroReadout: String {
+        switch controller.guidance.currentAction {
+        case .checkTemperature: String(localized: "Check doneness")
+        default: controller.guidance.currentAction.title
         }
     }
 
