@@ -283,6 +283,9 @@
         }
       }
     },
+    "Bounce" : {
+
+    },
     "Build the crust" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -313,6 +316,9 @@
           }
         }
       }
+    },
+    "Calibration" : {
+
     },
     "Cancel" : {
       "localizations" : {
@@ -381,6 +387,9 @@
           }
         }
       }
+    },
+    "Changed fields" : {
+
     },
     "CHECK" : {
       "localizations" : {
@@ -514,7 +523,6 @@
       }
     },
     "Cooking" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -545,6 +553,9 @@
           }
         }
       }
+    },
+    "Copy" : {
+
     },
     "Crust" : {
       "extractionState" : "stale",
@@ -600,6 +611,9 @@
           }
         }
       }
+    },
+    "Cuts" : {
+
     },
     "Don’t move it yet." : {
       "localizations" : {
@@ -662,6 +676,12 @@
           }
         }
       }
+    },
+    "Doneness adjustments" : {
+
+    },
+    "Draft not applied — %lld issue(s)" : {
+
     },
     "Dry" : {
       "localizations" : {
@@ -839,6 +859,9 @@
         }
       }
     },
+    "Export" : {
+
+    },
     "Fat cap" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -911,7 +934,6 @@
       }
     },
     "Finishing" : {
-      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1148,6 +1170,12 @@
         }
       }
     },
+    "Import file…" : {
+
+    },
+    "Import pasted JSON" : {
+
+    },
     "Insert probe in the thickest part." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1294,6 +1322,12 @@
         }
       }
     },
+    "Motion" : {
+
+    },
+    "Needs fat cap" : {
+
+    },
     "New York Strip" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1372,6 +1406,9 @@
           }
         }
       }
+    },
+    "Notifications" : {
+
     },
     "Now!" : {
       "extractionState" : "stale",
@@ -1452,6 +1489,9 @@
           }
         }
       }
+    },
+    "Override JSON" : {
+
     },
     "Pan is ready" : {
       "localizations" : {
@@ -1590,6 +1630,9 @@
         }
       }
     },
+    "Production defaults" : {
+
+    },
     "Progress" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1725,6 +1768,9 @@
         }
       }
     },
+    "Reset to production" : {
+
+    },
     "Rest off the heat" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1766,6 +1812,9 @@
           }
         }
       }
+    },
+    "Running" : {
+
     },
     "Salt" : {
       "localizations" : {
@@ -1829,6 +1878,9 @@
           }
         }
       }
+    },
+    "Save override" : {
+
     },
     "SEAR" : {
       "localizations" : {
@@ -1959,6 +2011,9 @@
         }
       }
     },
+    "Share" : {
+
+    },
     "Skip" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2062,6 +2117,9 @@
           }
         }
       }
+    },
+    "Source" : {
+
     },
     "STAND IT UP" : {
       "localizations" : {
@@ -2458,6 +2516,9 @@
           }
         }
       }
+    },
+    "Tuning Lab" : {
+
     },
     "Turn it over now." : {
       "extractionState" : "stale",
