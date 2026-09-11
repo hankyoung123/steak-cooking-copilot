@@ -14,6 +14,7 @@ DESTINATION := platform=iOS Simulator,name=iPhone 17
 
 # The only UI tests that need to run while iterating on layout.
 LAYOUT_UI_TESTS := \
+	-only-testing:SteakCopilotUITests/SteakCopilotUITests/testHomeSkeletonSlotsDoNotMoveBetweenCuts \
 	-only-testing:SteakCopilotUITests/SteakCopilotUITests/testSessionSkeletonSlotsDoNotMoveBetweenCookingPhases \
 	-only-testing:SteakCopilotUITests/SteakCopilotUITests/testResultSkeletonSlotsDoNotMoveBetweenReadyEatFeedback
 

@@ -7,6 +7,10 @@ final class SteakCopilotUITests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["今日牛排"].exists)
         XCTAssertEqual(app.buttons["setup.primary"].label, "开始烹饪 →")
+        // Captured before opening the settings sheet: CJK cut names are the
+        // longest copy this screen has to lay out, so the home skeleton is
+        // worth an explicit reference image in Chinese.
+        attachScreenshot(named: "home-zh-Hans", app: app)
         app.buttons["home.settings"].tap()
         XCTAssertEqual(
             app.buttons["setup.doneness.mediumWell"].label,
@@ -504,6 +508,75 @@ final class SteakCopilotUITests: XCTestCase {
         attachScreenshot(named: "layout-result-feedback", app: app)
     }
 
+    // MARK: - Setup screen skeleton
+
+    /// Regression for the setup screen's skeleton.
+    ///
+    /// The three cuts have different name lengths in both languages, and the
+    /// screen used to be a plain `VStack` of intrinsically sized rows, so any
+    /// copy change was free to reflow everything below it. The title, the
+    /// parameter row, the pre-flight summary and the call to action must all hold
+    /// one frame while the selection changes; only the artwork, the cut name, the
+    /// neighbour labels and the parameter values may differ.
+    func testHomeSkeletonSlotsDoNotMoveBetweenCuts() {
+        let app = launchApp()
+
+        var samples: [HomeSkeletonSample] = []
+        for index in 0..<3 {
+            settleArtwork(after: 0.5)
+            samples.append(captureHomeSkeleton(in: app))
+            attachScreenshot(named: "home-cut-\(index)", app: app)
+            if index < 2 {
+                app.buttons["home.nextCut"].tap()
+            }
+        }
+
+        // Coverage guard: the assertions below are only meaningful if the walk
+        // really visited three different cuts.
+        XCTAssertEqual(
+            Set(samples.map(\.cutTitle)).count,
+            3,
+            "Expected all three cuts, saw \(samples.map(\.cutTitle))"
+        )
+
+        let tolerance: CGFloat = 2
+        assertStable(samples, "home.carousel", tolerance) { $0.carousel }
+        assertStable(samples, "home.title", tolerance) { $0.title }
+        assertStable(samples, "home.plan.doneness", tolerance) { $0.doneness }
+        assertStable(samples, "home.plan.thickness", tolerance) { $0.thickness }
+        assertStable(samples, "setup.primary", tolerance) { $0.primaryAction }
+
+        // The summary sits inside a fixed-height band, but the row itself is
+        // centred and its text width tracks the cut's cooking budget (a two-digit
+        // minute count is wider than a one-digit one), so only its vertical
+        // placement is asserted.
+        assertStable(samples, "home.summary", tolerance, horizontal: false) { $0.summary }
+    }
+
+    private struct HomeSkeletonSample: LayoutSample {
+        let cutTitle: String
+        let carousel: CGRect
+        let title: CGRect
+        let doneness: CGRect
+        let thickness: CGRect
+        let summary: CGRect
+        let primaryAction: CGRect
+
+        var phaseLabel: String { cutTitle }
+    }
+
+    private func captureHomeSkeleton(in app: XCUIApplication) -> HomeSkeletonSample {
+        HomeSkeletonSample(
+            cutTitle: app.staticTexts["home.title"].label,
+            carousel: layoutFrame("home.carousel", in: app),
+            title: layoutFrame("home.title", in: app),
+            doneness: layoutFrame("home.plan.doneness", in: app),
+            thickness: layoutFrame("home.plan.thickness", in: app),
+            summary: layoutFrame("home.summary", in: app),
+            primaryAction: layoutFrame("setup.primary", in: app)
+        )
+    }
+
     // MARK: - Layout skeleton probes
 
     private struct ResultSkeletonSample: LayoutSample {
@@ -586,8 +659,8 @@ final class SteakCopilotUITests: XCTestCase {
         return frame.isEmpty ? nil : frame
     }
 
-    /// A sampled layout state, so one stability assertion can serve the session
-    /// and the result screens.
+    /// A sampled layout state, so one stability assertion can serve the session,
+    /// the result and the setup screens.
     private protocol LayoutSample {
         var phaseLabel: String { get }
     }
@@ -598,10 +671,16 @@ final class SteakCopilotUITests: XCTestCase {
     /// rounding is sub-point. Slots a phase legitimately does not show (the rail
     /// during FINISHING, the telemetry during reading entry) are skipped rather
     /// than asserted to be at zero.
+    ///
+    /// `horizontal` is for a slot whose width follows its content — a centred row
+    /// whose text gets longer really does shift its midpoint, and asserting
+    /// otherwise would pin a layout that should be free to breathe. Its vertical
+    /// placement is still asserted.
     private func assertStable<S: LayoutSample>(
         _ samples: [S],
         _ name: String,
         _ tolerance: CGFloat,
+        horizontal: Bool = true,
         _ frame: (S) -> CGRect?
     ) {
         let present = samples.compactMap { sample in
@@ -620,12 +699,14 @@ final class SteakCopilotUITests: XCTestCase {
                 accuracy: tolerance,
                 "\(name) moved vertically in \(phase)"
             )
-            XCTAssertEqual(
-                rect.midX,
-                first.1.midX,
-                accuracy: tolerance,
-                "\(name) moved horizontally in \(phase)"
-            )
+            if horizontal {
+                XCTAssertEqual(
+                    rect.midX,
+                    first.1.midX,
+                    accuracy: tolerance,
+                    "\(name) moved horizontally in \(phase)"
+                )
+            }
             XCTAssertEqual(
                 rect.height,
                 first.1.height,

@@ -45,27 +45,63 @@ struct EditorialHairline: View {
     }
 }
 
+/// One column of the setup screen's parameter row.
+///
+/// Both columns are laid out identically — same icon box, same value slot, same
+/// label treatment — so `三分熟` and `3.0 cm` carry comparable visual weight and
+/// share one baseline. The icon sits in a fixed box rather than being sized to
+/// its own glyph, because `thermometer.medium` and `ruler` have very different
+/// natural proportions and would otherwise not read as a matched pair.
 struct EditorialMetric: View {
+    @Environment(AppTheme.self) private var theme
     let icon: String?
     let label: String
     let value: String
     var dark = false
+    var valueIdentifier: String?
 
     var body: some View {
         VStack(spacing: 6) {
             if let icon {
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .light))
-                    .foregroundStyle(dark ? Color.white.opacity(0.55) : Color.secondary)
+                    .font(.system(size: 13, weight: .light))
+                    .foregroundStyle(iconColor)
+                    .frame(width: 20, height: 16)
             }
-            Text(value)
+            valueText
                 .font(.system(size: 16, weight: .regular, design: .serif))
                 .monospacedDigit()
+                .foregroundStyle(valueColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(height: 22)
             Text(label)
                 .font(.system(size: 8, weight: .medium))
                 .tracking(1.1)
-                .foregroundStyle(dark ? Color.white.opacity(0.43) : Color.secondary)
+                .foregroundStyle(labelColor)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private var valueText: some View {
+        if let valueIdentifier {
+            Text(value).accessibilityIdentifier(valueIdentifier)
+        } else {
+            Text(value)
+        }
+    }
+
+    private var iconColor: Color {
+        dark ? .white.opacity(0.5) : theme.ink.opacity(0.5)
+    }
+
+    private var valueColor: Color {
+        dark ? .white.opacity(0.9) : theme.ink
+    }
+
+    private var labelColor: Color {
+        dark ? .white.opacity(0.46) : theme.ink.opacity(0.55)
     }
 }

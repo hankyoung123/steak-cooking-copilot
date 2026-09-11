@@ -33,9 +33,11 @@ struct PrimaryActionButton: View {
                     .stroke(lightOnDark ? Color.white.opacity(0.24) : Color.white.opacity(0.07), lineWidth: 0.8)
             }
             .shadow(
-                color: Color.black.opacity(lightOnDark ? 0 : 0.2),
-                radius: 10,
-                y: 5
+                // Kept deliberately shallow: this is meant to read as a printed
+                // black block, not a floating Material card.
+                color: Color.black.opacity(lightOnDark ? 0 : 0.12),
+                radius: 6,
+                y: 3
             )
         }
         .buttonStyle(EditorialPressStyle())
