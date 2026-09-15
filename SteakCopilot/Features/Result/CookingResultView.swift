@@ -254,6 +254,7 @@ struct CookingResultView: View {
                         }
                     }
                     .buttonStyle(EditorialPressStyle())
+                    .accessibilityIdentifier("feedback.doneness.\(option.rawValue)")
                 }
             }
 
@@ -268,6 +269,7 @@ struct CookingResultView: View {
                                 .frame(height: crust == option ? 1.3 : 0.7)
                         }
                         .buttonStyle(EditorialPressStyle())
+                        .accessibilityIdentifier("feedback.crust.\(option.rawValue)")
                 }
             }
         }

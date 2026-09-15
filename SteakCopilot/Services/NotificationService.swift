@@ -14,14 +14,28 @@ final class NotificationService: CookingNotificationServing {
 
     private let center: UNUserNotificationCenter
     private let isEnabled: Bool
+    /// Read on every use, so switching reminders off in Settings stops them
+    /// immediately rather than at the next launch.
+    private let preferencesProvider: any AppPreferencesProviding
 
-    init(center: UNUserNotificationCenter = .current(), isEnabled: Bool = true) {
+    init(
+        center: UNUserNotificationCenter = .current(),
+        isEnabled: Bool = true,
+        preferencesProvider: any AppPreferencesProviding = StaticAppPreferencesProvider()
+    ) {
         self.center = center
         self.isEnabled = isEnabled
+        self.preferencesProvider = preferencesProvider
+    }
+
+    /// Whether reminders may be scheduled right now: the launch-argument kill
+    /// switch and the user's preference both have to allow it.
+    private var isAvailable: Bool {
+        isEnabled && preferencesProvider.preferences.isNotificationsEnabled
     }
 
     func requestAuthorization() async -> Bool {
-        guard isEnabled else { return false }
+        guard isAvailable else { return false }
         // The completion-handler API is used through a continuation so the
         // non-Sendable UNUserNotificationCenter never crosses an isolation
         // boundary via a nonisolated async method call (Swift 6 strict
@@ -37,7 +51,7 @@ final class NotificationService: CookingNotificationServing {
     }
 
     func scheduleNextAction(guidance: CookingGuidance) async {
-        guard isEnabled else { return }
+        guard isAvailable else { return }
         center.removePendingNotificationRequests(
             withIdentifiers: [Self.nextActionIdentifier]
         )

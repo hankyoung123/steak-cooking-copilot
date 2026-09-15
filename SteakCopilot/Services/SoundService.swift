@@ -1,7 +1,12 @@
 import AudioToolbox
 
 @MainActor
-final class SoundService {
+protocol SoundServing: AnyObject {
+    func play(_ preset: SoundPreset)
+}
+
+@MainActor
+final class SoundService: SoundServing {
     var isEnabled: Bool
 
     init(isEnabled: Bool = true) {

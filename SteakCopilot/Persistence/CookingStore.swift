@@ -47,6 +47,12 @@ struct CookingStore {
         loadCalibrations()[key] ?? .neutral
     }
 
+    /// Forgets every learned adjustment. The stored setup preferences and cook
+    /// history are separate values and are left alone.
+    func clearCalibrations() {
+        defaults.removeObject(forKey: Key.calibrations)
+    }
+
     func save(calibration: CookingCalibration, for key: CalibrationKey) {
         var calibrations = loadCalibrations()
         calibrations[key] = calibration

@@ -276,7 +276,14 @@ final class SteakCopilotUITests: XCTestCase {
         for _ in 0..<30 {
             if app.staticTexts["FINISHING"].exists { break }
             let confirm = app.buttons["cook.confirm"]
-            XCTAssertTrue(confirm.waitForExistence(timeout: 5))
+            if !confirm.waitForExistence(timeout: 5) {
+                // The cook can reach the rest between the check above and this
+                // wait, which takes the confirm button away. That is the natural
+                // end of the walk, not a failure.
+                if app.staticTexts["FINISHING"].exists { break }
+                XCTFail("Expected the next cook action or the finishing phase")
+                break
+            }
 
             switch confirm.label {
             case "Flipped" where !capturedFlip:
@@ -656,6 +663,138 @@ final class SteakCopilotUITests: XCTestCase {
         attachScreenshot(named: "home-single-cut", app: app)
     }
 
+    /// Every app-wide group is on the settings screen.
+    func testSettingsCoversEveryAppWideGroup() {
+        let app = launchApp()
+
+        app.buttons["home.topSettings"].tap()
+        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+
+        for section in ["CUTS ON HOME", "REMINDERS", "SOUND & HAPTICS",
+                        "LEARNED ADJUSTMENTS", "ABOUT"] {
+            XCTAssertTrue(
+                scrollToVisible(section, in: app),
+                "Settings is missing the \(section) section"
+            )
+        }
+
+        XCTAssertTrue(layoutElement("appSettings.reminders", in: app).exists)
+        XCTAssertTrue(layoutElement("appSettings.sound", in: app).exists)
+        XCTAssertTrue(layoutElement("appSettings.haptics", in: app).exists)
+        XCTAssertTrue(
+            layoutElement("appSettings.version", in: app).exists,
+            "About should show a version"
+        )
+        XCTAssertTrue(
+            scrollToVisible(
+                layoutElement("appSettings.adjustments.empty", in: app),
+                in: app
+            ),
+            "with no feedback yet there is nothing learned to show"
+        )
+        attachScreenshot(named: "app-settings-full", app: app)
+    }
+
+    /// The switches are preferences, not session state: they have to survive a
+    /// relaunch.
+    func testFeedbackSwitchSurvivesARelaunch() {
+        let app = launchApp()
+
+        app.buttons["home.topSettings"].tap()
+        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        layoutElement("appSettings.sound", in: app).tap()
+        app.buttons["appSettings.save"].tap()
+        XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 3))
+
+        // Relaunch without the reset argument, so the stored value is read back.
+        app.terminate()
+        app.launchArguments = app.launchArguments.filter { $0 != "-resetPreferences" }
+        app.launch()
+        XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 5))
+
+        app.buttons["home.topSettings"].tap()
+        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        XCTAssertEqual(
+            layoutElement("appSettings.sound", in: app).value as? String,
+            "0",
+            "the sound switch should still be off"
+        )
+        XCTAssertEqual(
+            layoutElement("appSettings.haptics", in: app).value as? String,
+            "1",
+            "and the other switch should be untouched"
+        )
+    }
+
+    /// The gap this whole screen was built for: what the app has learned is now
+    /// visible, and can be undone.
+    func testLearnedAdjustmentIsShownAndCanBeReset() {
+        let app = launchApp()
+
+        // Skip to the result screen, then answer the feedback badly so there is
+        // something to learn.
+        app.buttons["setup.primary"].tap()
+        for _ in 0..<4 { confirmSkip(in: app) }
+        XCTAssertTrue(app.buttons["ready.continue"].waitForExistence(timeout: 5))
+        app.buttons["ready.continue"].tap()
+        XCTAssertTrue(app.buttons["eat.feedback"].waitForExistence(timeout: 3))
+        app.buttons["eat.feedback"].tap()
+
+        let save = app.buttons["feedback.save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 3))
+        let tooDone = layoutElement("feedback.doneness.2", in: app)
+        XCTAssertTrue(scrollToVisible(tooDone, in: app))
+        tooDone.tap()
+        app.buttons["feedback.save"].tap()
+        XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 5))
+
+        app.buttons["home.topSettings"].tap()
+        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        XCTAssertTrue(
+            scrollToVisibleButton("appSettings.resetAdjustments", in: app),
+            "an overshot cook should have taught the app something"
+        )
+        XCTAssertFalse(
+            layoutElement("appSettings.adjustments.empty", in: app).exists,
+            "the empty state should have given way to the list"
+        )
+        // Guard the assertion the tap depends on: a row left under the sticky
+        // Save bar is still reported as hittable, and tapping it would press the
+        // bar instead — which dismisses the sheet.
+        let reset = app.buttons["appSettings.resetAdjustments"]
+        let saveBar = app.buttons["appSettings.save"]
+        if reset.frame.maxY >= saveBar.frame.minY {
+            // Scrolling stops as soon as XCUI considers the row hittable, which
+            // can still be underneath the sticky Save bar. One more swipe brings
+            // it clear; tapping it there would press the bar and dismiss the
+            // sheet instead.
+            app.swipeUp()
+        }
+        XCTAssertLessThan(
+            reset.frame.maxY,
+            saveBar.frame.minY,
+            "the reset row must scroll clear of the Save bar before it is tapped"
+        )
+        attachScreenshot(named: "app-settings-adjustments", app: app)
+        reset.tap()
+        attachScreenshot(named: "app-settings-reset-tapped", app: app)
+        XCTAssertTrue(app.buttons["Reset"].waitForExistence(timeout: 3))
+        app.buttons["Reset"].tap()
+        app.buttons["appSettings.save"].tap()
+
+        // Reopen: the list is empty again.
+        XCTAssertTrue(app.buttons["home.topSettings"].waitForExistence(timeout: 3))
+        app.buttons["home.topSettings"].tap()
+        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        XCTAssertTrue(
+            scrollToVisible(
+                layoutElement("appSettings.adjustments.empty", in: app),
+                in: app
+            ),
+            "resetting should forget everything it had learned"
+        )
+    }
+
     // MARK: - Setup screen skeleton
 
     /// Regression for the setup screen's skeleton.
@@ -985,6 +1124,9 @@ final class SteakCopilotUITests: XCTestCase {
         app.launchArguments = [
             "-resetSession",
             "-resetTuning",
+            // Learned adjustments outlive a session by design, so without this a
+            // run would inherit whatever an earlier run taught the app.
+            "-resetCalibrations",
             // App preferences persist by design, so every test starts from the
             // default (all cuts visible) rather than from whatever a previous
             // run left behind.

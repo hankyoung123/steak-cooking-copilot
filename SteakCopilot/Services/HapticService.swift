@@ -1,7 +1,14 @@
 import UIKit
 
+/// Seam for `MotionDirector`, so a test can observe which cues were fired —
+/// which is the only way to prove a preference actually silences one.
 @MainActor
-final class HapticService {
+protocol HapticServing: AnyObject {
+    func fire(_ preset: HapticPreset)
+}
+
+@MainActor
+final class HapticService: HapticServing {
     var isEnabled: Bool
 
     init(isEnabled: Bool = true) {

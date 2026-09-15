@@ -106,6 +106,32 @@ final class AppPreferencesTests: XCTestCase {
         XCTAssertEqual(preferences.selection(startingFrom: first), first)
     }
 
+    // MARK: - Toggles
+
+    func testEverySwitchStartsOn() {
+        let preferences = AppPreferences()
+
+        XCTAssertTrue(preferences.isNotificationsEnabled)
+        XCTAssertTrue(preferences.isSoundEnabled)
+        XCTAssertTrue(preferences.isHapticsEnabled)
+    }
+
+    func testTogglesSurviveCoding() throws {
+        let preferences = AppPreferences(
+            hiddenCuts: [.strip],
+            isNotificationsEnabled: false,
+            isSoundEnabled: false,
+            isHapticsEnabled: true
+        )
+
+        let decoded = try JSONDecoder().decode(
+            AppPreferences.self,
+            from: JSONEncoder().encode(preferences)
+        )
+
+        XCTAssertEqual(decoded, preferences)
+    }
+
     // MARK: - Coding
 
     func testRoundTripsThroughCoding() throws {
@@ -116,6 +142,21 @@ final class AppPreferencesTests: XCTestCase {
 
         XCTAssertEqual(decoded, preferences)
         XCTAssertEqual(decoded.visibleCuts, [.ribeye])
+    }
+
+    /// The first release stored the hidden set on its own, before the switches
+    /// existed. An install that predates them must keep its hidden cuts and pick
+    /// up the defaults for everything else, with no migration step.
+    func testDecodesTheEarlierShapeAndKeepsTheHiddenCuts() throws {
+        let legacy = try JSONEncoder().encode(Set([SteakCut.strip]))
+
+        let decoded = try JSONDecoder().decode(AppPreferences.self, from: legacy)
+
+        XCTAssertFalse(decoded.isVisible(.strip))
+        XCTAssertTrue(decoded.isVisible(.ribeye))
+        XCTAssertTrue(decoded.isNotificationsEnabled)
+        XCTAssertTrue(decoded.isSoundEnabled)
+        XCTAssertTrue(decoded.isHapticsEnabled)
     }
 
     func testDecodingRepairsAValueThatHidesEverything() throws {
@@ -138,7 +179,7 @@ final class AppPreferencesStoreTests: XCTestCase {
     }
 
     func testDefaultsToEverythingVisible() {
-        XCTAssertEqual(AppPreferencesStore(defaults: makeDefaults()).load(), .standard)
+        XCTAssertEqual(AppPreferencesStore(defaults: makeDefaults()).preferences, .standard)
     }
 
     func testRoundTripsThroughTheStore() {
@@ -147,9 +188,9 @@ final class AppPreferencesStoreTests: XCTestCase {
 
         var preferences = AppPreferences()
         preferences.setCut(.tenderloin, visible: false)
-        store.save(preferences)
+        store.update(preferences)
 
-        XCTAssertEqual(AppPreferencesStore(defaults: defaults).load(), preferences)
+        XCTAssertEqual(AppPreferencesStore(defaults: defaults).preferences, preferences)
     }
 
     func testResetRestoresTheDefault() {
@@ -157,18 +198,59 @@ final class AppPreferencesStoreTests: XCTestCase {
         let store = AppPreferencesStore(defaults: defaults)
         var preferences = AppPreferences()
         preferences.setCut(.strip, visible: false)
-        store.save(preferences)
+        store.update(preferences)
 
         store.reset()
 
-        XCTAssertEqual(store.load(), .standard)
+        XCTAssertEqual(store.preferences, .standard)
+    }
+
+    /// A value written by the previous release, sitting in `UserDefaults`, is
+    /// read back with its hidden cuts intact.
+    func testLoadsAPreviouslyStoredShape() throws {
+        let defaults = makeDefaults()
+        defaults.set(
+            try JSONEncoder().encode(Set([SteakCut.tenderloin])),
+            forKey: "steak.preferences.v1"
+        )
+
+        let loaded = AppPreferencesStore(defaults: defaults).preferences
+
+        XCTAssertFalse(loaded.isVisible(.tenderloin))
+        XCTAssertTrue(loaded.isNotificationsEnabled)
+    }
+
+    func testTogglesRoundTripThroughTheStore() {
+        let defaults = makeDefaults()
+        let store = AppPreferencesStore(defaults: defaults)
+        var preferences = store.preferences
+        preferences.isSoundEnabled = false
+        preferences.isNotificationsEnabled = false
+        store.update(preferences)
+
+        let reloaded = AppPreferencesStore(defaults: defaults).preferences
+
+        XCTAssertFalse(reloaded.isSoundEnabled)
+        XCTAssertFalse(reloaded.isNotificationsEnabled)
+        XCTAssertTrue(reloaded.isHapticsEnabled)
+    }
+
+    func testStorePublishesTheValueItWasGiven() {
+        let store = AppPreferencesStore(defaults: makeDefaults())
+        var preferences = store.preferences
+        preferences.setCut(.strip, visible: false)
+
+        store.update(preferences)
+
+        XCTAssertEqual(store.preferences, preferences)
+        XCTAssertFalse(store.preferences.isVisible(.strip))
     }
 
     func testGarbageInTheStoreFallsBackToTheDefault() {
         let defaults = makeDefaults()
         defaults.set(Data("not json".utf8), forKey: "steak.preferences.v1")
 
-        XCTAssertEqual(AppPreferencesStore(defaults: defaults).load(), .standard)
+        XCTAssertEqual(AppPreferencesStore(defaults: defaults).preferences, .standard)
     }
 
     /// The promise the settings screen makes in its footnote: hiding is not
@@ -196,17 +278,17 @@ final class AppPreferencesStoreTests: XCTestCase {
 
         var preferences = AppPreferences()
         preferences.setCut(.strip, visible: false)
-        store.save(preferences)
-        XCTAssertFalse(store.load().isVisible(.strip))
+        store.update(preferences)
+        XCTAssertFalse(store.preferences.isVisible(.strip))
 
         XCTAssertEqual(cooking.loadSetupPreferences(for: .strip), saved)
         XCTAssertEqual(cooking.loadCalibration(for: key), learned)
 
         // Showing it again restores it with nothing lost.
         preferences.setCut(.strip, visible: true)
-        store.save(preferences)
+        store.update(preferences)
 
-        XCTAssertTrue(store.load().isVisible(.strip))
+        XCTAssertTrue(store.preferences.isVisible(.strip))
         XCTAssertEqual(cooking.loadSetupPreferences(for: .strip), saved)
         XCTAssertEqual(cooking.loadCalibration(for: key), learned)
     }
@@ -219,13 +301,13 @@ final class AppPreferencesStoreTests: XCTestCase {
 
         var preferences = AppPreferences()
         preferences.setCut(.strip, visible: false)
-        store.save(preferences)
+        store.update(preferences)
         cooking.save(session: .fresh(at: Date(timeIntervalSince1970: 0)))
 
         cooking.clearSession()
 
         XCTAssertEqual(
-            AppPreferencesStore(defaults: defaults).load(),
+            AppPreferencesStore(defaults: defaults).preferences,
             preferences,
             "session data and app preferences are separate concerns"
         )

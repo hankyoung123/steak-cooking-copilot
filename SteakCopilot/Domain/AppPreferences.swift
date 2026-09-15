@@ -3,9 +3,6 @@ import Foundation
 /// App-wide preferences, as opposed to the per-cook setup held in
 /// `SteakSetupPreferences`.
 ///
-/// Only one preference exists so far — which cuts appear on the setup screen —
-/// but sound, haptics and notifications will land here too.
-///
 /// ## Why the hidden set, not the visible one
 ///
 /// Storing what is **hidden** rather than what is **shown** is deliberate:
@@ -24,10 +21,25 @@ struct AppPreferences: Codable, Equatable, Sendable {
     /// Cuts the user has chosen not to see on the setup screen.
     private(set) var hiddenCuts: Set<SteakCut>
 
+    /// Whether the app may schedule cooking reminders.
+    var isNotificationsEnabled: Bool
+    /// Whether the app plays its cooking cues.
+    var isSoundEnabled: Bool
+    /// Whether the app produces haptic feedback.
+    var isHapticsEnabled: Bool
+
     static let standard = AppPreferences()
 
-    init(hiddenCuts: Set<SteakCut> = []) {
+    init(
+        hiddenCuts: Set<SteakCut> = [],
+        isNotificationsEnabled: Bool = true,
+        isSoundEnabled: Bool = true,
+        isHapticsEnabled: Bool = true
+    ) {
         self.hiddenCuts = Self.sanitised(hiddenCuts)
+        self.isNotificationsEnabled = isNotificationsEnabled
+        self.isSoundEnabled = isSoundEnabled
+        self.isHapticsEnabled = isHapticsEnabled
     }
 
     // MARK: - Reading
@@ -90,15 +102,53 @@ struct AppPreferences: Codable, Equatable, Sendable {
 
     // MARK: - Coding
 
-    /// Encoded as a bare set, so the stored document stays readable.
+    private enum CodingKeys: String, CodingKey {
+        case hiddenCuts
+        case isNotificationsEnabled
+        case isSoundEnabled
+        case isHapticsEnabled
+    }
+
+    /// Decodes both shapes this type has had.
+    ///
+    /// The first release stored the hidden set on its own; the toggles turned it
+    /// into an object. Reading the bare set first means an install that predates
+    /// the toggles keeps its hidden cuts and simply gains the defaults for
+    /// everything else, with no migration step and no second storage key.
     init(from decoder: Decoder) throws {
-        let container = try decoder.singleValueContainer()
-        self.init(hiddenCuts: try container.decode(Set<SteakCut>.self))
+        if let single = try? decoder.singleValueContainer(),
+           let legacyHiddenCuts = try? single.decode(Set<SteakCut>.self) {
+            self.init(hiddenCuts: legacyHiddenCuts)
+            return
+        }
+
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            hiddenCuts: try container.decodeIfPresent(
+                Set<SteakCut>.self,
+                forKey: .hiddenCuts
+            ) ?? [],
+            isNotificationsEnabled: try container.decodeIfPresent(
+                Bool.self,
+                forKey: .isNotificationsEnabled
+            ) ?? true,
+            isSoundEnabled: try container.decodeIfPresent(
+                Bool.self,
+                forKey: .isSoundEnabled
+            ) ?? true,
+            isHapticsEnabled: try container.decodeIfPresent(
+                Bool.self,
+                forKey: .isHapticsEnabled
+            ) ?? true
+        )
     }
 
     func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(hiddenCuts)
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(hiddenCuts, forKey: .hiddenCuts)
+        try container.encode(isNotificationsEnabled, forKey: .isNotificationsEnabled)
+        try container.encode(isSoundEnabled, forKey: .isSoundEnabled)
+        try container.encode(isHapticsEnabled, forKey: .isHapticsEnabled)
     }
 
     /// Refuses to persist a set that would hide every cut.
@@ -108,5 +158,25 @@ struct AppPreferences: Codable, Equatable, Sendable {
             value.remove(keep)
         }
         return value
+    }
+}
+
+/// Live access to the app-wide preferences.
+///
+/// Mirrors `TuningProviding`: the feedback and notification services read this on
+/// every use rather than capturing a snapshot, so a switch flipped in Settings
+/// takes effect on the very next cue instead of at the next launch.
+@MainActor
+protocol AppPreferencesProviding: AnyObject {
+    var preferences: AppPreferences { get }
+}
+
+/// Fixed preferences, for tests and previews.
+@MainActor
+final class StaticAppPreferencesProvider: AppPreferencesProviding {
+    let preferences: AppPreferences
+
+    init(_ preferences: AppPreferences = .standard) {
+        self.preferences = preferences
     }
 }

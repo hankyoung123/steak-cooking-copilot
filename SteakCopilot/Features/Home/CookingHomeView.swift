@@ -20,12 +20,11 @@ struct CookingHomeView: View {
     /// the same screen.
     let preferencesStore: AppPreferencesStore
     @State private var preferences: SteakSetupPreferences
-    @State private var appPreferences: AppPreferences
     @State private var presentedSheet: HomeSheet?
 
     init(
         controller: CookingSessionController,
-        preferencesStore: AppPreferencesStore = AppPreferencesStore()
+        preferencesStore: AppPreferencesStore
     ) {
         self.controller = controller
         self.preferencesStore = preferencesStore
@@ -34,7 +33,13 @@ struct CookingHomeView: View {
                 for: controller.session.configuration.cut
             )
         )
-        _appPreferences = State(initialValue: preferencesStore.load())
+    }
+
+    /// Read straight from the store, which is observable, rather than mirrored
+    /// into local state: the settings screen is not the only thing that may
+    /// change it.
+    private var appPreferences: AppPreferences {
+        preferencesStore.preferences
     }
 
     var body: some View {
@@ -65,7 +70,9 @@ struct CookingHomeView: View {
             case .appSettings:
                 SettingsView(
                     preferences: appPreferences,
-                    onSave: saveAppPreferences
+                    learnedAdjustments: controller.learnedAdjustments,
+                    onSave: saveAppPreferences,
+                    onResetLearnedAdjustments: { controller.resetLearnedAdjustments() }
                 )
                 .presentationDetents([.large])
                 .presentationCornerRadius(28)
@@ -417,9 +424,15 @@ struct CookingHomeView: View {
     }
 
     private func saveAppPreferences(_ newValue: AppPreferences) {
-        appPreferences = newValue
-        preferencesStore.save(newValue)
+        let wasEnabled = appPreferences.isNotificationsEnabled
+        preferencesStore.update(newValue)
         applySelectionFallback()
+
+        // Ask for permission at the moment the user turned reminders on, rather
+        // than at launch where the prompt has no context.
+        if newValue.isNotificationsEnabled, !wasEnabled {
+            controller.requestNotificationAuthorization()
+        }
     }
 
     /// Keeps the selection on a cut that is actually on screen. Hiding the cut

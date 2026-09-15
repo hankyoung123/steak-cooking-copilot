@@ -637,6 +637,16 @@
         }
       }
     },
+    "REMINDERS" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提醒"
+          }
+        }
+      }
+    },
     "Don’t move it yet." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1729,6 +1739,16 @@
         }
       }
     },
+    "Nudges you when the next flip, baste or pull is due, so you can step away from the pan." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在需要翻面、淋浇或出锅时提醒你，不必一直守在锅边。"
+          }
+        }
+      }
+    },
     "READY" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1835,6 +1855,16 @@
         }
       }
     },
+    "Cooking reminders" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "烹饪提醒"
+          }
+        }
+      }
+    },
     "Running" : {},
     "Salt" : {
       "localizations" : {
@@ -1842,6 +1872,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "撒盐"
+          }
+        }
+      }
+    },
+    "Sound" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音效"
           }
         }
       }
@@ -1878,6 +1918,16 @@
         }
       }
     },
+    "Haptics" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "触感"
+          }
+        }
+      }
+    },
     "Save & Cook Again" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1906,6 +1956,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "煎制"
+          }
+        }
+      }
+    },
+    "LEARNED ADJUSTMENTS" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "学习到的调整"
           }
         }
       }
@@ -2009,12 +2069,32 @@
         }
       }
     },
+    "Nothing yet. Feedback after a cook is what teaches the app." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无。烹饪后的反馈才会让它学习。"
+          }
+        }
+      }
+    },
     "Settings" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "设置"
+          }
+        }
+      }
+    },
+    "Learned from your feedback after a cook. Each entry shifts the timing for that cut, thickness and doneness." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "根据你每次烹饪后的反馈学习而来。每条都会影响对应部位、厚度与熟度的时间。"
           }
         }
       }
@@ -2030,12 +2110,32 @@
       }
     },
     "Share" : {},
+    "Reset learned adjustments?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置学习到的调整？"
+          }
+        }
+      }
+    },
     "Skip" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "跳过"
+          }
+        }
+      }
+    },
+    "Reset" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置"
           }
         }
       }
@@ -2270,12 +2370,32 @@
         }
       }
     },
+    "ABOUT" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关于"
+          }
+        }
+      }
+    },
     "TARGET TEMP" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "目标温度"
+          }
+        }
+      }
+    },
+    "Version" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "版本"
           }
         }
       }
@@ -2449,6 +2569,16 @@
         }
       }
     },
+    "Temperatures shown while cooking are model estimates, not measurements. They never decide when the steak is done." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "烹饪中显示的温度是模型估算，不是实测。它不会决定牛排何时完成。"
+          }
+        }
+      }
+    },
     "Time to eat" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2456,6 +2586,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "开始享用"
+          }
+        }
+      }
+    },
+    "%@ · %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · %@"
           }
         }
       }
@@ -2729,6 +2869,66 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "当前进度将被清除，并返回设置界面。"
+          }
+        }
+      }
+    },
+    "SOUND & HAPTICS" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "声音与触感"
+          }
+        }
+      }
+    },
+    "Reset adjustments" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置调整"
+          }
+        }
+      }
+    },
+    "Thin" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "薄"
+          }
+        }
+      }
+    },
+    "Standard" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标准"
+          }
+        }
+      }
+    },
+    "Thick" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "厚"
+          }
+        }
+      }
+    },
+    "The app will go back to its built-in timings for every cut. Your saved settings and cook history are kept." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有部位都会回到内置时间。已保存的设置和烹饪记录会保留。"
           }
         }
       }

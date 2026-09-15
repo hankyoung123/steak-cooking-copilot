@@ -16,6 +16,11 @@ struct SteakCopilotApp: App {
         if arguments.contains("-resetSession") {
             store.clearSession()
         }
+        // Learned adjustments deliberately survive a session, and they are
+        // user-visible now, so a UI run needs a way to start from none.
+        if arguments.contains("-resetCalibrations") {
+            store.clearCalibrations()
+        }
         // Effective tuning = generated production defaults + optional local
         // development override. Test launch arguments can force production
         // values so UI tests always run the shipped configuration.
@@ -32,18 +37,23 @@ struct SteakCopilotApp: App {
         self.preferencesStore = preferencesStore
         // Every tuning consumer shares one store, so a change made in the
         // Tuning Lab is read live instead of being frozen at launch.
-        let motion = MotionDirector(
-            haptics: HapticService(isEnabled: !arguments.contains("-quietFeedback")),
-            sounds: SoundService(isEnabled: !arguments.contains("-quietFeedback")),
-            tuningProvider: tuningStore
-        )
         _tuningStore = State(initialValue: tuningStore)
         _controller = State(
             initialValue: CookingSessionController(
                 store: store,
-                motionDirector: motion,
+                motionDirector: MotionDirector(
+                    haptics: HapticService(
+                        isEnabled: !arguments.contains("-quietFeedback")
+                    ),
+                    sounds: SoundService(
+                        isEnabled: !arguments.contains("-quietFeedback")
+                    ),
+                    tuningProvider: tuningStore,
+                    preferencesProvider: preferencesStore
+                ),
                 notificationService: NotificationService(
-                    isEnabled: !arguments.contains("-disableNotifications")
+                    isEnabled: !arguments.contains("-disableNotifications"),
+                    preferencesProvider: preferencesStore
                 ),
                 liveActivityService: LiveActivityService(
                     isEnabled: !arguments.contains("-disableLiveActivity"),

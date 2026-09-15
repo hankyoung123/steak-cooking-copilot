@@ -180,6 +180,43 @@ final class CookingSessionController {
         engine.remainingSearFlips(for: session, profile: currentProfile, at: date)
     }
 
+    /// The adjustments learned from feedback, most influential first.
+    ///
+    /// Only entries that actually move something are listed: the point of the
+    /// screen is "what has this app changed about my cooking", and neutral
+    /// entries answer nothing.
+    var learnedAdjustments: [LearnedAdjustment] {
+        calibrations
+            .map { LearnedAdjustment(key: $0.key, calibration: $0.value) }
+            .filter(\.isEffective)
+            .sorted { lhs, rhs in
+                if lhs.magnitude != rhs.magnitude { return lhs.magnitude > rhs.magnitude }
+                if lhs.key.cut != rhs.key.cut {
+                    return lhs.key.cut.rawValue < rhs.key.cut.rawValue
+                }
+                return lhs.key.doneness.rawValue < rhs.key.doneness.rawValue
+            }
+    }
+
+    /// Forgets every learned adjustment, so cooking returns to the production
+    /// timings for this configuration.
+    ///
+    /// Deliberately narrow: the saved setup preferences, the cook history and the
+    /// app-wide preferences are different stores and are not touched.
+    func resetLearnedAdjustments(at date: Date = .now) {
+        calibrations = [:]
+        store.clearCalibrations()
+        refresh(at: date)
+    }
+
+    /// Asks for notification permission.
+    ///
+    /// Called when the reminder switch is turned on rather than at launch, so the
+    /// system prompt arrives at a moment the user just asked for it.
+    func requestNotificationAuthorization() {
+        Task { _ = await notificationService.requestAuthorization() }
+    }
+
     /// The in-pan route for the steak currently being cooked.
     var journey: CookingJourney {
         CookingJourney(

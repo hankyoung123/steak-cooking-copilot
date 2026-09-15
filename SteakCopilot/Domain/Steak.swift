@@ -69,6 +69,15 @@ enum ThicknessBucket: String, Codable, Hashable, Sendable {
     case standard
     case thick
 
+    /// Shown in Settings, where a learned adjustment is listed per bucket.
+    var title: String {
+        switch self {
+        case .thin: String(localized: "Thin")
+        case .standard: String(localized: "Standard")
+        case .thick: String(localized: "Thick")
+        }
+    }
+
     /// Bucket boundaries are tunable, so the tuning must be supplied.
     init(thicknessCM: Double, in tuning: AppTuning) {
         self = tuning.cooking.thicknessBucket(thicknessCM: thicknessCM)

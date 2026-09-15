@@ -9,8 +9,11 @@ struct RootFlowView: View {
     let controller: CookingSessionController
     /// Development-only parameter override store (`-tuningLab`).
     var tuningStore: TuningStore?
-    /// App-wide preferences, read by the setup screen.
-    var preferencesStore = AppPreferencesStore()
+    /// App-wide preferences, read by the setup screen and by the feedback and
+    /// notification services. Required: a store is a reference type holding
+    /// persisted state, so a default value would build a new one per view
+    /// initialisation.
+    let preferencesStore: AppPreferencesStore
 
     var body: some View {
         ZStack {
@@ -190,6 +193,11 @@ private enum SessionControlConfirmation: String, Identifiable {
 }
 
 #Preview("Setup") {
-    RootFlowView(controller: CookingSessionController(store: CookingStore(defaults: UserDefaults(suiteName: "preview.setup")!)))
+    RootFlowView(
+        controller: CookingSessionController(
+            store: CookingStore(defaults: UserDefaults(suiteName: "preview.setup")!)
+        ),
+        preferencesStore: AppPreferencesStore()
+    )
         .environment(AppTheme())
 }
