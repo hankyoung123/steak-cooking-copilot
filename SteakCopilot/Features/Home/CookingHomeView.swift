@@ -71,7 +71,7 @@ struct CookingHomeView: View {
                 SettingsView(
                     preferences: appPreferences,
                     learnedAdjustments: controller.learnedAdjustments,
-                    onSave: saveAppPreferences,
+                    onChange: applyAppPreferences,
                     onResetLearnedAdjustments: { controller.resetLearnedAdjustments() }
                 )
                 .presentationDetents([.large])
@@ -423,7 +423,9 @@ struct CookingHomeView: View {
         controller.updateSetupPreferences(newValue)
     }
 
-    private func saveAppPreferences(_ newValue: AppPreferences) {
+    /// Applied the moment a switch moves: the settings sheet has no Save button,
+    /// so this is the only place a change can land.
+    private func applyAppPreferences(_ newValue: AppPreferences) {
         let wasEnabled = appPreferences.isNotificationsEnabled
         preferencesStore.update(newValue)
         applySelectionFallback()

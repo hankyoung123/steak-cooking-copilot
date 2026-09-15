@@ -9,22 +9,24 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(AppTheme.self) private var theme
-    @State private var draft: AppPreferences
     @State private var showsResetConfirmation = false
 
+    let preferences: AppPreferences
     let learnedAdjustments: [LearnedAdjustment]
-    let onSave: (AppPreferences) -> Void
+    /// Called as soon as a switch moves. There is no Save button, so a control
+    /// that only edited a local draft would silently lose the change on close.
+    let onChange: (AppPreferences) -> Void
     let onResetLearnedAdjustments: () -> Void
 
     init(
         preferences: AppPreferences,
         learnedAdjustments: [LearnedAdjustment],
-        onSave: @escaping (AppPreferences) -> Void,
+        onChange: @escaping (AppPreferences) -> Void,
         onResetLearnedAdjustments: @escaping () -> Void
     ) {
-        _draft = State(initialValue: preferences)
+        self.preferences = preferences
         self.learnedAdjustments = learnedAdjustments
-        self.onSave = onSave
+        self.onChange = onChange
         self.onResetLearnedAdjustments = onResetLearnedAdjustments
     }
 
@@ -48,10 +50,9 @@ struct SettingsView: View {
                     aboutSection
                 }
                 .padding(.horizontal, 24)
-                .padding(.bottom, 24)
+                .padding(.bottom, 32)
             }
             .scrollIndicators(.hidden)
-            .safeAreaInset(edge: .bottom) { saveBar }
         }
         .preferredColorScheme(.light)
         .alert(
@@ -85,18 +86,6 @@ struct SettingsView: View {
             .editorialDisplayStyle(size: 40, color: theme.ink)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.top, 4)
-    }
-
-    private var saveBar: some View {
-        PrimaryActionButton(title: String(localized: "Save & Close")) {
-            onSave(draft)
-            dismiss()
-        }
-        .accessibilityIdentifier("appSettings.save")
-        .padding(.horizontal, 24)
-        .padding(.top, 10)
-        .padding(.bottom, 12)
-        .background(theme.porcelain.opacity(0.96))
     }
 
     private var divider: some View {
@@ -137,13 +126,8 @@ struct SettingsView: View {
     }
 
     private func cutRow(_ cut: SteakCut) -> some View {
-        let locked = !draft.canHide(cut)
-        return Toggle(
-            isOn: Binding(
-                get: { draft.isVisible(cut) },
-                set: { draft.setCut(cut, visible: $0) }
-            )
-        ) {
+        let locked = !preferences.canHide(cut)
+        return Toggle(isOn: visibilityBinding(cut)) {
             Text(cut.title)
                 .font(.system(size: 15, weight: .regular, design: .serif))
                 .foregroundStyle(theme.ink)
@@ -158,7 +142,38 @@ struct SettingsView: View {
     }
 
     private var isAnyCutLocked: Bool {
-        SteakCut.allCases.contains { !draft.canHide($0) }
+        SteakCut.allCases.contains { !preferences.canHide($0) }
+    }
+
+    /// Settings apply the moment they are changed, so the sheet never holds a
+    /// draft that a close would discard.
+    private func apply(_ updated: AppPreferences) {
+        guard updated != preferences else { return }
+        onChange(updated)
+    }
+
+    private func visibilityBinding(_ cut: SteakCut) -> Binding<Bool> {
+        Binding(
+            get: { preferences.isVisible(cut) },
+            set: { visible in
+                var updated = preferences
+                updated.setCut(cut, visible: visible)
+                apply(updated)
+            }
+        )
+    }
+
+    private func flagBinding(
+        _ keyPath: WritableKeyPath<AppPreferences, Bool>
+    ) -> Binding<Bool> {
+        Binding(
+            get: { preferences[keyPath: keyPath] },
+            set: { value in
+                var updated = preferences
+                updated[keyPath: keyPath] = value
+                apply(updated)
+            }
+        )
     }
 
     // MARK: - Reminders
@@ -169,7 +184,7 @@ struct SettingsView: View {
             toggleRow(
                 "Cooking reminders",
                 identifier: "appSettings.reminders",
-                isOn: $draft.isNotificationsEnabled
+                isOn: flagBinding(\.isNotificationsEnabled)
             )
             Text("Nudges you when the next flip, baste or pull is due, so you can step away from the pan.")
                 .font(.system(size: 9))
@@ -188,12 +203,12 @@ struct SettingsView: View {
             toggleRow(
                 "Sound",
                 identifier: "appSettings.sound",
-                isOn: $draft.isSoundEnabled
+                isOn: flagBinding(\.isSoundEnabled)
             )
             toggleRow(
                 "Haptics",
                 identifier: "appSettings.haptics",
-                isOn: $draft.isHapticsEnabled
+                isOn: flagBinding(\.isHapticsEnabled)
             )
         }
         .padding(.vertical, 16)

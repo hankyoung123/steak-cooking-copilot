@@ -16,6 +16,8 @@ can express it.
 | Learned adjustments | see and reset what feedback taught | **invisible and unresettable** |
 | About | version, and what an estimated temperature is | nothing |
 
+Changes apply as they are made; there is no Save button.
+
 ## The real gap: learned adjustments
 
 Every feedback answer writes a `CookingCalibration` — a cooking-time adjustment
@@ -53,6 +55,17 @@ communicates, so it is still delivered with both off.
 Permission is requested when the reminder switch is turned **on**, not at launch,
 so the system prompt arrives at a moment the user just asked for it.
 
+## No Save button
+
+The sheet has no Save & Close: every switch is applied the moment it moves, the
+way a system settings screen behaves. That required dropping the local draft —
+with no Save to press, a control that only edited a draft would silently lose the
+change on close — so the controls now bind straight through to the live
+preferences and the sheet is dismissed with the back chevron.
+
+It also removed the sticky bottom bar, which is what let the reset row be
+tap-blocked in the first place, and the tests no longer have to guard against it.
+
 ## Storage
 
 `AppPreferences` changed from a bare set of hidden cuts to an object with the
@@ -74,11 +87,10 @@ Two problems surfaced while testing, both real:
    button, which made the walk fail on a button that had legitimately gone away.
    It now breaks on the finishing phase instead of asserting.
 
-A third, self-inflicted one is worth noting because it cost time: XCUI reports a
-row sitting **under the sticky Save bar** as hittable, and tapping it presses the
-bar — which dismisses the sheet. The test now asserts the row is clear of the bar
-before tapping rather than trusting `isHittable`. The bar itself is correctly
-pinned (measured at maxY 828 of 874); the trap is purely in XCUI's hittability.
+A third, self-inflicted one cost time and then disappeared with the Save button
+(below): while there was a sticky bar at the bottom, XCUI reported a row sitting
+under it as hittable, and tapping that row pressed the bar and dismissed the
+sheet.
 
 ## Automated results
 

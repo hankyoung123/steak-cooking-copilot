@@ -579,7 +579,7 @@ final class SteakCopilotUITests: XCTestCase {
         let app = launchApp()
 
         app.buttons["home.topSettings"].tap()
-        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["appSettings.close"].waitForExistence(timeout: 3))
         XCTAssertFalse(
             app.buttons["setup.doneness.mediumRare"].exists,
             "the gear must not open this cook's doneness and thickness"
@@ -590,17 +590,17 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertTrue(app.buttons["home.settings"].waitForExistence(timeout: 3))
         app.buttons["home.settings"].tap()
         XCTAssertTrue(app.buttons["setup.doneness.mediumRare"].waitForExistence(timeout: 3))
-        XCTAssertFalse(app.buttons["appSettings.save"].exists)
+        XCTAssertFalse(app.buttons["appSettings.close"].exists)
     }
 
     func testHidingACutTakesItOffTheHomeScreen() {
         let app = launchApp()
 
         app.buttons["home.topSettings"].tap()
-        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["appSettings.close"].waitForExistence(timeout: 3))
         layoutElement("appSettings.cut.strip", in: app).tap()
         attachScreenshot(named: "app-settings-cuts", app: app)
-        app.buttons["appSettings.save"].tap()
+        app.buttons["appSettings.close"].tap()
 
         XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 3))
         XCTAssertFalse(
@@ -616,9 +616,9 @@ final class SteakCopilotUITests: XCTestCase {
 
         // And it comes back.
         app.buttons["home.topSettings"].tap()
-        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["appSettings.close"].waitForExistence(timeout: 3))
         layoutElement("appSettings.cut.strip", in: app).tap()
-        app.buttons["appSettings.save"].tap()
+        app.buttons["appSettings.close"].tap()
         XCTAssertTrue(app.buttons["setup.cut.strip"].waitForExistence(timeout: 3))
     }
 
@@ -629,7 +629,7 @@ final class SteakCopilotUITests: XCTestCase {
         let titleBefore = layoutFrame("home.title", in: app)
 
         app.buttons["home.topSettings"].tap()
-        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["appSettings.close"].waitForExistence(timeout: 3))
         layoutElement("appSettings.cut.strip", in: app).tap()
         layoutElement("appSettings.cut.tenderloin", in: app).tap()
 
@@ -641,7 +641,7 @@ final class SteakCopilotUITests: XCTestCase {
         )
         attachScreenshot(named: "app-settings-last-cut", app: app)
 
-        app.buttons["appSettings.save"].tap()
+        app.buttons["appSettings.close"].tap()
         XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 3))
         XCTAssertTrue(app.buttons["setup.cut.ribeye"].exists)
         XCTAssertFalse(
@@ -668,7 +668,7 @@ final class SteakCopilotUITests: XCTestCase {
         let app = launchApp()
 
         app.buttons["home.topSettings"].tap()
-        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["appSettings.close"].waitForExistence(timeout: 3))
 
         for section in ["CUTS ON HOME", "REMINDERS", "SOUND & HAPTICS",
                         "LEARNED ADJUSTMENTS", "ABOUT"] {
@@ -701,9 +701,9 @@ final class SteakCopilotUITests: XCTestCase {
         let app = launchApp()
 
         app.buttons["home.topSettings"].tap()
-        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["appSettings.close"].waitForExistence(timeout: 3))
         layoutElement("appSettings.sound", in: app).tap()
-        app.buttons["appSettings.save"].tap()
+        app.buttons["appSettings.close"].tap()
         XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 3))
 
         // Relaunch without the reset argument, so the stored value is read back.
@@ -713,7 +713,7 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 5))
 
         app.buttons["home.topSettings"].tap()
-        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["appSettings.close"].waitForExistence(timeout: 3))
         XCTAssertEqual(
             layoutElement("appSettings.sound", in: app).value as? String,
             "0",
@@ -749,7 +749,7 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 5))
 
         app.buttons["home.topSettings"].tap()
-        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["appSettings.close"].waitForExistence(timeout: 3))
         XCTAssertTrue(
             scrollToVisibleButton("appSettings.resetAdjustments", in: app),
             "an overshot cook should have taught the app something"
@@ -762,30 +762,18 @@ final class SteakCopilotUITests: XCTestCase {
         // Save bar is still reported as hittable, and tapping it would press the
         // bar instead — which dismisses the sheet.
         let reset = app.buttons["appSettings.resetAdjustments"]
-        let saveBar = app.buttons["appSettings.save"]
-        if reset.frame.maxY >= saveBar.frame.minY {
-            // Scrolling stops as soon as XCUI considers the row hittable, which
-            // can still be underneath the sticky Save bar. One more swipe brings
-            // it clear; tapping it there would press the bar and dismiss the
-            // sheet instead.
-            app.swipeUp()
-        }
-        XCTAssertLessThan(
-            reset.frame.maxY,
-            saveBar.frame.minY,
-            "the reset row must scroll clear of the Save bar before it is tapped"
-        )
+        XCTAssertTrue(reset.isHittable, "the reset action must be reachable")
         attachScreenshot(named: "app-settings-adjustments", app: app)
         reset.tap()
         attachScreenshot(named: "app-settings-reset-tapped", app: app)
         XCTAssertTrue(app.buttons["Reset"].waitForExistence(timeout: 3))
         app.buttons["Reset"].tap()
-        app.buttons["appSettings.save"].tap()
+        app.buttons["appSettings.close"].tap()
 
         // Reopen: the list is empty again.
         XCTAssertTrue(app.buttons["home.topSettings"].waitForExistence(timeout: 3))
         app.buttons["home.topSettings"].tap()
-        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["appSettings.close"].waitForExistence(timeout: 3))
         XCTAssertTrue(
             scrollToVisible(
                 layoutElement("appSettings.adjustments.empty", in: app),
