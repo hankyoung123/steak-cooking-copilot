@@ -564,6 +564,98 @@ final class SteakCopilotUITests: XCTestCase {
         attachScreenshot(named: "layout-result-feedback", app: app)
     }
 
+    // MARK: - App settings
+
+    /// The gear opens app-wide settings, not the per-cook sheet it used to
+    /// duplicate.
+    func testGearOpensAppSettingsRatherThanTheCutSheet() {
+        let app = launchApp()
+
+        app.buttons["home.topSettings"].tap()
+        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        XCTAssertFalse(
+            app.buttons["setup.doneness.mediumRare"].exists,
+            "the gear must not open this cook's doneness and thickness"
+        )
+
+        // The bottom entry point still edits this cook.
+        app.buttons["appSettings.close"].tap()
+        XCTAssertTrue(app.buttons["home.settings"].waitForExistence(timeout: 3))
+        app.buttons["home.settings"].tap()
+        XCTAssertTrue(app.buttons["setup.doneness.mediumRare"].waitForExistence(timeout: 3))
+        XCTAssertFalse(app.buttons["appSettings.save"].exists)
+    }
+
+    func testHidingACutTakesItOffTheHomeScreen() {
+        let app = launchApp()
+
+        app.buttons["home.topSettings"].tap()
+        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        layoutElement("appSettings.cut.strip", in: app).tap()
+        attachScreenshot(named: "app-settings-cuts", app: app)
+        app.buttons["appSettings.save"].tap()
+
+        XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 3))
+        XCTAssertFalse(
+            app.buttons["setup.cut.strip"].exists,
+            "a hidden cut must not be in the carousel at all"
+        )
+        XCTAssertTrue(app.buttons["setup.cut.ribeye"].exists)
+        XCTAssertTrue(app.buttons["setup.cut.tenderloin"].exists)
+
+        // Its neighbour is still reachable, and it is not the hidden one.
+        app.buttons["home.nextCut"].tap()
+        XCTAssertTrue(app.buttons["setup.cut.tenderloin"].waitForExistence(timeout: 3))
+
+        // And it comes back.
+        app.buttons["home.topSettings"].tap()
+        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        layoutElement("appSettings.cut.strip", in: app).tap()
+        app.buttons["appSettings.save"].tap()
+        XCTAssertTrue(app.buttons["setup.cut.strip"].waitForExistence(timeout: 3))
+    }
+
+    /// The screen can never end up with nothing to show.
+    func testTheLastVisibleCutCannotBeHidden() {
+        let app = launchApp()
+
+        let titleBefore = layoutFrame("home.title", in: app)
+
+        app.buttons["home.topSettings"].tap()
+        XCTAssertTrue(app.buttons["appSettings.save"].waitForExistence(timeout: 3))
+        layoutElement("appSettings.cut.strip", in: app).tap()
+        layoutElement("appSettings.cut.tenderloin", in: app).tap()
+
+        let last = layoutElement("appSettings.cut.ribeye", in: app)
+        XCTAssertFalse(last.isEnabled, "the last visible cut must not be hideable")
+        XCTAssertTrue(
+            app.staticTexts["Keep at least one cut on the home screen."].exists,
+            "the reason has to be visible, not a control that silently does nothing"
+        )
+        attachScreenshot(named: "app-settings-last-cut", app: app)
+
+        app.buttons["appSettings.save"].tap()
+        XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["setup.cut.ribeye"].exists)
+        XCTAssertFalse(
+            app.buttons["home.nextCut"].exists,
+            "with one cut there is nothing to navigate, so the arrows are gone"
+        )
+
+        // The navigation row keeps its height even when it is empty, so dropping
+        // to a single cut does not shift the title, the parameters or the CTA.
+        let titleAfter = layoutFrame("home.title", in: app)
+        XCTAssertEqual(
+            titleAfter.minY,
+            titleBefore.minY,
+            accuracy: 2,
+            "an empty navigation row must still reserve its height"
+        )
+        XCTAssertEqual(titleAfter.height, titleBefore.height, accuracy: 2)
+
+        attachScreenshot(named: "home-single-cut", app: app)
+    }
+
     // MARK: - Setup screen skeleton
 
     /// Regression for the setup screen's skeleton.
@@ -893,6 +985,10 @@ final class SteakCopilotUITests: XCTestCase {
         app.launchArguments = [
             "-resetSession",
             "-resetTuning",
+            // App preferences persist by design, so every test starts from the
+            // default (all cuts visible) rather than from whatever a previous
+            // run left behind.
+            "-resetPreferences",
             "-disableNotifications",
             "-disableLiveActivity",
             "-quietFeedback"

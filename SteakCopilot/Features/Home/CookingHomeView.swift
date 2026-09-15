@@ -16,16 +16,25 @@ struct CookingHomeView: View {
     @Environment(AppTheme.self) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     let controller: CookingSessionController
+    /// App-wide preferences, so the gear and the fine-tune sheet are no longer
+    /// the same screen.
+    let preferencesStore: AppPreferencesStore
     @State private var preferences: SteakSetupPreferences
+    @State private var appPreferences: AppPreferences
     @State private var presentedSheet: HomeSheet?
 
-    init(controller: CookingSessionController) {
+    init(
+        controller: CookingSessionController,
+        preferencesStore: AppPreferencesStore = AppPreferencesStore()
+    ) {
         self.controller = controller
+        self.preferencesStore = preferencesStore
         _preferences = State(
             initialValue: controller.setupPreferences(
                 for: controller.session.configuration.cut
             )
         )
+        _appPreferences = State(initialValue: preferencesStore.load())
     }
 
     var body: some View {
@@ -39,9 +48,10 @@ struct CookingHomeView: View {
             .scrollIndicators(.hidden)
             .scrollBounceBehavior(.basedOnSize)
         }
+        .onAppear(perform: applySelectionFallback)
         .sheet(item: $presentedSheet) { sheet in
             switch sheet {
-            case .settings:
+            case .cutSettings:
                 AdvancedSettingsSheet(
                     preferences: preferences,
                     estimate: { controller.estimatedCookingBudget(for: $0) },
@@ -49,6 +59,13 @@ struct CookingHomeView: View {
                         controller.tuning.doneness[$0].targetTemperatureC
                     },
                     onSave: save
+                )
+                .presentationDetents([.large])
+                .presentationCornerRadius(28)
+            case .appSettings:
+                SettingsView(
+                    preferences: appPreferences,
+                    onSave: saveAppPreferences
                 )
                 .presentationDetents([.large])
                 .presentationCornerRadius(28)
@@ -102,14 +119,24 @@ struct CookingHomeView: View {
                 title: String(localized: "Settings"),
                 systemImage: "gearshape",
                 identifier: "home.topSettings"
-            ) { presentedSheet = .settings }
+            ) { presentedSheet = .appSettings }
         }
         .padding(.horizontal, layout.screenInset)
         .frame(height: layout.topBarHeight)
     }
 
+    /// The cuts the home screen shows. Hiding one is purely presentational: the
+    /// per-cut settings and the adjustments it has learned are untouched.
+    private var visibleCuts: [SteakCut] {
+        appPreferences.visibleCuts
+    }
+
     private func hero(_ layout: HomeLayoutMetrics) -> some View {
-        SteakHeroCarousel(selection: cutBinding, layout: layout)
+        SteakHeroCarousel(
+            selection: cutBinding,
+            layout: layout,
+            cuts: visibleCuts
+        )
             .frame(height: layout.heroHeight)
             .accessibilityIdentifier("home.carousel")
     }
@@ -217,7 +244,7 @@ struct CookingHomeView: View {
     /// trailing arrow.
     private func secondaryAction(_ layout: HomeLayoutMetrics) -> some View {
         Button {
-            presentedSheet = .settings
+            presentedSheet = .cutSettings
         } label: {
             HStack(spacing: 6) {
                 Text("Fine-tune settings")
@@ -271,6 +298,24 @@ struct CookingHomeView: View {
     // MARK: - Cut navigation
 
     private func cutNavigation(_ layout: HomeLayoutMetrics) -> some View {
+        Group {
+            if visibleCuts.count < 2 {
+                // Nothing to navigate, so the arrows and dots would be decoration
+                // that lies about what they do. The row's height is still
+                // reserved, so turning a cut off does not shift the title, the
+                // parameters and the call to action above and below it.
+                Color.clear
+            } else {
+                cutNavigationContent(layout)
+            }
+        }
+        .padding(.horizontal, layout.screenInset)
+        .frame(maxWidth: layout.navigationMaxWidth)
+        .frame(maxWidth: .infinity)
+        .frame(height: layout.navigationHeight)
+    }
+
+    private func cutNavigationContent(_ layout: HomeLayoutMetrics) -> some View {
         HStack(spacing: 0) {
             cutButton(
                 previousCut,
@@ -283,7 +328,7 @@ struct CookingHomeView: View {
             Spacer(minLength: 8)
 
             HStack(spacing: 7) {
-                ForEach(SteakCut.allCases) { cut in
+                ForEach(visibleCuts) { cut in
                     Circle()
                         .fill(
                             cut == preferences.configuration.cut
@@ -311,10 +356,6 @@ struct CookingHomeView: View {
                 layout: layout
             ) { cutBinding.wrappedValue = nextCut }
         }
-        .padding(.horizontal, layout.screenInset)
-        .frame(maxWidth: layout.navigationMaxWidth)
-        .frame(maxWidth: .infinity)
-        .frame(height: layout.navigationHeight)
     }
 
     /// The whole side region is the target, not just the glyphs: the label sits
@@ -375,14 +416,31 @@ struct CookingHomeView: View {
         controller.updateSetupPreferences(newValue)
     }
 
+    private func saveAppPreferences(_ newValue: AppPreferences) {
+        appPreferences = newValue
+        preferencesStore.save(newValue)
+        applySelectionFallback()
+    }
+
+    /// Keeps the selection on a cut that is actually on screen. Hiding the cut
+    /// you were looking at should move you to a neighbour rather than leave the
+    /// screen showing something the carousel no longer contains.
+    private func applySelectionFallback() {
+        let fallback = appPreferences.selection(
+            startingFrom: preferences.configuration.cut
+        )
+        guard fallback != preferences.configuration.cut else { return }
+        save(controller.setupPreferences(for: fallback))
+    }
+
     private var previousCut: SteakCut {
-        let cuts = SteakCut.allCases
+        let cuts = visibleCuts
         let index = cuts.firstIndex(of: preferences.configuration.cut) ?? 0
         return cuts[(index - 1 + cuts.count) % cuts.count]
     }
 
     private var nextCut: SteakCut {
-        let cuts = SteakCut.allCases
+        let cuts = visibleCuts
         let index = cuts.firstIndex(of: preferences.configuration.cut) ?? 0
         return cuts[(index + 1) % cuts.count]
     }
@@ -403,7 +461,10 @@ struct CookingHomeView: View {
 }
 
 private enum HomeSheet: String, Identifiable {
-    case settings
+    /// This cook's doneness and thickness — the bottom "Fine-tune settings".
+    case cutSettings
+    /// App-wide settings — the gear in the top-right corner.
+    case appSettings
     case history
     var id: Self { self }
 }

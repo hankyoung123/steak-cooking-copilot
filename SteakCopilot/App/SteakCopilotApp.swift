@@ -5,6 +5,8 @@ struct SteakCopilotApp: App {
     @State private var theme = AppTheme()
     @State private var tuningStore: TuningStore
     @State private var controller: CookingSessionController
+    /// App-wide preferences. A value store, so it needs no observation state.
+    private let preferencesStore: AppPreferencesStore
 
     init() {
         let arguments = ProcessInfo.processInfo.arguments
@@ -21,6 +23,13 @@ struct SteakCopilotApp: App {
         if arguments.contains("-resetTuning") {
             tuningStore.resetToProduction()
         }
+        // App preferences persist across launches; the launch argument only
+        // exists so UI tests start from a known state.
+        let preferencesStore = AppPreferencesStore()
+        if arguments.contains("-resetPreferences") {
+            preferencesStore.reset()
+        }
+        self.preferencesStore = preferencesStore
         // Every tuning consumer shares one store, so a change made in the
         // Tuning Lab is read live instead of being frozen at launch.
         let motion = MotionDirector(
@@ -48,7 +57,11 @@ struct SteakCopilotApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootFlowView(controller: controller, tuningStore: tuningStore)
+            RootFlowView(
+                controller: controller,
+                tuningStore: tuningStore,
+                preferencesStore: preferencesStore
+            )
                 .environment(theme)
         }
     }

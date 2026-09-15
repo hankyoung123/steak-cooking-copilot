@@ -9,6 +9,8 @@ struct RootFlowView: View {
     let controller: CookingSessionController
     /// Development-only parameter override store (`-tuningLab`).
     var tuningStore: TuningStore?
+    /// App-wide preferences, read by the setup screen.
+    var preferencesStore = AppPreferencesStore()
 
     var body: some View {
         ZStack {
@@ -29,7 +31,10 @@ struct RootFlowView: View {
             Group {
                 switch controller.flowStage {
                 case .setup:
-                    CookingHomeView(controller: controller)
+                    CookingHomeView(
+                        controller: controller,
+                        preferencesStore: preferencesStore
+                    )
                 case .prep:
                     sessionView
                 case .heat:

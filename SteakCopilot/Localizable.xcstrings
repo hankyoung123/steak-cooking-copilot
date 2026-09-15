@@ -12,6 +12,7 @@
       }
     },
     "%.0f°C" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -375,6 +376,7 @@
       }
     },
     "Center temperature" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -549,6 +551,16 @@
       }
     },
     "Copy" : {},
+    "Keep at least one cut on the home screen." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "首页至少要保留一个部位。"
+          }
+        }
+      }
+    },
     "Crust" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -556,6 +568,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "焦壳"
+          }
+        }
+      }
+    },
+    "Hiding a cut only takes it off the home screen. Its settings and everything it has learned are kept." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏只会把它从首页移除，它的设置和已经学到的调整都会保留。"
           }
         }
       }
@@ -605,6 +627,16 @@
       }
     },
     "Cuts" : {},
+    "CUTS ON HOME" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "首页显示的部位"
+          }
+        }
+      }
+    },
     "Don’t move it yet." : {
       "localizations" : {
         "zh-Hans" : {
@@ -731,6 +763,16 @@
         }
       }
     },
+    "ESTIMATED" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "估算"
+          }
+        }
+      }
+    },
     "Estimated carryover" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -748,16 +790,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "预计完成"
-          }
-        }
-      }
-    },
-    "ESTIMATED" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "估算"
           }
         }
       }
@@ -917,16 +949,6 @@
         }
       }
     },
-    "Flips left: %lld" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "剩余翻面：%lld 次"
-          }
-        }
-      }
-    },
     "FINISH" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1042,6 +1064,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "已翻面"
+          }
+        }
+      }
+    },
+    "Flips left: %lld" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剩余翻面：%lld 次"
           }
         }
       }
@@ -1367,6 +1399,7 @@
       }
     },
     "No thermometer — use timing" : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1656,6 +1689,7 @@
       }
     },
     "Pull near %.0f°C" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -2111,16 +2145,6 @@
         }
       }
     },
-    "SUGGESTED" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "建议"
-          }
-        }
-      }
-    },
     "STAND THE FAT CAP" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2200,6 +2224,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "牛排厚度"
+          }
+        }
+      }
+    },
+    "SUGGESTED" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建议"
           }
         }
       }
@@ -2310,6 +2344,7 @@
         }
       }
     },
+    "Thermal" : {},
     "These settings are recommendations based on your last cook." : {
       "localizations" : {
         "zh-Hans" : {
@@ -2542,6 +2577,7 @@
       }
     },
     "Use this reading" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {

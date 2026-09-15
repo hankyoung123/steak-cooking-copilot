@@ -149,7 +149,12 @@ final class LocalizationTests: XCTestCase {
             // temperature, plus the flip countdown under the instruction.
             "ESTIMATED": "估算",
             "SUGGESTED": "建议",
-            "Flips left: %lld": "剩余翻面：%lld 次"
+            "Flips left: %lld": "剩余翻面：%lld 次",
+            // The app-wide settings screen behind the gear.
+            "CUTS ON HOME": "首页显示的部位",
+            "Keep at least one cut on the home screen.": "首页至少要保留一个部位。",
+            "Hiding a cut only takes it off the home screen. Its settings and everything it has learned are kept.":
+                "隐藏只会把它从首页移除，它的设置和已经学到的调整都会保留。"
         ]
         for (key, translation) in cookingCopy {
             XCTAssertEqual(

@@ -13,11 +13,14 @@ import SwiftUI
 struct SteakHeroCarousel: View {
     @Binding var selection: SteakCut
     let layout: HomeLayoutMetrics
+    /// The cuts actually on screen, in canonical order: the app-wide preference
+    /// decides this, so the carousel never pages to a hidden cut.
+    let cuts: [SteakCut]
 
     var body: some View {
         ScrollView(.horizontal) {
             LazyHStack(spacing: AppSpacing.sm) {
-                ForEach(SteakCut.allCases) { cut in
+                ForEach(cuts) { cut in
                     Button {
                         selection = cut
                     } label: {
