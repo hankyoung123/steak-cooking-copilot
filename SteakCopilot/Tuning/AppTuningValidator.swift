@@ -252,6 +252,33 @@ enum AppTuningValidator {
             )
         }
 
+        // MARK: Thermal
+
+        let thermal = tuning.thermal
+        require(
+            thermal.initialCentreTemperatureC > 0,
+            "thermal.initialCentreTemperatureC must be > 0"
+        )
+        require(
+            thermal.surfaceTemperatureC > 0,
+            "thermal.surfaceTemperatureC must be > 0"
+        )
+        // Mirrors the generator: the two anchors must bracket every doneness, or
+        // the estimate's time constant would be undefined for some level.
+        for doneness in Doneness.allCases {
+            let spec = tuning.doneness[doneness]
+            require(
+                thermal.initialCentreTemperatureC < spec.pullTemperatureC,
+                "thermal.initialCentreTemperatureC must be below "
+                    + "doneness.\(doneness.rawValue).pullTemperatureC"
+            )
+            require(
+                thermal.surfaceTemperatureC > spec.targetTemperatureC,
+                "thermal.surfaceTemperatureC must be above "
+                    + "doneness.\(doneness.rawValue).targetTemperatureC"
+            )
+        }
+
         // MARK: Notifications
 
         let notifications = tuning.notifications

@@ -1,5 +1,21 @@
 import Foundation
 
+/// Whether the app offers a probe-reading entry point.
+///
+/// This is a product switch, not a cooking parameter, so it lives in code
+/// rather than in `Config/production.yaml`.
+///
+/// Turning it off **hides the entry point only**. The engine keeps the whole
+/// reading capability — a reading still overrides the time estimate, the
+/// priority rules are untouched, and `recordManualTemperature` still works —
+/// and so do its tests. What changes is that no screen asks for a reading, so
+/// the cook runs on the timing estimate and the in-pan journey has no CHECK TEMP
+/// step. Flipping this back to `true` restores the step in the journey; the
+/// reading control itself is in git history.
+enum ProbeReading {
+    static let isOffered = false
+}
+
 /// One milestone in the in-pan cooking journey.
 ///
 /// This is the only thing the flow counter in the top-right corner counts. It is
@@ -111,17 +127,28 @@ struct CookingProgress: Equatable, Sendable {
 struct CookingJourney: Equatable, Sendable {
     let steps: [CookingJourneyStep]
 
-    init(needsFatCap: Bool) {
+    init(needsFatCap: Bool, includesTemperatureCheck: Bool = ProbeReading.isOffered) {
         var steps: [CookingJourneyStep] = [.sear, .flip]
         if needsFatCap {
             steps.append(.fatCap)
         }
-        steps.append(contentsOf: [.addButter, .baste, .checkTemperature, .takeOut])
+        steps.append(contentsOf: [.addButter, .baste])
+        if includesTemperatureCheck {
+            steps.append(.checkTemperature)
+        }
+        steps.append(.takeOut)
         self.steps = steps
     }
 
-    init(configuration: SteakConfiguration, tuning: AppTuning = .production) {
-        self.init(needsFatCap: configuration.cut.spec(in: tuning).needsFatCap)
+    init(
+        configuration: SteakConfiguration,
+        tuning: AppTuning = .production,
+        includesTemperatureCheck: Bool = ProbeReading.isOffered
+    ) {
+        self.init(
+            needsFatCap: configuration.cut.spec(in: tuning).needsFatCap,
+            includesTemperatureCheck: includesTemperatureCheck
+        )
     }
 
     var totalSteps: Int { steps.count }

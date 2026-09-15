@@ -48,11 +48,29 @@ final class CookingSessionController {
         self.timeScale = timeScale
         let restoredCalibrations = store.loadCalibrations()
         calibrations = restoredCalibrations
-        let restored = store.loadSession() ?? CookingSession.fresh(at: now)
-        session = restored
+        var restored = store.loadSession() ?? CookingSession.fresh(at: now)
         let restoredCalibration = restoredCalibrations[
             CalibrationKey(configuration: restored.configuration, tuning: tuning)
         ] ?? .neutral
+        // A session saved by a build that still offered the reading control can
+        // be waiting for a probe, or sitting in the reading-entry phase, which no
+        // longer has a way out. Put it back on the timing estimate.
+        if !ProbeReading.isOffered, restored.startedAt != nil {
+            if restored.thermometerUnavailableAt == nil {
+                restored.thermometerUnavailableAt = now
+            }
+            if restored.phase == .checkTemperature {
+                let profile = resolvedEngine.profile(
+                    for: restored.configuration,
+                    calibration: restoredCalibration,
+                    timeScale: timeScale
+                )
+                restored.phase = .sear
+                restored.phaseStartedAt = now
+                restored.nextActionAt = now.addingTimeInterval(profile.flipInterval)
+            }
+        }
+        session = restored
         guidance = resolvedEngine.guidance(
             for: restored,
             at: now,
@@ -114,6 +132,12 @@ final class CookingSessionController {
 
     func panIsReady(at date: Date = .now) {
         session.startedAt = date
+        // With no reading entry point the cook runs on the timing estimate, which
+        // is the engine's own no-thermometer path. This is the existing switch for
+        // "estimate by time", so the engine itself is untouched.
+        if !ProbeReading.isOffered {
+            session.thermometerUnavailableAt = date
+        }
         session.enter(
             .sear,
             at: date,
@@ -138,6 +162,22 @@ final class CookingSessionController {
         }
 
         dispatchMotionEventIfNeeded()
+    }
+
+    /// Estimated centre temperature at `date`, or `nil` when there is nothing to
+    /// estimate. Display only: nothing in the engine reads it to decide anything.
+    func estimatedCentreTemperatureC(at date: Date) -> Double? {
+        engine.estimatedCentreTemperatureC(
+            for: session,
+            at: date,
+            profile: currentProfile
+        )
+    }
+
+    /// Flips the plan still expects before the late stage, or `nil` outside the
+    /// searing loop.
+    func remainingSearFlips(at date: Date) -> Int? {
+        engine.remainingSearFlips(for: session, profile: currentProfile, at: date)
     }
 
     /// The in-pan route for the steak currently being cooked.

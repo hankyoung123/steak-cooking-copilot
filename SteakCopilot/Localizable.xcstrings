@@ -283,9 +283,7 @@
         }
       }
     },
-    "Bounce" : {
-
-    },
+    "Bounce" : {},
     "Build the crust" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -317,9 +315,7 @@
         }
       }
     },
-    "Calibration" : {
-
-    },
+    "Calibration" : {},
     "Cancel" : {
       "localizations" : {
         "zh-Hans" : {
@@ -388,9 +384,7 @@
         }
       }
     },
-    "Changed fields" : {
-
-    },
+    "Changed fields" : {},
     "CHECK" : {
       "localizations" : {
         "zh-Hans" : {
@@ -554,9 +548,7 @@
         }
       }
     },
-    "Copy" : {
-
-    },
+    "Copy" : {},
     "Crust" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -612,9 +604,7 @@
         }
       }
     },
-    "Cuts" : {
-
-    },
+    "Cuts" : {},
     "Don’t move it yet." : {
       "localizations" : {
         "zh-Hans" : {
@@ -677,12 +667,8 @@
         }
       }
     },
-    "Doneness adjustments" : {
-
-    },
-    "Draft not applied — %lld issue(s)" : {
-
-    },
+    "Doneness adjustments" : {},
+    "Draft not applied — %lld issue(s)" : {},
     "Dry" : {
       "localizations" : {
         "zh-Hans" : {
@@ -762,6 +748,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "预计完成"
+          }
+        }
+      }
+    },
+    "ESTIMATED" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "估算"
           }
         }
       }
@@ -859,9 +855,7 @@
         }
       }
     },
-    "Export" : {
-
-    },
+    "Export" : {},
     "Fat cap" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -919,6 +913,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "精调设置"
+          }
+        }
+      }
+    },
+    "Flips left: %lld" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "剩余翻面：%lld 次"
           }
         }
       }
@@ -1170,12 +1174,8 @@
         }
       }
     },
-    "Import file…" : {
-
-    },
-    "Import pasted JSON" : {
-
-    },
+    "Import file…" : {},
+    "Import pasted JSON" : {},
     "Insert probe in the thickest part." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1322,12 +1322,8 @@
         }
       }
     },
-    "Motion" : {
-
-    },
-    "Needs fat cap" : {
-
-    },
+    "Motion" : {},
+    "Needs fat cap" : {},
     "New York Strip" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1407,9 +1403,7 @@
         }
       }
     },
-    "Notifications" : {
-
-    },
+    "Notifications" : {},
     "Now!" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1490,9 +1484,7 @@
         }
       }
     },
-    "Override JSON" : {
-
-    },
+    "Override JSON" : {},
     "Pan is ready" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1630,9 +1622,7 @@
         }
       }
     },
-    "Production defaults" : {
-
-    },
+    "Production defaults" : {},
     "Progress" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1768,9 +1758,7 @@
         }
       }
     },
-    "Reset to production" : {
-
-    },
+    "Reset to production" : {},
     "Rest off the heat" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1813,9 +1801,7 @@
         }
       }
     },
-    "Running" : {
-
-    },
+    "Running" : {},
     "Salt" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1879,9 +1865,7 @@
         }
       }
     },
-    "Save override" : {
-
-    },
+    "Save override" : {},
     "SEAR" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2011,9 +1995,7 @@
         }
       }
     },
-    "Share" : {
-
-    },
+    "Share" : {},
     "Skip" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2118,15 +2100,23 @@
         }
       }
     },
-    "Source" : {
-
-    },
+    "Source" : {},
     "STAND IT UP" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "立起牛排"
+          }
+        }
+      }
+    },
+    "SUGGESTED" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "建议"
           }
         }
       }
@@ -2517,9 +2507,7 @@
         }
       }
     },
-    "Tuning Lab" : {
-
-    },
+    "Tuning Lab" : {},
     "Turn it over now." : {
       "extractionState" : "stale",
       "localizations" : {

@@ -28,6 +28,35 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertEqual(app.buttons["session.exit"].label, "退出")
         XCTAssertEqual(app.buttons["session.skip"].label, "跳过")
         attachScreenshot(named: "stage-controls-zh-Hans", app: app)
+
+        // Drive into the searing loop so the new status readout and the flip
+        // countdown are exercised in Chinese as well as English.
+        app.buttons["prep.dry"].tap()
+        app.buttons["prep.salt"].tap()
+        tapWhenEnabled(app.buttons["prep.continue"], timeout: 3)
+        XCTAssertTrue(app.buttons["heat.ready"].waitForExistence(timeout: 3))
+        app.buttons["heat.ready"].tap()
+        waitForLabelPrefix(
+            "煎制",
+            on: app.staticTexts["session.phase.title"],
+            timeout: 3
+        )
+
+        let telemetry = layoutElement("session.telemetry", in: app)
+        XCTAssertTrue(telemetry.waitForExistence(timeout: 3))
+        XCTAssertTrue(
+            telemetry.label.contains("估算"),
+            "status readout should be labelled in Chinese, got \(telemetry.label)"
+        )
+        XCTAssertTrue(telemetry.label.contains("建议"), telemetry.label)
+
+        let instruction = layoutElement("session.instruction", in: app)
+        XCTAssertTrue(instruction.exists)
+        XCTAssertTrue(
+            instruction.label.contains("剩余翻面"),
+            "flip countdown should be in Chinese, got \(instruction.label)"
+        )
+        attachScreenshot(named: "searing-zh-Hans", app: app)
     }
 
     func testUnsupportedSystemLanguageFallsBackToEnglish() {
@@ -77,16 +106,16 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 3))
     }
 
-    func testCaseARibeyeWithoutThermometerCompletesEstimatedFlow() {
+    /// The app no longer offers a probe reading, so this is simply the cook flow.
+    func testCaseARibeyeCompletesTheEstimatedFlow() {
         let app = launchApp()
         startCooking(app)
 
-        let evidence = advanceWithoutThermometer(app)
+        let evidence = advanceToFinishing(app)
 
         XCTAssertGreaterThanOrEqual(evidence.flipCount, 2)
         XCTAssertTrue(evidence.sawButter)
         XCTAssertTrue(evidence.sawTakeOut)
-        XCTAssertTrue(evidence.sawNoThermometer)
         let reachedFinishingOrResult = app.staticTexts["FINISHING"].waitForExistence(timeout: 2)
             || app.buttons["ready.continue"].waitForExistence(timeout: 4)
         XCTAssertTrue(reachedFinishingOrResult)
@@ -96,7 +125,7 @@ final class SteakCopilotUITests: XCTestCase {
         finishReadyFeedbackFlow(app)
     }
 
-    func testCaseBStripWithManualTemperatureUsesFatCapAndTakesOut() {
+    func testCaseBStripUsesFatCapAndTakesOut() {
         let app = launchApp()
         app.buttons["home.nextCut"].tap()
         app.buttons["home.settings"].tap()
@@ -107,32 +136,31 @@ final class SteakCopilotUITests: XCTestCase {
         var flipCount = 0
         var sawFatCap = false
         var sawButter = false
+        var sawTakeOut = false
+
+        // Confirms until the steak is out. TAKE OUT ends the in-pan journey, so
+        // the loop stops on the FINISHING phase rather than on a step count.
         for _ in 0..<30 {
-            if app.buttons["cook.temperature.submit"].waitForExistence(timeout: 1) {
-                app.sliders["cook.temperature.slider"]
-                    .adjust(toNormalizedSliderPosition: 0.80)
-                app.buttons["cook.temperature.submit"].tap()
-                break
-            }
+            if app.staticTexts["FINISHING"].exists { break }
+
             let confirm = app.buttons["cook.confirm"]
             XCTAssertTrue(confirm.waitForExistence(timeout: 5))
             let label = confirm.label
             flipCount += label == "Flipped" ? 1 : 0
             sawFatCap = sawFatCap || label == "Start fat cap"
             sawButter = sawButter || label == "Butter added"
+            sawTakeOut = sawTakeOut || label == "Steak is out"
             tapWhenEnabled(confirm, timeout: 15)
         }
 
         XCTAssertGreaterThanOrEqual(flipCount, 2)
-        XCTAssertTrue(sawFatCap)
+        XCTAssertTrue(sawFatCap, "Strip must stand the fat cap up")
         XCTAssertTrue(sawButter)
-
-        let takeOut = app.buttons["cook.confirm"]
-        XCTAssertTrue(takeOut.waitForExistence(timeout: 4))
-        waitForLabel("Steak is out", on: takeOut, timeout: 4)
-        XCTAssertEqual(takeOut.label, "Steak is out")
-        tapWhenEnabled(takeOut, timeout: 15)
-        XCTAssertTrue(app.staticTexts["FINISHING"].waitForExistence(timeout: 4))
+        XCTAssertTrue(sawTakeOut, "The journey must end with TAKE OUT")
+        XCTAssertTrue(
+            app.staticTexts["FINISHING"].waitForExistence(timeout: 4),
+            "Taking the steak out should hand over to the rest"
+        )
     }
 
     func testCaseCTenderloinMediumSkipsFatCap() {
@@ -144,7 +172,7 @@ final class SteakCopilotUITests: XCTestCase {
         app.buttons["settings.save"].tap()
         startCooking(app)
 
-        let evidence = advanceWithoutThermometer(app)
+        let evidence = advanceToFinishing(app)
 
         XCTAssertGreaterThanOrEqual(evidence.flipCount, 2)
         XCTAssertFalse(evidence.sawFatCap)
@@ -247,10 +275,6 @@ final class SteakCopilotUITests: XCTestCase {
 
         for _ in 0..<30 {
             if app.staticTexts["FINISHING"].exists { break }
-            if app.buttons["cook.noThermometer"].waitForExistence(timeout: 1) {
-                app.buttons["cook.noThermometer"].tap()
-                continue
-            }
             let confirm = app.buttons["cook.confirm"]
             XCTAssertTrue(confirm.waitForExistence(timeout: 5))
 
@@ -263,7 +287,9 @@ final class SteakCopilotUITests: XCTestCase {
                 settleArtwork()
                 attachScreenshot(named: "prototype-baste", app: app)
                 capturedBaste = true
-            case "CHECK TEMP" where !capturedCheck:
+            // With no probe reading, the "check" photograph belongs to the
+            // take-out prompt: it is the last cook action before the rest.
+            case "Steak is out" where !capturedCheck:
                 settleArtwork()
                 attachScreenshot(named: "prototype-check", app: app)
                 capturedCheck = true
@@ -320,7 +346,8 @@ final class SteakCopilotUITests: XCTestCase {
 
         // Every parameter group has a section, each reachable by scrolling.
         for section in ["Cooking", "Cuts", "Doneness", "Calibration",
-                        "Finishing", "Notifications", "Motion", "Override JSON"] {
+                        "Finishing", "Thermal", "Notifications", "Motion",
+                        "Override JSON"] {
             XCTAssertTrue(
                 scrollToVisible(section, in: app),
                 "Tuning Lab is missing the \(section) section"
@@ -328,15 +355,23 @@ final class SteakCopilotUITests: XCTestCase {
         }
 
         // The Override JSON section exposes every import/export affordance.
-        XCTAssertTrue(app.buttons["tuningLab.export"].exists)
-        XCTAssertTrue(app.buttons["tuningLab.copy"].exists)
-        XCTAssertTrue(app.buttons["tuningLab.importPasted"].exists)
-        XCTAssertTrue(app.buttons["tuningLab.importFile"].exists)
+        // The form renders lazily, so each control has to be scrolled to before
+        // it exists in the tree.
+        for identifier in ["tuningLab.export", "tuningLab.copy",
+                           "tuningLab.importPasted", "tuningLab.importFile"] {
+            XCTAssertTrue(
+                scrollToVisibleButton(identifier, in: app),
+                "Tuning Lab is missing \(identifier)"
+            )
+        }
 
         // Export populates the editor with a versioned document.
+        scrollToVisibleButton("tuningLab.export", in: app)
         app.buttons["tuningLab.export"].tap()
         let editor = app.textViews["tuningLab.importText"]
-        XCTAssertTrue(editor.waitForExistence(timeout: 3))
+        XCTAssertTrue(
+            scrollToVisible(editor, in: app) || editor.waitForExistence(timeout: 3)
+        )
         let exported = editor.value as? String ?? ""
         XCTAssertTrue(
             exported.contains("schemaVersion"),
@@ -380,22 +415,10 @@ final class SteakCopilotUITests: XCTestCase {
 
             if app.staticTexts["FINISHING"].exists { break }
 
-            let noThermometer = app.buttons["cook.noThermometer"]
-            if noThermometer.exists, noThermometer.isHittable {
-                noThermometer.tap()
-                continue
-            }
-
             let confirm = app.buttons["cook.confirm"]
             if confirm.waitForExistence(timeout: 4) {
                 tapWhenEnabled(confirm, timeout: 20)
                 continue
-            }
-
-            if app.buttons["cook.temperature.submit"].exists {
-                // The reading path is covered by the case tests; this test only
-                // needs the phase sequence, and that path has no confirm step.
-                break
             }
 
             XCTFail("Expected the next cook action or the finishing phase")
@@ -403,9 +426,10 @@ final class SteakCopilotUITests: XCTestCase {
         }
 
         XCTAssertGreaterThanOrEqual(
-            samples.count,
-            6,
-            "The walk should have sampled several distinct cooking phases"
+            Set(samples.map(\.phaseTitle)).count,
+            4,
+            "The walk should have sampled several distinct cooking phases, "
+                + "saw \(Set(samples.map(\.phaseTitle)).sorted())"
         )
 
         let titles = Set(samples.map(\.phaseTitle))
@@ -436,7 +460,11 @@ final class SteakCopilotUITests: XCTestCase {
         let tolerance: CGFloat = 2
         assertStable(samples, "session.topControls", tolerance) { $0.topControls }
         assertStable(samples, "session.scene", tolerance) { $0.scene }
-        assertStable(samples, "session.instruction", tolerance) { $0.instruction }
+        // The instruction band gains and loses its supporting line — prep and
+        // heat have one, and so does the searing loop now that it carries the
+        // flip count — so the band's top edge is what has to hold, not the height
+        // of the text inside it.
+        assertStable(samples, "session.instruction", tolerance, height: false) { $0.instruction }
         assertStable(samples, "session.primaryAction", tolerance) { $0.primaryAction }
 
         // The progress rail is present in every phase except FINISHING (where
@@ -446,9 +474,9 @@ final class SteakCopilotUITests: XCTestCase {
         assertStable(samples, "session.progress (while shown)", tolerance) { $0.progress }
         assertStable(samples, "session.telemetry (while shown)", tolerance) { $0.telemetry }
 
-        // The flow counter is a strip route, so it runs 01 / 07 … 07 / 07 and is
-        // never allowed to walk backwards — the no-thermometer fallback and a low
-        // reading both send the session back into the searing loop.
+        // The flow counter is a strip route, so it runs 01 / 06 … 06 / 06 and is
+        // never allowed to walk backwards — the timing estimate sends the session
+        // back into the searing loop after BASTE.
         let counted = samples.compactMap(\.step)
         XCTAssertFalse(counted.isEmpty, "The flow counter was never displayed")
         XCTAssertEqual(
@@ -459,9 +487,9 @@ final class SteakCopilotUITests: XCTestCase {
         for sample in samples {
             guard let label = sample.stepLabel else { continue }
             XCTAssertEqual(
-                sample.stepLabel?.hasSuffix("/ 07"),
+                sample.stepLabel?.hasSuffix("/ 06"),
                 true,
-                "Strip is a seven-step route but showed \(label) in \(sample.phaseTitle)"
+                "Strip is a six-step route but showed \(label) in \(sample.phaseTitle)"
             )
         }
         XCTAssertNil(
@@ -470,7 +498,7 @@ final class SteakCopilotUITests: XCTestCase {
         )
         XCTAssertEqual(
             counted.max(),
-            7,
+            6,
             "The walk should have reached the final cook step, saw \(counted)"
         )
 
@@ -631,7 +659,7 @@ final class SteakCopilotUITests: XCTestCase {
 
     private struct SessionSkeletonSample: LayoutSample {
         let phaseTitle: String
-        /// The flow counter as displayed, e.g. "03 / 07"; `nil` when the chrome
+        /// The flow counter as displayed, e.g. "03 / 06"; `nil` when the chrome
         /// hides it because the in-pan journey is over.
         let stepLabel: String?
         let topControls: CGRect
@@ -717,11 +745,17 @@ final class SteakCopilotUITests: XCTestCase {
     /// whose text gets longer really does shift its midpoint, and asserting
     /// otherwise would pin a layout that should be free to breathe. Its vertical
     /// placement is still asserted.
+    ///
+    /// `height` is for a band whose *content* gains or loses a line. The band
+    /// itself is a fixed slot, and its content is top aligned, so the thing that
+    /// must hold still is the top edge; the combined element's box simply reports
+    /// how many lines are showing.
     private func assertStable<S: LayoutSample>(
         _ samples: [S],
         _ name: String,
         _ tolerance: CGFloat,
         horizontal: Bool = true,
+        height: Bool = true,
         _ frame: (S) -> CGRect?
     ) {
         let present = samples.compactMap { sample in
@@ -748,12 +782,14 @@ final class SteakCopilotUITests: XCTestCase {
                     "\(name) moved horizontally in \(phase)"
                 )
             }
-            XCTAssertEqual(
-                rect.height,
-                first.1.height,
-                accuracy: tolerance,
-                "\(name) changed height in \(phase)"
-            )
+            if height {
+                XCTAssertEqual(
+                    rect.height,
+                    first.1.height,
+                    accuracy: tolerance,
+                    "\(name) changed height in \(phase)"
+                )
+            }
         }
     }
 
@@ -894,29 +930,25 @@ final class SteakCopilotUITests: XCTestCase {
         )
     }
 
-    private func advanceWithoutThermometer(
+    /// Confirms whatever the app asks for until the steak is resting.
+    ///
+    /// There is no reading entry point, so nothing has to be chosen along the
+    /// way; the cook runs on the timing estimate.
+    private func advanceToFinishing(
         _ app: XCUIApplication
     ) -> (
         flipCount: Int,
         sawFatCap: Bool,
         sawButter: Bool,
-        sawTakeOut: Bool,
-        sawNoThermometer: Bool
+        sawTakeOut: Bool
     ) {
         var flipCount = 0
         var sawFatCap = false
         var sawButter = false
         var sawTakeOut = false
-        var sawNoThermometer = false
 
         for _ in 0..<30 {
             if app.staticTexts["FINISHING"].exists { break }
-            let noThermometer = app.buttons["cook.noThermometer"]
-            if noThermometer.waitForExistence(timeout: 1) {
-                sawNoThermometer = true
-                noThermometer.tap()
-                continue
-            }
             let confirm = app.buttons["cook.confirm"]
             if !confirm.waitForExistence(timeout: 5) {
                 if app.staticTexts["FINISHING"].waitForExistence(timeout: 2) {
@@ -933,7 +965,7 @@ final class SteakCopilotUITests: XCTestCase {
             tapWhenEnabled(confirm, timeout: 15)
         }
 
-        return (flipCount, sawFatCap, sawButter, sawTakeOut, sawNoThermometer)
+        return (flipCount, sawFatCap, sawButter, sawTakeOut)
     }
 
     private func finishReadyFeedbackFlow(_ app: XCUIApplication) {

@@ -1024,7 +1024,7 @@ final class TuningConfigurationTests: XCTestCase {
 final class TuningLabCoverageTests: XCTestCase {
     /// Leaves in Config/production.yaml. Kept in step by
     /// `Scripts/generate_tuning.py`, whose `--self-test` runs in CI.
-    private let expectedLeafCount = 102
+    private let expectedLeafCount = 104
 
     func testLabExposesEveryTunableParameter() {
         let ids = TuningLabView.allFieldIDs

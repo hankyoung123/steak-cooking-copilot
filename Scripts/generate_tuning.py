@@ -294,6 +294,11 @@ FINISHING_KEYS = [
     "idleEstimateMaxSeconds",
 ]
 
+THERMAL_KEYS = [
+    "surfaceTemperatureC",
+    "initialCentreTemperatureC",
+]
+
 NOTIFICATION_KEYS = [
     "approachingThresholdSeconds",
     "urgentThresholdSeconds",
@@ -340,6 +345,7 @@ ROOT_KEYS = [
     "doneness",
     "calibration",
     "finishing",
+    "thermal",
     "notifications",
     "motion",
 ]
@@ -577,6 +583,34 @@ def validate(root: dict[str, Any]) -> dict[str, Any]:
             "idleEstimateMaxSeconds"
         )
 
+    thermal = require_mapping(root["thermal"], "config.thermal")
+    require_keys(thermal, THERMAL_KEYS, "config.thermal")
+    for key in THERMAL_KEYS:
+        require_number(thermal, key, "config.thermal")
+    require_positive(
+        thermal["initialCentreTemperatureC"],
+        "config.thermal.initialCentreTemperatureC",
+    )
+    require_positive(
+        thermal["surfaceTemperatureC"],
+        "config.thermal.surfaceTemperatureC",
+    )
+    # The estimate's two anchors must bracket every doneness. Otherwise the
+    # time constant would be the log of a non-positive ratio for some level,
+    # i.e. the displayed estimate would be undefined exactly when it is shown.
+    for name in DONENESS_NAMES:
+        level = doneness[name]
+        if thermal["initialCentreTemperatureC"] >= level["pullTemperatureC"]:
+            raise ConfigError(
+                "config.thermal.initialCentreTemperatureC must be below "
+                f"config.doneness.{name}.pullTemperatureC"
+            )
+        if thermal["surfaceTemperatureC"] <= level["targetTemperatureC"]:
+            raise ConfigError(
+                "config.thermal.surfaceTemperatureC must be above "
+                f"config.doneness.{name}.targetTemperatureC"
+            )
+
     notifications = require_mapping(root["notifications"], "config.notifications")
     require_keys(notifications, NOTIFICATION_KEYS, "config.notifications")
     for key in NOTIFICATION_KEYS:
@@ -664,6 +698,7 @@ def emit(root: dict[str, Any], fingerprint: str) -> str:
     doneness = root["doneness"]
     calibration = root["calibration"]
     finishing = root["finishing"]
+    thermal = root["thermal"]
     notifications = root["notifications"]
     motion = root["motion"]
 
@@ -754,6 +789,10 @@ def emit(root: dict[str, Any], fingerprint: str) -> str:
             continue
         add(f"            {key}: {swift_number(finishing[key])},")
     add("        ),")
+    add("        thermal: ThermalTuning(")
+    for key in THERMAL_KEYS:
+        add(f"            {key}: {swift_number(thermal[key])},")
+    add("        ),")
     add("        notifications: NotificationTuning(")
     for key in NOTIFICATION_KEYS:
         add(f"            {key}: {swift_number(notifications[key])},")
@@ -813,6 +852,11 @@ SELF_TEST_CASES: list[tuple[str, list[tuple[str, str]], str]] = [
         "pull at or above target",
         [("    pullTemperatureC: 52", "    pullTemperatureC: 99")],
         "pullTemperatureC",
+    ),
+    (
+        "surface temperature below a doneness target",
+        [("  surfaceTemperatureC: 120", "  surfaceTemperatureC: 60")],
+        "surfaceTemperatureC",
     ),
     (
         "boolean where a number is required",

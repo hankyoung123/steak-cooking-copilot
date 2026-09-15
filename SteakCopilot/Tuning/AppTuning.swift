@@ -27,6 +27,7 @@ struct AppTuning: Codable, Equatable, Sendable {
     var doneness: DonenessTuning
     var calibration: CalibrationTuning
     var finishing: FinishingTuning
+    var thermal: ThermalTuning
     var notifications: NotificationTuning
     var motion: MotionTuning
 
@@ -185,6 +186,22 @@ struct FinishingTuning: Codable, Equatable, Sendable {
     var idleEstimate: ClosedRange<TimeInterval> {
         idleEstimateMinSeconds...idleEstimateMaxSeconds
     }
+}
+
+// MARK: - Thermal
+
+/// Parameters of the centre-temperature **estimate** shown during a cook.
+///
+/// This is a model output, never a measurement, and it is display-only: nothing
+/// in `CookingEngine` reads it to decide anything. `TuningConfigurationTests`
+/// asserts that.
+struct ThermalTuning: Codable, Equatable, Sendable {
+    /// Effective surface temperature of the steak against the pan, in °C. This
+    /// folds pan temperature and contact resistance into one number; it is not
+    /// the pan's measured temperature.
+    var surfaceTemperatureC: Double
+    /// Centre temperature before the steak hits the pan, in °C.
+    var initialCentreTemperatureC: Double
 }
 
 // MARK: - Notifications

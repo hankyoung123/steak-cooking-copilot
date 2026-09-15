@@ -144,7 +144,12 @@ final class LocalizationTests: XCTestCase {
             // catalog key has to be the *format* string. It used to be stored
             // with the production numbers already substituted (+1–3°C), so the
             // lookup missed and the Chinese UI silently fell back to English.
-            "Expected carryover +%lld–%lld°C": "预计余温升温 +%lld–%lld°C"
+            "Expected carryover +%lld–%lld°C": "预计余温升温 +%lld–%lld°C",
+            // The status readout: an estimate and the suggested pull
+            // temperature, plus the flip countdown under the instruction.
+            "ESTIMATED": "估算",
+            "SUGGESTED": "建议",
+            "Flips left: %lld": "剩余翻面：%lld 次"
         ]
         for (key, translation) in cookingCopy {
             XCTAssertEqual(

@@ -27,31 +27,30 @@ final class CookingJourneyTests: XCTestCase {
 
         XCTAssertEqual(
             journey.steps.map(\.rawValue),
-            ["sear", "flip", "fatCap", "addButter", "baste", "checkTemperature", "takeOut"]
+            ["sear", "flip", "fatCap", "addButter", "baste", "takeOut"]
         )
-        XCTAssertEqual(journey.totalSteps, 7)
+        XCTAssertEqual(journey.totalSteps, 6)
         XCTAssertEqual(journey.position(of: .sear), 1)
         XCTAssertEqual(journey.position(of: .flip), 2)
         XCTAssertEqual(journey.position(of: .fatCap), 3)
         XCTAssertEqual(journey.position(of: .addButter), 4)
         XCTAssertEqual(journey.position(of: .baste), 5)
-        XCTAssertEqual(journey.position(of: .checkTemperature), 6)
-        XCTAssertEqual(journey.position(of: .takeOut), 7)
+        XCTAssertEqual(journey.position(of: .takeOut), 6)
     }
 
     /// Cuts that need no fat cap get a shorter route, and — the part that matters
     /// — a *contiguous* one. The old label produced 02 → 04 by leaving an empty
     /// slot where the fat cap would have been.
-    func testCutsWithoutAFatCapGetAContiguousSixStepRoute() {
+    func testCutsWithoutAFatCapGetAContiguousFiveStepRoute() {
         for cut in [SteakCut.ribeye, .tenderloin] {
             let journey = route(cut)
 
             XCTAssertEqual(
                 journey.steps.map(\.rawValue),
-                ["sear", "flip", "addButter", "baste", "checkTemperature", "takeOut"],
+                ["sear", "flip", "addButter", "baste", "takeOut"],
                 "\(cut.rawValue) must not reserve a fat-cap slot"
             )
-            XCTAssertEqual(journey.totalSteps, 6)
+            XCTAssertEqual(journey.totalSteps, 5)
             XCTAssertFalse(journey.contains(.fatCap))
 
             let positions = journey.steps.compactMap(journey.position(of:))
@@ -134,18 +133,38 @@ final class CookingJourneyTests: XCTestCase {
         XCTAssertEqual(journey.candidate(for: facts(flips: 1, action: .flip)), .flip)
     }
 
-    /// Being asked to probe the steak is the CHECK TEMP step: by the time the
-    /// prompt appears the baste timer has already run out.
-    func testCheckTemperaturePromptIsItsOwnStep() {
-        let journey = route(.ribeye)
+    /// The reading entry point is hidden, so no cut's route has a CHECK TEMP step
+    /// any more — a step that could never be reached would be exactly the
+    /// phantom-number bug this model exists to prevent.
+    func testProbeReadingIsNotOnAnyProductionRoute() {
+        XCTAssertFalse(ProbeReading.isOffered)
+        for cut in SteakCut.allCases {
+            XCTAssertFalse(
+                route(cut).contains(.checkTemperature),
+                "\(cut.rawValue) must not count a step the app never asks for"
+            )
+        }
+    }
+
+    /// …but the *capability* is retained: the route is parameterised, so turning
+    /// the entry point back on restores CHECK TEMP in the right place without
+    /// touching the model.
+    func testRouteCanStillCarryTheTemperatureCheck() {
+        let withCheck = CookingJourney(needsFatCap: true, includesTemperatureCheck: true)
 
         XCTAssertEqual(
-            journey.candidate(for: facts(flips: 3, phase: .baste, butter: true, action: .checkTemperature)),
-            .checkTemperature
+            withCheck.steps.map(\.rawValue),
+            ["sear", "flip", "fatCap", "addButter", "baste", "checkTemperature", "takeOut"]
         )
+        XCTAssertEqual(withCheck.position(of: .checkTemperature), 6)
+        XCTAssertEqual(withCheck.totalSteps, 7)
+
+        // And the milestone derivation still recognises the step.
         XCTAssertEqual(
-            journey.progress(for: .baste, milestone: .checkTemperature)?.label,
-            "05 / 06"
+            withCheck.candidate(
+                for: facts(flips: 3, phase: .baste, butter: true, action: .checkTemperature)
+            ),
+            .checkTemperature
         )
     }
 
@@ -159,13 +178,13 @@ final class CookingJourneyTests: XCTestCase {
         XCTAssertEqual(milestone, .takeOut)
         XCTAssertEqual(
             strip.progress(for: .checkTemperature, milestone: milestone)?.label,
-            "07 / 07"
+            "06 / 06"
         )
 
         let ribeye = route(.ribeye)
         XCTAssertEqual(
             ribeye.progress(for: .checkTemperature, milestone: .takeOut)?.label,
-            "06 / 06"
+            "05 / 05"
         )
     }
 
@@ -180,9 +199,11 @@ final class CookingJourneyTests: XCTestCase {
             journey.candidate(for: facts(flips: 3, phase: .baste, butter: true)),
             .baste
         )
+        // A reading can no longer be entered, so the check-temperature prompt
+        // resolves onto the last step this route actually has before take-out.
         XCTAssertEqual(
             journey.candidate(for: facts(flips: 3, phase: .checkTemperature, butter: true)),
-            .checkTemperature
+            .baste
         )
         XCTAssertEqual(
             journey.candidate(for: facts(flips: 3, reading: true, pulled: true)),
@@ -212,7 +233,7 @@ final class CookingJourneyTests: XCTestCase {
         let journey = route(.strip)
 
         var milestone: CookingJourneyStep? = nil
-        for step in [CookingJourneyStep.sear, .flip, .fatCap, .addButter, .baste, .checkTemperature, .takeOut] {
+        for step in journey.steps {
             milestone = journey.advanced(from: milestone, with: step)
             XCTAssertEqual(milestone, step)
         }
@@ -241,8 +262,8 @@ final class CookingJourneyTests: XCTestCase {
 
         for phase: CookingPhase in [.setup, .prep, .heat] {
             let progress = journey.progress(for: phase, milestone: nil)
-            XCTAssertEqual(progress, CookingProgress(currentStep: 0, totalSteps: 7))
-            XCTAssertEqual(progress?.label, "00 / 07")
+            XCTAssertEqual(progress, CookingProgress(currentStep: 0, totalSteps: 6))
+            XCTAssertEqual(progress?.label, "00 / 06")
         }
     }
 
@@ -263,9 +284,9 @@ final class CookingJourneyTests: XCTestCase {
     /// it always agrees with the journey.
     func testLabelMatchesTheRouteForEveryStep() {
         let cases: [(SteakCut, [String])] = [
-            (.strip, ["01 / 07", "02 / 07", "03 / 07", "04 / 07", "05 / 07", "06 / 07", "07 / 07"]),
-            (.ribeye, ["01 / 06", "02 / 06", "03 / 06", "04 / 06", "05 / 06", "06 / 06"]),
-            (.tenderloin, ["01 / 06", "02 / 06", "03 / 06", "04 / 06", "05 / 06", "06 / 06"])
+            (.strip, ["01 / 06", "02 / 06", "03 / 06", "04 / 06", "05 / 06", "06 / 06"]),
+            (.ribeye, ["01 / 05", "02 / 05", "03 / 05", "04 / 05", "05 / 05"]),
+            (.tenderloin, ["01 / 05", "02 / 05", "03 / 05", "04 / 05", "05 / 05"])
         ]
 
         for (cut, expected) in cases {
@@ -317,14 +338,15 @@ final class CookingProgressIntegrationTests: XCTestCase {
     /// is a step in its own right, and confirming it in the same breath would hide
     /// that step from the recording. Time only moves on while the app is waiting
     /// for a timer.
+    ///
+    /// There is no reading entry point any more, so the walk never has to choose
+    /// one; the cook runs on the timing estimate.
     private func walk(
         _ controller: CookingSessionController,
-        from start: Date,
-        usingThermometer: Bool
+        from start: Date
     ) -> [Int] {
         var observed: [Int] = []
         var now = start
-        let pullTarget = controller.guidance.pullTemperatureC
 
         func advanceTime() {
             if let due = controller.session.nextActionAt, due > now {
@@ -334,7 +356,7 @@ final class CookingProgressIntegrationTests: XCTestCase {
             }
         }
 
-        for _ in 0..<160 {
+        for _ in 0..<200 {
             controller.refresh(at: now)
             guard let progress = controller.cookingProgress else { break }
             observed.append(progress.currentStep)
@@ -354,23 +376,7 @@ final class CookingProgressIntegrationTests: XCTestCase {
                     controller.confirmCurrentAction(at: now)
                 }
 
-            case .flip, .addButter:
-                controller.confirmCurrentAction(at: now)
-
-            case .checkTemperature:
-                if controller.session.phase == .checkTemperature {
-                    if usingThermometer {
-                        // A reading at the pull target is what moves the journey
-                        // on to its final step.
-                        controller.recordManualTemperature(pullTarget, at: now)
-                    } else {
-                        controller.continueWithoutThermometer(at: now)
-                    }
-                } else {
-                    controller.confirmCurrentAction(at: now)
-                }
-
-            case .takeOut:
+            case .flip, .addButter, .checkTemperature, .takeOut:
                 controller.confirmCurrentAction(at: now)
 
             case .eat:
@@ -389,63 +395,66 @@ final class CookingProgressIntegrationTests: XCTestCase {
         }
     }
 
-    func testStripSessionCountsOneThroughSeven() {
+    func testStripSessionCountsOneThroughSix() {
         let start = Date(timeIntervalSince1970: 500_000)
         let controller = makeController(at: start)
         startCooking(controller, cut: .strip, at: start)
 
-        let observed = walk(controller, from: start, usingThermometer: true)
+        let observed = walk(controller, from: start)
 
-        XCTAssertEqual(controller.journey.totalSteps, 7)
+        XCTAssertEqual(controller.journey.totalSteps, 6)
         XCTAssertEqual(
             observed,
             observed.sorted(),
             "The counter must never go backwards, saw \(observed)"
         )
         XCTAssertEqual(observed.first, 1)
-        XCTAssertEqual(observed.last, 7, "Saw \(observed)")
-        // The exact route the requirement describes, with repeat observations of
-        // one milestone (frequent flips, a running timer) collapsed.
+        XCTAssertEqual(observed.last, 6, "Saw \(observed)")
+        // The exact route, with repeat observations of one milestone (frequent
+        // flips, a running timer) collapsed.
         XCTAssertEqual(
             milestones(observed),
-            [1, 2, 3, 4, 5, 6, 7],
+            [1, 2, 3, 4, 5, 6],
             "Strip should walk SEAR → FLIP → FAT CAP → ADD BUTTER → BASTE → "
-                + "CHECK TEMP → TAKE OUT, saw \(observed)"
+                + "TAKE OUT, saw \(observed)"
         )
     }
 
-    func testRibeyeSessionNeverCountsPastSix() {
+    func testRibeyeSessionNeverCountsPastFive() {
         let start = Date(timeIntervalSince1970: 600_000)
         let controller = makeController(at: start)
         startCooking(controller, cut: .ribeye, at: start)
 
-        let observed = walk(controller, from: start, usingThermometer: true)
+        let observed = walk(controller, from: start)
 
-        XCTAssertEqual(controller.journey.totalSteps, 6)
+        XCTAssertEqual(controller.journey.totalSteps, 5)
         XCTAssertEqual(observed, observed.sorted())
         XCTAssertEqual(observed.first, 1)
-        XCTAssertEqual(observed.last, 6, "Saw \(observed)")
+        XCTAssertEqual(observed.last, 5, "Saw \(observed)")
         XCTAssertEqual(
             milestones(observed),
-            [1, 2, 3, 4, 5, 6],
-            "Ribeye should walk SEAR → FLIP → ADD BUTTER → BASTE → CHECK TEMP "
-                + "→ TAKE OUT with no fat-cap gap, saw \(observed)"
+            [1, 2, 3, 4, 5],
+            "Ribeye should walk SEAR → FLIP → ADD BUTTER → BASTE → TAKE OUT "
+                + "with no fat-cap gap, saw \(observed)"
         )
         XCTAssertLessThanOrEqual(
             observed.max() ?? 0,
-            6,
-            "A six-step route must never display a seventh step"
+            5,
+            "A five-step route must never display a sixth step"
         )
     }
 
     /// The fallback sends the session back into the searing loop after BASTE and
     /// CHECK TEMP. This is the case that used to make the number jump backwards.
-    func testNoThermometerFallbackNeverWalksTheCounterBackwards() {
+    /// The timing estimate is now the only path, and it returns the session to
+    /// the searing loop after BASTE, which is the case that used to walk the
+    /// counter backwards.
+    func testTimingEstimateNeverWalksTheCounterBackwards() {
         let start = Date(timeIntervalSince1970: 700_000)
         let controller = makeController(at: start)
         startCooking(controller, cut: .strip, at: start)
 
-        let observed = walk(controller, from: start, usingThermometer: false)
+        let observed = walk(controller, from: start)
 
         XCTAssertFalse(observed.isEmpty, "The walk should have observed the counter")
         XCTAssertEqual(
@@ -456,7 +465,7 @@ final class CookingProgressIntegrationTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(
             observed.max() ?? 0,
             5,
-            "The fallback should still pass through BASTE, saw \(observed)"
+            "The timing path should still pass through BASTE, saw \(observed)"
         )
     }
 
@@ -466,16 +475,16 @@ final class CookingProgressIntegrationTests: XCTestCase {
         let start = Date(timeIntervalSince1970: 800_000)
         let controller = makeController(at: start)
 
-        XCTAssertEqual(controller.cookingProgress?.label, "00 / 06")
+        XCTAssertEqual(controller.cookingProgress?.label, "00 / 05")
 
         controller.finishSetup(at: start)
-        XCTAssertEqual(controller.cookingProgress?.label, "00 / 06")
+        XCTAssertEqual(controller.cookingProgress?.label, "00 / 05")
 
         controller.finishPrep(at: start)
-        XCTAssertEqual(controller.cookingProgress?.label, "00 / 06")
+        XCTAssertEqual(controller.cookingProgress?.label, "00 / 05")
 
         controller.panIsReady(at: start)
-        XCTAssertEqual(controller.cookingProgress?.label, "01 / 06")
+        XCTAssertEqual(controller.cookingProgress?.label, "01 / 05")
     }
 
     /// The counter disappears once the steak is out of the pan: resting is not
@@ -484,7 +493,7 @@ final class CookingProgressIntegrationTests: XCTestCase {
         let start = Date(timeIntervalSince1970: 900_000)
         let controller = makeController(at: start)
         startCooking(controller, cut: .ribeye, at: start)
-        _ = walk(controller, from: start, usingThermometer: true)
+        _ = walk(controller, from: start)
         controller.refresh(at: start)
 
         XCTAssertEqual(controller.session.phase, .finishing)
@@ -508,7 +517,7 @@ final class CookingProgressIntegrationTests: XCTestCase {
             now: start
         )
         startCooking(controller, cut: .strip, at: start)
-        _ = walk(controller, from: start, usingThermometer: true)
+        _ = walk(controller, from: start)
         let reached = controller.session.journeyMilestone
 
         let reloaded = CookingSessionController(store: store, now: start)

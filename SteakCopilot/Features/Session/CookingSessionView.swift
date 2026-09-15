@@ -26,7 +26,6 @@ struct CookingSessionView: View {
     let onSkip: () -> Void
     @State private var dried = false
     @State private var salted = false
-    @State private var manualTemperature = 50.0
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 1)) { context in
@@ -49,10 +48,6 @@ struct CookingSessionView: View {
             }
         }
         .foregroundStyle(isDarkStage ? theme.porcelain : theme.ink)
-        .onAppear {
-            manualTemperature = controller.session.lastManualTemperatureC
-                ?? controller.guidance.pullTemperatureC - 2
-        }
         .task(id: controller.session.nextActionAt) {
             await refreshAtKeyBoundaries()
         }
@@ -168,26 +163,13 @@ struct CookingSessionView: View {
                 at: date,
                 height: layout.statusHeight
             )
-        case .checkTemperature:
-            // The reading entry swaps in for the telemetry: it shows the value
-            // being entered and the pull target, which is the same information
-            // in an editable form. It sits *inside* the reserved band, so the
-            // rail above it and the CTA below it do not move.
-            ManualTemperatureControl(
-                temperature: $manualTemperature,
-                pullTemperatureC: controller.guidance.pullTemperatureC,
-                accentColor: accentColor
-            )
-            .frame(
-                height: layout.statusHeight
-                    - layout.progressRailHeight
-                    - layout.statusContentSpacing
-            )
-        default:
+        case .sear, .fatCap, .baste, .checkTemperature, .setup, .prep, .heat:
             // The rail, the telemetry row and the slack below it are all inside
             // the reserved band, so a longer or shorter telemetry value can
             // never reach the bottom action row.
-            telemetry
+            telemetry(at: date)
+        default:
+            telemetry(at: date)
         }
     }
 
@@ -218,22 +200,6 @@ struct CookingSessionView: View {
                     prepToggle("Dry", identifier: "prep.dry", isOn: $dried)
                     prepToggle("Salt", identifier: "prep.salt", isOn: $salted)
                 }
-            case .checkTemperature:
-                Button {
-                    controller.continueWithoutThermometer(at: date)
-                } label: {
-                    Text("No thermometer — use timing")
-                        .font(.system(size: 12, weight: .regular, design: .serif))
-                        .foregroundStyle(secondaryText)
-                        .overlay(alignment: .bottom) {
-                            Rectangle()
-                                .fill(hairlineColor)
-                                .frame(height: 0.7)
-                                .offset(y: 4)
-                        }
-                }
-                .buttonStyle(EditorialPressStyle())
-                .accessibilityIdentifier("cook.noThermometer")
             default:
                 Color.clear
             }
@@ -267,9 +233,8 @@ struct CookingSessionView: View {
                 ) { controller.panIsReady(at: date) }
                 .accessibilityIdentifier("heat.ready")
             case .sear, .fatCap, .baste, .checkTemperature:
-                // Two things can occupy the CTA row in the cook phases: the
-                // action to confirm, and — in CHECK TEMP while a reading is
-                // still being entered — the reading itself.
+                // The cook phases have exactly one thing to offer: the action to
+                // confirm. There is no reading entry, so no second occupant.
                 if let title = confirmTitle {
                     PrimaryActionButton(
                         title: title,
@@ -279,13 +244,6 @@ struct CookingSessionView: View {
                     ) { controller.confirmCurrentAction(at: date) }
                     .accessibilityLabel(title)
                     .accessibilityIdentifier("cook.confirm")
-                } else if controller.session.phase == .checkTemperature {
-                    PrimaryActionButton(
-                        title: String(localized: "Use this reading"),
-                        icon: "arrow.right",
-                        lightOnDark: isDarkStage
-                    ) { controller.recordManualTemperature(manualTemperature, at: date) }
-                    .accessibilityIdentifier("cook.temperature.submit")
                 }
             case .finishing, .ready, .eat, .feedback, .setup:
                 // FINISHING ends on its own; the result phases have their own
@@ -340,8 +298,8 @@ struct CookingSessionView: View {
                 .multilineTextAlignment(.center)
                 .lineLimit(1)
                 .minimumScaleFactor(0.62)
-            if showsInstructionDetail {
-                Text(instructionDetail)
+            if let detail = instructionDetail(at: date) {
+                Text(detail)
                     .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(secondaryText)
                     .multilineTextAlignment(.center)
@@ -520,21 +478,34 @@ struct CookingSessionView: View {
         FinishingDisplay.rangeText(for: controller.guidance.finishingEstimate)
     }
 
-    private var telemetry: some View {
+    /// The status readout: an estimated centre temperature next to the
+    /// suggested pull temperature.
+    ///
+    /// There is no probe reading to show any more, so the estimate takes the
+    /// first column. Its label says ESTIMATED and its value carries a leading
+    /// tilde, because it is a model output and must never read as a measurement.
+    private func telemetry(at date: Date) -> some View {
         HStack(spacing: 0) {
             sessionMetric(
-                label: "TARGET TEMP",
-                value: String(format: "%.0f°C", controller.guidance.targetTemperatureC)
+                label: "ESTIMATED",
+                value: estimatedTemperatureText(at: date)
             )
             metricDivider
             sessionMetric(
-                label: "LAST READING",
-                value: currentTemperatureText
+                label: "SUGGESTED",
+                value: String(format: "%.0f°C", controller.guidance.pullTemperatureC)
             )
         }
         .frame(height: 46)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier(SessionLayoutID.telemetry)
+    }
+
+    private func estimatedTemperatureText(at date: Date) -> String {
+        guard let value = controller.estimatedCentreTemperatureC(at: date) else {
+            return "—"
+        }
+        return String(format: "~%.0f°C", value)
     }
 
     private var metricDivider: some View {
@@ -677,16 +648,29 @@ struct CookingSessionView: View {
         }
     }
 
-    private var instructionDetail: String {
+    /// The supporting line under the instruction, or `nil` when the phase has
+    /// none.
+    ///
+    /// During the searing loop it carries how many flips the plan still expects
+    /// before the finish steps. That slot is already reserved at a fixed height,
+    /// so the count costs no layout change and cannot push the rows below it.
+    private func instructionDetail(at date: Date) -> String? {
         switch controller.session.phase {
-        case .prep: String(localized: "A dry surface gives you a deeper, faster crust.")
-        case .heat: String(localized: "Oil should shimmer and the steak should sizzle immediately on contact.")
-        default: ""
+        case .prep:
+            return String(localized: "A dry surface gives you a deeper, faster crust.")
+        case .heat:
+            return String(
+                localized: "Oil should shimmer and the steak should sizzle immediately on contact."
+            )
+        default:
+            guard let flips = controller.remainingSearFlips(at: date), flips > 0 else {
+                return nil
+            }
+            return String(
+                format: String(localized: "Flips left: %lld"),
+                Int64(flips)
+            )
         }
-    }
-
-    private var showsInstructionDetail: Bool {
-        [.prep, .heat].contains(controller.session.phase)
     }
 
     private var overallProgress: Double {

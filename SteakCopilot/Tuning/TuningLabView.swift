@@ -44,6 +44,7 @@ struct TuningLabView: View {
                 donenessSection
                 calibrationSection
                 finishingSection
+                thermalSection
                 notificationsSection
                 motionSection
                 overrideSection
@@ -222,6 +223,14 @@ struct TuningLabView: View {
                         )
                     )
                 }
+            }
+        }
+    }
+
+    private var thermalSection: some View {
+        Section("Thermal") {
+            ForEach(Self.thermalFields) { field in
+                numberRow(field)
             }
         }
     }
@@ -668,6 +677,13 @@ extension TuningLabView {
         ]
     }
 
+    static var thermalFields: [NumberFieldSpec] {
+        [
+            number("thermal.surfaceTemperatureC", "Surface temperature (°C)", \.thermal.surfaceTemperatureC, step: 5, range: 40...300, decimals: 0),
+            number("thermal.initialCentreTemperatureC", "Initial centre temperature (°C)", \.thermal.initialCentreTemperatureC, step: 1, range: -20...30, decimals: 0),
+        ]
+    }
+
     static var notificationFields: [NumberFieldSpec] {
         [
             number("notifications.approachingThresholdSeconds", "Approaching threshold (s)", \.notifications.approachingThresholdSeconds, step: 1, range: 1...60, decimals: 0),
@@ -761,6 +777,7 @@ extension TuningLabView {
                 )
             )
         }
+        fields.append(contentsOf: thermalFields)
         fields.append(contentsOf: notificationFields)
         fields.append(contentsOf: motionDurationFields)
         fields.append(contentsOf: motionBounceFields)

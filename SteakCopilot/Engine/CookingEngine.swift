@@ -245,6 +245,82 @@ struct CookingEngine: Sendable {
             .addingTimeInterval(profile.estimatedCookingBudget)
     }
 
+    /// Estimated centre temperature at `date`, in °C.
+    ///
+    /// **Display only.** This value is never an input to `pullRecommendation`,
+    /// `searBoundary`, `nextActionAt`, or any other decision — it exists so the
+    /// screen can show a model estimate where it used to show a probe reading.
+    /// `TuningConfigurationTests` asserts that the estimate cannot move the
+    /// schedule.
+    ///
+    /// The shape is the first term of the one-dimensional slab solution: the
+    /// centre's temperature deficit decays exponentially towards the effective
+    /// surface temperature, so the rise is fast early and saturates late rather
+    /// than interpolating linearly. The time constant is solved from the app's
+    /// own pull estimate,
+    ///
+    ///     T(t) = T_s − (T_s − T_0)·exp(−t/τ),   τ = t_pull / ln((T_s − T_0)/(T_s − T_pull))
+    ///
+    /// which anchors the curve so the estimate reaches the suggested pull
+    /// temperature exactly when the schedule says to pull. Substituting a
+    /// measured diffusivity instead would let the estimate disagree with the
+    /// timing and tell the user to keep cooking while the app says to take the
+    /// steak out.
+    ///
+    /// Returns `nil` before the pan is on the heat, and whenever the anchors do
+    /// not bracket the pull temperature (an override could otherwise make the
+    /// logarithm undefined).
+    func estimatedCentreTemperatureC(
+        for session: CookingSession,
+        at date: Date,
+        profile: CookingProfile
+    ) -> Double? {
+        guard let startedAt = session.startedAt else { return nil }
+
+        let thermal = tuning.thermal
+        let initial = thermal.initialCentreTemperatureC
+        let surface = thermal.surfaceTemperatureC
+        let pull = profile.pullTemperatureC
+        let pullSeconds = profile.estimatedCookingBudget
+
+        guard pullSeconds > 0,
+              surface > pull,
+              pull > initial else { return nil }
+
+        let tau = pullSeconds / log((surface - initial) / (surface - pull))
+        guard tau.isFinite, tau > 0 else { return nil }
+
+        let elapsed = max(0, date.timeIntervalSince(startedAt))
+        let estimate = surface - (surface - initial) * exp(-elapsed / tau)
+        return min(max(estimate, initial), surface)
+    }
+
+    /// How many flips the plan still expects before the late stage (fat cap or
+    /// butter) begins, or `nil` when the searing loop is not the current work.
+    ///
+    /// Frequent flipping is one milestone in the journey, so this counts the
+    /// flips that are still *scheduled* rather than the ones already taken: it
+    /// falls out of the absolute late-stage date, which does not move when the
+    /// user flips late. Once butter is in the pan the count is no longer
+    /// meaningful and the answer is `nil`.
+    func remainingSearFlips(
+        for session: CookingSession,
+        profile: CookingProfile,
+        at date: Date
+    ) -> Int? {
+        guard session.phase == .sear, session.butterAddedAt == nil else { return nil }
+
+        let untilLateStage = lateStageDate(for: session, profile: profile)
+            .timeIntervalSince(date)
+        guard untilLateStage > 0 else { return nil }
+
+        let interval = max(profile.flipInterval, 0.01)
+        // Flips land on multiples of the interval from now, and a flip that
+        // coincides exactly with the late stage loses the tie, so the count is
+        // the number of multiples strictly below the late stage.
+        return max(0, Int(floor(untilLateStage / interval - 1e-6)))
+    }
+
     /// Candidate boundaries for the frequent-flip sear stage, in tie-break
     /// priority order (pull, late stage, flip).
     func searBoundaryCandidates(
