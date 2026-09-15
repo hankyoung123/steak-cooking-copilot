@@ -83,7 +83,9 @@ struct CookingSessionView: View {
         SessionStageControls(
             flowStage: controller.flowStage,
             phaseTitle: navigationTitle,
-            stepLabel: stepLabel,
+            // The counter comes from the journey model; this view has no idea
+            // which step a fat cap is, or how many steps a cut has.
+            progress: controller.cookingProgress,
             dark: isDarkStage,
             onExit: onExit,
             onSkip: onSkip
@@ -613,26 +615,6 @@ struct CookingSessionView: View {
         case .finishing: return String(localized: "FINISHING")
         default: return ""
         }
-    }
-
-    private var stepLabel: String {
-        let step: Int
-        if isCookPhase {
-            switch controller.guidance.currentAction {
-            case .flip: step = 2
-            case .standFatCap: step = 3
-            case .addButter, .baste: step = 4
-            case .checkTemperature, .takeOut: step = 5
-            default: step = 1
-            }
-        } else {
-            switch controller.session.phase {
-            case .prep, .heat: step = 0
-            case .finishing: step = 6
-            default: step = 7
-            }
-        }
-        return String(format: "%02d / 07", step)
     }
 
     private func usesTimer(at date: Date) -> Bool {

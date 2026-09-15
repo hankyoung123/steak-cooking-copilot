@@ -17,6 +17,16 @@ struct CookingSession: Codable, Equatable, Identifiable, Sendable {
     var thermometerUnavailableAt: Date?
     var pulledAt: Date?
     var finishedAt: Date?
+    /// Furthest milestone of the in-pan cooking journey this session has
+    /// reached, for the flow counter.
+    ///
+    /// Stored rather than recomputed on every read because the route legitimately
+    /// returns to the searing loop — a low temperature reading, or the
+    /// no-thermometer fallback after BASTE or CHECK TEMP — and a derived value
+    /// would then walk the counter backwards. `CookingJourney.advanced(from:with:)`
+    /// can only ever move this forward, so it cannot drift away from the facts;
+    /// it is a high-water mark of them, not a second source of truth.
+    var journeyMilestone: CookingJourneyStep?
 
     static func fresh(at date: Date = .now) -> CookingSession {
         CookingSession(
@@ -33,7 +43,8 @@ struct CookingSession: Codable, Equatable, Identifiable, Sendable {
             butterAddedAt: nil,
             thermometerUnavailableAt: nil,
             pulledAt: nil,
-            finishedAt: nil
+            finishedAt: nil,
+            journeyMilestone: nil
         )
     }
 
@@ -55,7 +66,8 @@ struct CookingSession: Codable, Equatable, Identifiable, Sendable {
     static func fixture(
         phase: CookingPhase,
         phaseStartedAt: Date,
-        nextActionAt: Date?
+        nextActionAt: Date?,
+        journeyMilestone: CookingJourneyStep? = nil
     ) -> CookingSession {
         var session = CookingSession.fresh(at: phaseStartedAt)
         session.id = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
@@ -63,6 +75,7 @@ struct CookingSession: Codable, Equatable, Identifiable, Sendable {
         session.phaseStartedAt = phaseStartedAt
         session.nextActionAt = nextActionAt
         session.startedAt = phase == .setup ? nil : phaseStartedAt
+        session.journeyMilestone = journeyMilestone
         return session
     }
 }

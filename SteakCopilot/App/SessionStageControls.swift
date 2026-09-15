@@ -4,7 +4,12 @@ struct SessionStageControls: View {
     @Environment(AppTheme.self) private var theme
     let flowStage: CookingFlowStage
     var phaseTitle: String? = nil
-    var stepLabel: String? = nil
+    /// The flow counter to display, or `nil` to hide it.
+    ///
+    /// This control only renders the pair of numbers. Deciding what a step is,
+    /// how many there are, and when the journey is over belongs to
+    /// `CookingJourney`, so the chrome has no idea what a fat cap or a baste is.
+    var progress: CookingProgress? = nil
     var dark: Bool? = nil
     let onExit: () -> Void
     let onSkip: () -> Void
@@ -62,12 +67,20 @@ struct SessionStageControls: View {
 
     private var trailingContent: some View {
         VStack(alignment: .trailing, spacing: 1) {
-            if let stepLabel {
-                Text(stepLabel)
-                    .font(.system(size: 9, weight: .medium, design: .serif))
-                    .monospacedDigit()
-                    .foregroundStyle(isDark ? theme.porcelain.opacity(0.78) : theme.ink.opacity(0.68))
-            }
+            // The counter's row is reserved even when there is nothing to count.
+            // FINISHING ends the in-pan journey, and letting the row collapse
+            // there would move the skip control and change the row's own bounds —
+            // the nav must not reflow just because a stage has no step number.
+            Text(progress?.label ?? " ")
+                .font(.system(size: 9, weight: .medium, design: .serif))
+                .monospacedDigit()
+                .foregroundStyle(isDark ? theme.porcelain.opacity(0.78) : theme.ink.opacity(0.68))
+                .opacity(progress == nil ? 0 : 1)
+                .frame(height: 12)
+                .accessibilityHidden(progress == nil)
+                .accessibilityIdentifier(
+                    progress == nil ? "session.step.none" : "session.step"
+                )
             skipButton(
                 title: String(localized: "Skip"),
                 identifier: "session.skip",

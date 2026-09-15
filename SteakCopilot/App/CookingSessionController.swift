@@ -129,6 +129,7 @@ final class CookingSessionController {
 
     func refresh(at date: Date = .now) {
         guidance = makeGuidance(at: date)
+        advanceJourneyIfNeeded()
 
         if session.phase == .finishing,
            session.remaining(at: date) <= 0 {
@@ -137,6 +138,45 @@ final class CookingSessionController {
         }
 
         dispatchMotionEventIfNeeded()
+    }
+
+    /// The in-pan route for the steak currently being cooked.
+    var journey: CookingJourney {
+        CookingJourney(
+            needsFatCap: session.configuration.cut.spec(in: tuning).needsFatCap
+        )
+    }
+
+    /// The flow counter for the session chrome, or `nil` when there is nothing to
+    /// count (resting and serving are not cook steps).
+    var cookingProgress: CookingProgress? {
+        journey.progress(for: session.phase, milestone: session.journeyMilestone)
+    }
+
+    /// Moves the journey high-water mark forward from the facts the session has
+    /// recorded. It can only ever advance, so a route that returns to the searing
+    /// loop — a low reading, or the no-thermometer fallback after BASTE or CHECK
+    /// TEMP — leaves the counter where it was instead of walking it back.
+    private func advanceJourneyIfNeeded() {
+        // The journey begins when the pan is ready; PREP and HEAT must stay at
+        // "00 / total" rather than counting the first sear before it happens.
+        guard session.startedAt != nil else { return }
+
+        let advanced = journey.advanced(
+            from: session.journeyMilestone,
+            with: journey.candidate(
+                for: CookingJourneyFacts(
+                    session: session,
+                    needsFatCap: session.configuration.cut.spec(in: tuning).needsFatCap,
+                    pendingAction: guidance.currentAction
+                )
+            )
+        )
+        guard advanced != session.journeyMilestone else { return }
+        session.journeyMilestone = advanced
+        // Persisted here so the stored mark and the displayed one cannot drift
+        // apart between a refresh and the next confirmed action.
+        store.save(session: session)
     }
 
     func confirmCurrentAction(at date: Date = .now) {

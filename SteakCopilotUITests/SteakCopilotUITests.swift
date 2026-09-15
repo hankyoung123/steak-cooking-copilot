@@ -446,6 +446,34 @@ final class SteakCopilotUITests: XCTestCase {
         assertStable(samples, "session.progress (while shown)", tolerance) { $0.progress }
         assertStable(samples, "session.telemetry (while shown)", tolerance) { $0.telemetry }
 
+        // The flow counter is a strip route, so it runs 01 / 07 … 07 / 07 and is
+        // never allowed to walk backwards — the no-thermometer fallback and a low
+        // reading both send the session back into the searing loop.
+        let counted = samples.compactMap(\.step)
+        XCTAssertFalse(counted.isEmpty, "The flow counter was never displayed")
+        XCTAssertEqual(
+            counted,
+            counted.sorted(),
+            "The flow counter must be monotonic, saw \(counted)"
+        )
+        for sample in samples {
+            guard let label = sample.stepLabel else { continue }
+            XCTAssertEqual(
+                sample.stepLabel?.hasSuffix("/ 07"),
+                true,
+                "Strip is a seven-step route but showed \(label) in \(sample.phaseTitle)"
+            )
+        }
+        XCTAssertNil(
+            samples.first { $0.phaseTitle == "FINISHING" }?.stepLabel,
+            "FINISHING is a rest, not the next cook step, so it must show no counter"
+        )
+        XCTAssertEqual(
+            counted.max(),
+            7,
+            "The walk should have reached the final cook step, saw \(counted)"
+        )
+
         // The hero is the one band whose *type size* legitimately changes: a
         // 78pt countdown while a stage timer runs, a 40pt sentence when it has
         // run out. Its container is fixed and its content is centred, so the
@@ -603,6 +631,9 @@ final class SteakCopilotUITests: XCTestCase {
 
     private struct SessionSkeletonSample: LayoutSample {
         let phaseTitle: String
+        /// The flow counter as displayed, e.g. "03 / 07"; `nil` when the chrome
+        /// hides it because the in-pan journey is over.
+        let stepLabel: String?
         let topControls: CGRect
         let hero: CGRect
         let scene: CGRect
@@ -612,11 +643,21 @@ final class SteakCopilotUITests: XCTestCase {
         let primaryAction: CGRect
 
         var phaseLabel: String { phaseTitle }
+
+        /// The leading number of the counter.
+        var step: Int? {
+            stepLabel
+                .flatMap { $0.split(separator: "/").first }
+                .flatMap { Int($0.trimmingCharacters(in: .whitespaces)) }
+        }
     }
 
     private func captureSessionSkeleton(in app: XCUIApplication) -> SessionSkeletonSample {
         SessionSkeletonSample(
             phaseTitle: app.staticTexts["session.phase.title"].label,
+            stepLabel: app.staticTexts["session.step"].exists
+                ? app.staticTexts["session.step"].label
+                : nil,
             topControls: layoutFrame("session.topControls", in: app),
             hero: layoutFrame("session.hero", in: app),
             scene: layoutFrame("session.scene", in: app),
