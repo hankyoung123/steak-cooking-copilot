@@ -86,9 +86,14 @@ final class TuningConfigurationTests: XCTestCase {
     func testGeneratedValuesAreTraceableToTheYAMLText() throws {
         let tuning = AppTuning.production
         let expectations: [(value: String, pattern: String)] = [
-            (String(tuning.cooking.baseCookingBudget), "baseCookingBudget: 300"),
+            (String(tuning.cooking.baseCookingBudget), "baseCookingBudget: 180"),
+            (String(tuning.cooking.thicknessSecondsPerCM), "thicknessSecondsPerCM: 120"),
             (String(tuning.cooking.flipIntervalStandard), "flipIntervalStandard: 30"),
             (String(tuning.cooking.lateStageRatio), "lateStageRatio: 0.65"),
+            (
+                String(tuning.cooking.minSecondsAfterFlipBeforePull),
+                "minSecondsAfterFlipBeforePull: 10"
+            ),
             (String(tuning.calibration.donenessStepSeconds), "donenessStepSeconds: 12"),
             (String(tuning.calibration.crustStepSeconds), "crustStepSeconds: 8"),
             (String(tuning.notifications.staleDelaySeconds), "staleDelaySeconds: 30"),
@@ -109,15 +114,16 @@ final class TuningConfigurationTests: XCTestCase {
     func testGeneratedValuesMatchTheYAML() throws {
         // Values asserted here are the literals in Config/production.yaml.
         let tuning = AppTuning.production
-        XCTAssertEqual(tuning.cooking.baseCookingBudget, 300)
+        XCTAssertEqual(tuning.cooking.baseCookingBudget, 180)
         XCTAssertEqual(tuning.cooking.referenceThickness, 2.5)
-        XCTAssertEqual(tuning.cooking.minThicknessFactor, 0.72)
-        XCTAssertEqual(tuning.cooking.minCookingBudget, 180)
+        XCTAssertEqual(tuning.cooking.thicknessSecondsPerCM, 120)
+        XCTAssertEqual(tuning.cooking.minCookingBudget, 90)
         XCTAssertEqual(tuning.cooking.maxCookingBudget, 720)
         XCTAssertEqual(tuning.cooking.flipIntervalThin, 25)
         XCTAssertEqual(tuning.cooking.flipIntervalStandard, 30)
         XCTAssertEqual(tuning.cooking.flipIntervalThick, 40)
         XCTAssertEqual(tuning.cooking.lateStageRatio, 0.65)
+        XCTAssertEqual(tuning.cooking.minSecondsAfterFlipBeforePull, 10)
         XCTAssertEqual(tuning.cooking.basteRatio, 0.16)
         XCTAssertEqual(tuning.cuts.strip.fatCapDuration, 35)
         XCTAssertEqual(tuning.cuts.tenderloin.recommendedThickness, 4.0)
@@ -149,16 +155,17 @@ final class TuningConfigurationTests: XCTestCase {
             doneness: .mediumRare
         )
 
-        // 300 * (3 / 2.5) * 1.0 + 5 (ribeye offset) = 365
+        // exposure(3cm) = 180 + 120 * (3 - 2.5) = 240
+        // + 5 (ribeye offset)                    = 245
         let profile = engine.profile(for: configuration, calibration: .neutral)
-        XCTAssertEqual(profile.estimatedCookingBudget, 365, accuracy: 0.001)
+        XCTAssertEqual(profile.estimatedCookingBudget, 245, accuracy: 0.001)
         XCTAssertEqual(engine.flipInterval(for: configuration), 30, accuracy: 0.001)
         XCTAssertEqual(profile.pullTemperatureC, 52, accuracy: 0.001)
         XCTAssertEqual(profile.targetTemperatureC, 55, accuracy: 0.001)
-        // late stage = max(flip * 2, 365 * 0.65) = 237.25
-        XCTAssertEqual(profile.lateStageDateOffset, 237.25, accuracy: 0.001)
-        // baste = 365 * 0.16 * 0.8 (ribeye) = 46.72, clamped to 45
-        XCTAssertEqual(profile.basteDuration, 45, accuracy: 0.001)
+        // late stage = max(flip * 2, 245 * 0.65) = 159.25
+        XCTAssertEqual(profile.lateStageDateOffset, 159.25, accuracy: 0.001)
+        // baste = 245 * 0.16 * 0.8 (ribeye) = 31.36
+        XCTAssertEqual(profile.basteDuration, 31.36, accuracy: 0.001)
     }
 
     // MARK: - No double defaults
@@ -452,8 +459,8 @@ final class TuningConfigurationTests: XCTestCase {
             .standFatCap
         )
         XCTAssertEqual(profile.fatCapDuration, 30)
-        // 300 * 1.2 * 1.0 + 60
-        XCTAssertEqual(profile.estimatedCookingBudget, 420, accuracy: 0.001)
+        // exposure(3cm) = 180 + 120 * (3 - 2.5) = 240, + the 60s cut offset
+        XCTAssertEqual(profile.estimatedCookingBudget, 300, accuracy: 0.001)
     }
 
     func testChangingThicknessBucketsChangesBucketAssignment() {
@@ -1024,7 +1031,7 @@ final class TuningConfigurationTests: XCTestCase {
 final class TuningLabCoverageTests: XCTestCase {
     /// Leaves in Config/production.yaml. Kept in step by
     /// `Scripts/generate_tuning.py`, whose `--self-test` runs in CI.
-    private let expectedLeafCount = 104
+    private let expectedLeafCount = 105
 
     func testLabExposesEveryTunableParameter() {
         let ids = TuningLabView.allFieldIDs

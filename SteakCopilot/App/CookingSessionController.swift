@@ -273,19 +273,29 @@ final class CookingSessionController {
             persistAndRefresh(at: date)
         case .standFatCap:
             guard session.phase == .sear else { return }
-            let duration = currentProfile.fatCapDuration ?? 0
+            // The window ends on the plan's absolute timeline, not at
+            // `now + duration`: standing the fat cap late shortens it instead
+            // of pushing the butter and the pull later.
             session.enter(
                 .fatCap,
                 at: date,
-                nextActionAt: date.addingTimeInterval(duration)
+                nextActionAt: engine.fatCapEndDate(
+                    for: session,
+                    profile: currentProfile
+                )
             )
             persistAndRefresh(at: date)
         case .addButter:
             session.butterAddedAt = date
+            // Same rule for the baste: adding the butter late eats into the
+            // baste window rather than running a full baste and pulling late.
             session.enter(
                 .baste,
                 at: date,
-                nextActionAt: date.addingTimeInterval(currentProfile.basteDuration)
+                nextActionAt: engine.basteEndDate(
+                    for: session,
+                    profile: currentProfile
+                )
             )
             persistAndRefresh(at: date)
         case .checkTemperature:

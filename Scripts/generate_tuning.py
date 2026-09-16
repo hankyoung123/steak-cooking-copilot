@@ -236,7 +236,7 @@ def require_positive(value: float, path: str) -> None:
 COOKING_KEYS = [
     "baseCookingBudget",
     "referenceThickness",
-    "minThicknessFactor",
+    "thicknessSecondsPerCM",
     "minCookingBudget",
     "maxCookingBudget",
     "flipIntervalThin",
@@ -249,6 +249,7 @@ COOKING_KEYS = [
     "standardMaxThickness",
     "lateStageRatio",
     "lateStageMinFlipIntervals",
+    "minSecondsAfterFlipBeforePull",
     "basteRatio",
     "minBasteDuration",
     "maxBasteDuration",
@@ -370,11 +371,9 @@ def validate(root: dict[str, Any]) -> dict[str, Any]:
 
     require_positive(cooking["baseCookingBudget"], "config.cooking.baseCookingBudget")
     require_positive(cooking["referenceThickness"], "config.cooking.referenceThickness")
-    require_positive(cooking["minThicknessFactor"], "config.cooking.minThicknessFactor")
-    require_range(
-        cooking["minThicknessFactor"],
-        "config.cooking.minThicknessFactor",
-        maximum=1.0,
+    require_positive(
+        cooking["thicknessSecondsPerCM"],
+        "config.cooking.thicknessSecondsPerCM",
     )
     require_positive(cooking["minCookingBudget"], "config.cooking.minCookingBudget")
     require_positive(cooking["maxCookingBudget"], "config.cooking.maxCookingBudget")
@@ -437,6 +436,12 @@ def validate(root: dict[str, Any]) -> dict[str, Any]:
         "config.cooking.lateStageMinFlipIntervals",
         minimum=1,
         maximum=20,
+    )
+    require_range(
+        cooking["minSecondsAfterFlipBeforePull"],
+        "config.cooking.minSecondsAfterFlipBeforePull",
+        minimum=0.0,
+        maximum=120.0,
     )
     require_range(cooking["basteRatio"], "config.cooking.basteRatio", minimum=0.01, maximum=1.0)
     require_positive(cooking["minBasteDuration"], "config.cooking.minBasteDuration")
@@ -830,7 +835,7 @@ def load_config(
 SELF_TEST_CASES: list[tuple[str, list[tuple[str, str]], str]] = [
     (
         "missing required key",
-        [("  baseCookingBudget: 300\n", "")],
+        [("  baseCookingBudget: 180\n", "")],
         "baseCookingBudget",
     ),
     (
@@ -839,13 +844,28 @@ SELF_TEST_CASES: list[tuple[str, list[tuple[str, str]], str]] = [
         "referenceThickness",
     ),
     (
+        "non-positive thickness slope",
+        [("  thicknessSecondsPerCM: 120", "  thicknessSecondsPerCM: 0")],
+        "thicknessSecondsPerCM",
+    ),
+    (
         "illegal range",
-        [("  maxCookingBudget: 720", "  maxCookingBudget: 100")],
+        [("  maxCookingBudget: 720", "  maxCookingBudget: 50")],
         "minCookingBudget",
     ),
     (
+        "negative flip guard",
+        [
+            (
+                "  minSecondsAfterFlipBeforePull: 10",
+                "  minSecondsAfterFlipBeforePull: -1",
+            )
+        ],
+        "minSecondsAfterFlipBeforePull",
+    ),
+    (
         "unknown key",
-        [("  baseCookingBudget: 300", "  baseCookingBudget: 300\n  typoKey: 5")],
+        [("  baseCookingBudget: 180", "  baseCookingBudget: 180\n  typoKey: 5")],
         "typoKey",
     ),
     (
@@ -901,15 +921,16 @@ SELF_TEST_CASES: list[tuple[str, list[tuple[str, str]], str]] = [
     ),
     (
         "tabs used for indentation",
-        [("  baseCookingBudget: 300", "\tbaseCookingBudget: 300")],
+        [("  baseCookingBudget: 180", "\tbaseCookingBudget: 180")],
         "tabs",
     ),
 ]
 
 VALID_CASES: list[tuple[str, list[tuple[str, str]]]] = [
-    ("identical values", [("  baseCookingBudget: 300", "  baseCookingBudget: 300")]),
+    ("identical values", [("  baseCookingBudget: 180", "  baseCookingBudget: 180")]),
     ("basteMultiplier at the inclusive maximum", [("    basteMultiplier: 0.8", "    basteMultiplier: 2.0")]),
     ("comment-only change", [("  referenceThickness: 2.5", "  referenceThickness: 2.5 # unchanged")]),
+    ("flip guard disabled with zero", [("  minSecondsAfterFlipBeforePull: 10", "  minSecondsAfterFlipBeforePull: 0")]),
 ]
 
 

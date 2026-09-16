@@ -587,7 +587,7 @@ extension TuningLabView {
         [
             number("cooking.baseCookingBudget", "Base cooking budget (s)", \.cooking.baseCookingBudget, step: 10, range: 30...1800, decimals: 0),
             number("cooking.referenceThickness", "Reference thickness (cm)", \.cooking.referenceThickness, step: 0.1, range: 0.5...10, decimals: 2),
-            number("cooking.minThicknessFactor", "Min thickness factor", \.cooking.minThicknessFactor, step: 0.01, range: 0.01...1, decimals: 2),
+            number("cooking.thicknessSecondsPerCM", "Thickness slope (s/cm)", \.cooking.thicknessSecondsPerCM, step: 5, range: 1...600, decimals: 0),
             number("cooking.minCookingBudget", "Min cooking budget (s)", \.cooking.minCookingBudget, step: 10, range: 10...1800, decimals: 0),
             number("cooking.maxCookingBudget", "Max cooking budget (s)", \.cooking.maxCookingBudget, step: 10, range: 10...3600, decimals: 0),
             number("cooking.flipIntervalThin", "Flip interval · thin (s)", \.cooking.flipIntervalThin, step: 1, range: 1...300, decimals: 0),
@@ -600,6 +600,7 @@ extension TuningLabView {
             number("cooking.standardMaxThickness", "Standard max thickness (cm)", \.cooking.standardMaxThickness, step: 0.1, range: 0.1...10, decimals: 1),
             number("cooking.lateStageRatio", "Late stage ratio", \.cooking.lateStageRatio, step: 0.01, range: 0.05...0.95, decimals: 2),
             number("cooking.lateStageMinFlipIntervals", "Late stage min flip intervals", \.cooking.lateStageMinFlipIntervals, step: 1, range: 1...20, decimals: 0),
+            number("cooking.minSecondsAfterFlipBeforePull", "Flip guard before pull (s)", \.cooking.minSecondsAfterFlipBeforePull, step: 1, range: 0...120, decimals: 0),
             number("cooking.basteRatio", "Baste ratio", \.cooking.basteRatio, step: 0.01, range: 0.01...1, decimals: 2),
             number("cooking.minBasteDuration", "Min baste duration (s)", \.cooking.minBasteDuration, step: 0.1, range: 0.1...600, decimals: 1),
             number("cooking.maxBasteDuration", "Max baste duration (s)", \.cooking.maxBasteDuration, step: 1, range: 1...1200, decimals: 0),

@@ -17,14 +17,14 @@ enum ProductionTuning {
     /// The hash covers the whole file, comments included, so it identifies
     /// the exact source revision. A comment-only edit therefore changes
     /// this line and requires regenerating, even though no value moved.
-    static let sourceFingerprint = "c56e3b9925c0f8afe7ccc90fe741f9ed4834b81a2c8582b1f8cfbb47aec40749"
+    static let sourceFingerprint = "b53e912036c2be87f1cf1a0a5628defe0c1e10896f63964bb6324346e731130c"
 
     static let production = AppTuning(
         cooking: CookingTuning(
-            baseCookingBudget: 300,
+            baseCookingBudget: 180,
             referenceThickness: 2.5,
-            minThicknessFactor: 0.72,
-            minCookingBudget: 180,
+            thicknessSecondsPerCM: 120,
+            minCookingBudget: 90,
             maxCookingBudget: 720,
             flipIntervalThin: 25,
             flipIntervalStandard: 30,
@@ -36,6 +36,7 @@ enum ProductionTuning {
             standardMaxThickness: 3.5,
             lateStageRatio: 0.65,
             lateStageMinFlipIntervals: 2,
+            minSecondsAfterFlipBeforePull: 10,
             basteRatio: 0.16,
             minBasteDuration: 0.8,
             maxBasteDuration: 45,

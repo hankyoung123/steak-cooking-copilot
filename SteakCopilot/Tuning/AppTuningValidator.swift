@@ -39,8 +39,8 @@ enum AppTuningValidator {
         require(cooking.baseCookingBudget > 0, "cooking.baseCookingBudget must be > 0")
         require(cooking.referenceThickness > 0, "cooking.referenceThickness must be > 0")
         require(
-            cooking.minThicknessFactor > 0 && cooking.minThicknessFactor <= 1,
-            "cooking.minThicknessFactor must be in (0, 1]"
+            cooking.thicknessSecondsPerCM > 0,
+            "cooking.thicknessSecondsPerCM must be > 0"
         )
         require(
             cooking.minCookingBudget > 0,
@@ -76,6 +76,11 @@ enum AppTuningValidator {
         require(
             cooking.lateStageMinFlipIntervals >= 1,
             "cooking.lateStageMinFlipIntervals must be >= 1"
+        )
+        require(
+            cooking.minSecondsAfterFlipBeforePull >= 0
+                && cooking.minSecondsAfterFlipBeforePull <= 120,
+            "cooking.minSecondsAfterFlipBeforePull must be in [0, 120]"
         )
         require(
             cooking.thinMaxThickness > 0,

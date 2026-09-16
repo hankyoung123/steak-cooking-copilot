@@ -38,9 +38,16 @@ struct AppTuning: Codable, Equatable, Sendable {
 // MARK: - Cooking
 
 struct CookingTuning: Codable, Equatable, Sendable {
+    /// Ideal in-pan heat-exposure time, in seconds, for a medium-rare steak at
+    /// `referenceThickness`. It contains no allowance for how long the user
+    /// takes to react: that delay belongs to the interaction layer (early
+    /// reminders, haptics, absolute deadlines), not to the cooking parameters.
     var baseCookingBudget: TimeInterval
+    /// Thickness at which the exposure time is exactly `baseCookingBudget`.
     var referenceThickness: Double
-    var minThicknessFactor: Double
+    /// Seconds added to the exposure time per additional centimetre of
+    /// thickness. `120` is the empirical baseline of +60s per +0.5cm.
+    var thicknessSecondsPerCM: TimeInterval
     var minCookingBudget: TimeInterval
     var maxCookingBudget: TimeInterval
     var flipIntervalThin: TimeInterval
@@ -53,6 +60,10 @@ struct CookingTuning: Codable, Equatable, Sendable {
     var standardMaxThickness: Double
     var lateStageRatio: Double
     var lateStageMinFlipIntervals: Double
+    /// A flip landing closer than this to `estimatedPullDate` is not scheduled
+    /// at all in the timing fallback: the user would flip and then be told to
+    /// take the steak out seconds later.
+    var minSecondsAfterFlipBeforePull: TimeInterval
     var basteRatio: Double
     var minBasteDuration: TimeInterval
     var maxBasteDuration: TimeInterval
@@ -60,6 +71,20 @@ struct CookingTuning: Codable, Equatable, Sendable {
     var budgetFinishAdjustmentMinSeconds: TimeInterval
     var budgetFinishAdjustmentMaxSeconds: TimeInterval
     var minFatCapDuration: TimeInterval
+
+    /// Ideal in-pan exposure time for a thickness, before doneness, cut and
+    /// calibration corrections. Linear in thickness, anchored so that
+    /// `referenceThickness` yields `baseCookingBudget` exactly:
+    ///
+    ///     exposure(t) = baseCookingBudget + thicknessSecondsPerCM · (t − referenceThickness)
+    ///
+    /// A linear model with a non-zero intercept is what the empirical baseline
+    /// describes (+60s per +0.5cm at every thickness), so it is not
+    /// proportional to thickness.
+    func exposureTime(thicknessCM: Double) -> TimeInterval {
+        baseCookingBudget
+            + thicknessSecondsPerCM * (thicknessCM - referenceThickness)
+    }
 
     /// Frequent-flip cadence for a thickness, before time scaling.
     func flipInterval(thicknessCM: Double) -> TimeInterval {

@@ -334,8 +334,10 @@ final class CutProfileTests: XCTestCase {
         }
 
         // Strip at a typical budget is the documented clamp case:
-        // 300 * 0.16 * 1.0 = 48 -> 45.
-        let strip = profile(.strip, thicknessCM: 2.5)
+        // exposure(3.5cm) = 300, 300 * 0.16 * 1.0 = 48 -> 45.
+        // (With the empirical pan-time model the cap binds from ~3.4cm up, so
+        // 2.5cm no longer reaches it.)
+        let strip = profile(.strip, thicknessCM: 3.5)
         XCTAssertEqual(strip.estimatedCookingBudget, 300, accuracy: 0.001)
         XCTAssertEqual(strip.basteDuration, 45, accuracy: 0.001)
 
@@ -364,41 +366,57 @@ final class CutProfileTests: XCTestCase {
     }
 
     /// Characterisation test for a real interaction between two requested
-    /// values: at the recommended thicknesses (3.0-4.0 cm) the raw baste is
-    /// 58-75s, so `maxBasteDuration` (45s) binds for *every* cut and
-    /// `basteMultiplier` has no visible effect there.
+    /// values, re-measured against the empirical pan-time model.
     ///
-    /// The multiplier only differentiates thinner steaks. This is recorded
-    /// deliberately: if someone raises the cap or the ratio, this test fails
-    /// and forces a conscious decision instead of silently changing the
-    /// intended "ribeye shorter, tenderloin longer" behaviour.
-    func testBasteMultiplierIsAbsorbedByTheClampAtRecommendedThickness() {
+    /// The baste is `budget * basteRatio * basteMultiplier`, and the budget is
+    /// now the ideal exposure time (180s at 2.5cm, +120s/cm), so the 45s cap
+    /// binds from roughly 3.4cm up on the baseline cut:
+    ///   ribeye      3.5cm: 305 * 0.16 * 0.8 = 39.04  (under the cap)
+    ///   strip       3.0cm: 240 * 0.16 * 1.0 = 38.40  (under the cap)
+    ///   tenderloin  4.0cm: 352 * 0.16 * 1.1 = 61.95  -> 45s
+    ///
+    /// Recorded deliberately: raising the cap or the ratio, or lengthening the
+    /// budgets, must fail here and force a conscious decision instead of
+    /// silently changing the "ribeye shorter, tenderloin longer" behaviour.
+    func testBasteCapBindsOnlyForTheThickestRecommendation() {
         let cap = tuning.cooking.maxBasteDuration
 
         for cut in SteakCut.allCases {
             let recommended = tuning.cuts[cut].recommendedThickness
             let cutProfile = profile(cut, thicknessCM: recommended)
-            let rawBaste = cutProfile.estimatedCookingBudget
-                * tuning.cooking.basteRatio
-                * tuning.cuts[cut].basteMultiplier
+            let rawBaste = rawBaste(cut, thicknessCM: recommended)
 
-            XCTAssertGreaterThan(
-                rawBaste,
-                cap,
+            XCTAssertEqual(
+                rawBaste > cap,
+                cut == .tenderloin,
                 """
-                \(cut.rawValue) at its recommended \(recommended)cm no longer \
-                exceeds the \(cap)s baste cap. The cut multipliers now differ \
-                in the default configuration - update this expectation and the \
-                comments in Config/production.yaml.
+                \(cut.rawValue) at its recommended \(recommended)cm has a raw \
+                baste of \(rawBaste)s against a \(cap)s cap. Update this \
+                expectation and the comments in Config/production.yaml.
                 """
             )
             XCTAssertEqual(
                 cutProfile.basteDuration,
-                cap,
+                min(cap, rawBaste),
                 accuracy: 0.001,
-                "\(cut.rawValue) should be clamped at the recommended thickness"
+                "\(cut.rawValue) baste must be the clamped raw value"
             )
         }
+
+        // Every cut still saturates the cap once it is thick enough, which is
+        // what keeps the cap meaningful.
+        for cut in SteakCut.allCases {
+            let thick = profile(cut, thicknessCM: 5)
+            XCTAssertGreaterThan(rawBaste(cut, thicknessCM: 5), cap)
+            XCTAssertEqual(thick.basteDuration, cap, accuracy: 0.001)
+        }
+    }
+
+    /// `budget * basteRatio * basteMultiplier`, before the engine's clamps.
+    private func rawBaste(_ cut: SteakCut, thicknessCM: Double) -> TimeInterval {
+        profile(cut, thicknessCM: thicknessCM).estimatedCookingBudget
+            * tuning.cooking.basteRatio
+            * tuning.cuts[cut].basteMultiplier
     }
 
     /// The multiplier still differentiates cuts where the clamp does not bind,

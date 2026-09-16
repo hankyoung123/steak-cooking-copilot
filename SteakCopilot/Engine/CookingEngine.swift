@@ -97,12 +97,13 @@ struct CookingEngine: Sendable {
         let doneness = configuration.doneness.spec(in: tuning)
         let cut = configuration.cut.spec(in: tuning)
         let scale = max(0.01, timeScale)
-        let thicknessFactor = max(
-            cooking.minThicknessFactor,
-            configuration.thicknessCM / cooking.referenceThickness
-        )
-        let rawBudget = cooking.baseCookingBudget
-            * thicknessFactor
+        // Ideal in-pan heat exposure for this thickness: linear, anchored at
+        // `referenceThickness`, with no allowance for how long the user takes
+        // to react. Reaction delay is the interaction layer's problem (early
+        // reminders, haptics, absolute deadlines, and compressing whatever
+        // follows a late step), so it is deliberately not added back here.
+        let exposure = cooking.exposureTime(thicknessCM: configuration.thicknessCM)
+        let rawBudget = exposure
             * doneness.cookingBudgetFactor
             + cut.cookingBudgetOffset
             + calibration.cookingTimeAdjustment
@@ -160,6 +161,7 @@ struct CookingEngine: Sendable {
                 finishing.minUpperBoundSeconds,
                 lowerFinish + finishing.spreadSeconds * scale
             ),
+            flipPullGuard: cooking.minSecondsAfterFlipBeforePull * scale,
             lateStageDateOffset: lateStageDateOffset
         )
     }
@@ -189,6 +191,7 @@ struct CookingEngine: Sendable {
         let action = currentAction(
             for: session,
             at: date,
+            profile: profile,
             pullRecommendation: pullRecommendation,
             lateStageAt: lateStageAt
         )
@@ -243,6 +246,81 @@ struct CookingEngine: Sendable {
     ) -> Date {
         (session.startedAt ?? session.phaseStartedAt)
             .addingTimeInterval(profile.estimatedCookingBudget)
+    }
+
+    /// The estimated pull date when — and only when — the timing fallback is
+    /// what decides the pull.
+    ///
+    /// With a probe in play the pull depends on a reading that has not happened
+    /// yet, so there is no absolute deadline for the late stage to compress
+    /// against; the estimate is a display anchor, not a decision.
+    func fallbackPullDate(
+        for session: CookingSession,
+        profile: CookingProfile
+    ) -> Date? {
+        session.thermometerUnavailableAt != nil
+            ? estimatedPullDate(for: session, profile: profile)
+            : nil
+    }
+
+    /// Absolute end of the fat-cap window.
+    func fatCapEndDate(
+        for session: CookingSession,
+        profile: CookingProfile
+    ) -> Date {
+        lateStagePlanEnd(for: session, profile: profile, extra: 0)
+    }
+
+    /// Absolute end of the baste window: the plan's fat-cap end plus the baste
+    /// duration, so a late ADD BUTTER shortens the baste instead of delaying
+    /// TAKE IT OUT.
+    func basteEndDate(
+        for session: CookingSession,
+        profile: CookingProfile
+    ) -> Date {
+        lateStagePlanEnd(
+            for: session,
+            profile: profile,
+            extra: profile.basteDuration
+        )
+    }
+
+    /// The late stage runs on the **plan's** absolute timeline — fat cap first,
+    /// then the baste, then TAKE IT OUT — rather than each window starting when
+    /// the user finally taps. A step taken 8s late therefore eats 8s out of the
+    /// window that follows it instead of pushing the pull 8s later.
+    ///
+    /// In the timing fallback the estimated pull date caps the whole sequence,
+    /// so the late stage can never run past the moment the plan says to pull.
+    private func lateStagePlanEnd(
+        for session: CookingSession,
+        profile: CookingProfile,
+        extra: TimeInterval
+    ) -> Date {
+        let planned = lateStageDate(for: session, profile: profile)
+            .addingTimeInterval((profile.fatCapDuration ?? 0) + extra)
+        guard let pull = fallbackPullDate(for: session, profile: profile) else {
+            return planned
+        }
+        return min(planned, pull)
+    }
+
+    /// Whether a flip taken at `date` would be immediately followed by TAKE IT
+    /// OUT. Only the timing fallback can answer this: with a probe the pull
+    /// follows a reading that has not happened yet.
+    ///
+    /// The guard scales with the profile, so a fast-cooked (test time scale)
+    /// session keeps the same route instead of having every flip suppressed by
+    /// a guard that is longer than the whole cook.
+    func isFlipPointless(
+        for session: CookingSession,
+        profile: CookingProfile,
+        at date: Date
+    ) -> Bool {
+        guard let pull = fallbackPullDate(for: session, profile: profile) else {
+            return false
+        }
+        return pull.timeIntervalSince(date) < profile.flipPullGuard
     }
 
     /// Estimated centre temperature at `date`, in °C.
@@ -323,17 +401,21 @@ struct CookingEngine: Sendable {
 
     /// Candidate boundaries for the frequent-flip sear stage, in tie-break
     /// priority order (pull, late stage, flip).
+    ///
+    /// A flip that would land within `minSecondsAfterFlipBeforePull` of the
+    /// estimated pull is not offered at all in the timing fallback: the user
+    /// would flip and then be told to take the steak out seconds later. The
+    /// plan simply waits the remaining seconds out.
     func searBoundaryCandidates(
         for session: CookingSession,
         profile: CookingProfile,
         from date: Date
     ) -> [SearBoundary] {
-        var candidates = [
-            SearBoundary(
-                kind: .flip,
-                date: date.addingTimeInterval(profile.flipInterval)
-            )
-        ]
+        var candidates: [SearBoundary] = []
+        let flipDate = date.addingTimeInterval(profile.flipInterval)
+        if !isFlipPointless(for: session, profile: profile, at: flipDate) {
+            candidates.append(SearBoundary(kind: .flip, date: flipDate))
+        }
         if session.butterAddedAt == nil {
             candidates.append(
                 SearBoundary(
@@ -342,12 +424,9 @@ struct CookingEngine: Sendable {
                 )
             )
         }
-        if session.thermometerUnavailableAt != nil {
+        if let pull = fallbackPullDate(for: session, profile: profile) {
             candidates.append(
-                SearBoundary(
-                    kind: .estimatedPull,
-                    date: estimatedPullDate(for: session, profile: profile)
-                )
+                SearBoundary(kind: .estimatedPull, date: pull)
             )
         }
         return candidates
@@ -361,19 +440,28 @@ struct CookingEngine: Sendable {
         profile: CookingProfile,
         from date: Date
     ) -> SearBoundary {
-        let fallback = SearBoundary(
-            kind: .flip,
-            date: date.addingTimeInterval(profile.flipInterval)
+        let candidates = searBoundaryCandidates(
+            for: session,
+            profile: profile,
+            from: date
         )
-        return searBoundaryCandidates(for: session, profile: profile, from: date)
-            .reduce(fallback) { earliest, candidate in
-                if candidate.date < earliest.date { return candidate }
-                if candidate.date == earliest.date,
-                   candidate.kind.tieBreakPriority < earliest.kind.tieBreakPriority {
-                    return candidate
-                }
-                return earliest
+        guard let first = candidates.first else {
+            // Unreachable in practice: a suppressed flip implies a live pull
+            // candidate, and otherwise the flip candidate is always present.
+            // Kept total rather than force-unwrapped.
+            return SearBoundary(
+                kind: .flip,
+                date: date.addingTimeInterval(profile.flipInterval)
+            )
+        }
+        return candidates.dropFirst().reduce(first) { earliest, candidate in
+            if candidate.date < earliest.date { return candidate }
+            if candidate.date == earliest.date,
+               candidate.kind.tieBreakPriority < earliest.kind.tieBreakPriority {
+                return candidate
             }
+            return earliest
+        }
     }
 
     /// Which kind of boundary `session.nextActionAt` currently represents.
@@ -384,13 +472,19 @@ struct CookingEngine: Sendable {
         profile: CookingProfile
     ) -> SearBoundaryKind {
         guard let nextActionAt = session.nextActionAt else { return .flip }
-        if session.thermometerUnavailableAt != nil,
-           estimatedPullDate(for: session, profile: profile) <= nextActionAt {
+        if let pull = fallbackPullDate(for: session, profile: profile),
+           pull <= nextActionAt {
             return .estimatedPull
         }
         if session.butterAddedAt == nil,
            lateStageDate(for: session, profile: profile) <= nextActionAt {
             return .lateStage
+        }
+        // A flip boundary the user never confirmed can drift into the guard
+        // window before the pull. The app will not ask for that flip any more
+        // (it waits for TAKE IT OUT), so the announced action has to follow.
+        if isFlipPointless(for: session, profile: profile, at: nextActionAt) {
+            return .estimatedPull
         }
         return .flip
     }
@@ -438,6 +532,7 @@ struct CookingEngine: Sendable {
     private func currentAction(
         for session: CookingSession,
         at date: Date,
+        profile: CookingProfile,
         pullRecommendation: PullRecommendation,
         lateStageAt: Date
     ) -> CookingAction {
@@ -459,8 +554,13 @@ struct CookingEngine: Sendable {
                    session.thermometerUnavailableAt == nil {
                     return .flip
                 }
-                return session.thermometerUnavailableAt == nil
-                    ? .checkTemperature
+                if session.thermometerUnavailableAt == nil {
+                    return .checkTemperature
+                }
+                // Waiting out the last seconds before the pull anchor beats a
+                // flip the user would be told to undo immediately.
+                return isFlipPointless(for: session, profile: profile, at: date)
+                    ? .wait
                     : .flip
             }
             guard date < lateStageAt else {
@@ -472,11 +572,11 @@ struct CookingEngine: Sendable {
         case .fatCap:
             return session.remaining(at: date) > 0 ? .standFatCap : .addButter
         case .baste:
-            return session.remaining(at: date) > 0
-                ? .baste
-                : (session.thermometerUnavailableAt == nil
-                    ? .checkTemperature
-                    : .flip)
+            guard session.remaining(at: date) <= 0 else { return .baste }
+            if session.thermometerUnavailableAt == nil { return .checkTemperature }
+            return isFlipPointless(for: session, profile: profile, at: date)
+                ? .wait
+                : .flip
         case .checkTemperature:
             return .checkTemperature
         case .finishing:
@@ -515,12 +615,17 @@ struct CookingEngine: Sendable {
             return fallbackPullIsDue(session: session, profile: profile)
                 ? .takeOut
                 : .addButter
-        case .baste where action == .baste:
+        case .baste:
+            // What the end of this window performs, announced while it runs.
             if fallbackPullIsDue(session: session, profile: profile) {
                 return .takeOut
             }
-            return session.thermometerUnavailableAt == nil
-                ? .checkTemperature
+            if session.thermometerUnavailableAt == nil {
+                return .checkTemperature
+            }
+            let windowEnd = session.nextActionAt ?? date
+            return isFlipPointless(for: session, profile: profile, at: windowEnd)
+                ? .takeOut
                 : .flip
         case .finishing:
             return .eat

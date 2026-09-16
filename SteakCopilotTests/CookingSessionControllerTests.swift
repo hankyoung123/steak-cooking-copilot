@@ -243,9 +243,10 @@ final class CookingSessionControllerTests: XCTestCase {
 
         // Confirm a few flips; each must schedule an absolute boundary no
         // later than min(now + flipInterval, estimatedPullAt), and CHECK
-        // TEMP must never reappear.
+        // TEMP must never reappear. Three flips is what the empirical pan time
+        // leaves between the 60s mark and the late stage.
         var date = try! XCTUnwrap(controller.session.nextActionAt)
-        for index in 0..<4 {
+        for index in 0..<3 {
             controller.refresh(at: date)
             XCTAssertEqual(controller.guidance.currentAction, .flip)
             XCTAssertNotEqual(controller.guidance.currentAction, .checkTemperature)
@@ -263,6 +264,13 @@ final class CookingSessionControllerTests: XCTestCase {
             )
             date = next
         }
+
+        // The end of the searing loop is the plan's absolute late stage, still
+        // no later than the estimated pull.
+        let lateStageAt = try! XCTUnwrap(controller.session.startedAt)
+            .addingTimeInterval(controller.currentProfile.lateStageDateOffset)
+        XCTAssertEqual(date.timeIntervalSince(lateStageAt), 0, accuracy: 0.001)
+        XCTAssertLessThan(lateStageAt, controller.session.startedAt!.addingTimeInterval(controller.currentProfile.estimatedCookingBudget))
 
         // Past the estimated pull boundary the next action must be TAKE IT OUT.
         let estimatedPullAt = try! XCTUnwrap(controller.session.startedAt)
