@@ -673,16 +673,21 @@ struct CookingSessionView: View {
         }
     }
 
+    /// The rail's position, derived from the same monotonic journey the
+    /// `05 / 07` counter shows rather than from the phase.
+    ///
+    /// The phase mapping that used to live here stepped **backwards** when the
+    /// no-thermometer fallback re-entered the searing loop after BASTE: `.baste`
+    /// was a fixed `0.62` while `.sear` was a fraction of the cooking budget, and
+    /// that fraction is only `0.49` at the end of the baste. See
+    /// `SessionProgressRail` for why its value cannot decrease.
     private var overallProgress: Double {
-        switch controller.session.phase {
-        case .prep: 0.04
-        case .heat: 0.08
-        case .sear, .fatCap: 0.12 + controller.guidance.estimatedProgress * 0.48
-        case .baste: 0.62
-        case .checkTemperature: 0.78
-        case .finishing: 0.9
-        default: 1
-        }
+        SessionProgressRail.progress(
+            phase: controller.session.phase,
+            milestone: controller.session.journeyMilestone,
+            journey: controller.journey,
+            estimatedProgress: controller.guidance.estimatedProgress
+        )
     }
 
     private var currentTemperatureText: String {
