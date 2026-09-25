@@ -197,14 +197,8 @@ final class CookingSessionControllerTests: XCTestCase {
         XCTAssertEqual(controller.session.phase, .ready)
         XCTAssertEqual(controller.session.finishedAt, now)
 
-        now.addTimeInterval(1)
-        await controller.skipCurrentStage(at: now)
-        XCTAssertEqual(controller.session.phase, .eat)
-
-        now.addTimeInterval(1)
-        await controller.skipCurrentStage(at: now)
-        XCTAssertEqual(controller.session.phase, .feedback)
-
+        // The ending page is one page: skipping it leaves for a fresh setup
+        // rather than walking the retired READY → EAT → FEEDBACK chain.
         now.addTimeInterval(1)
         await controller.skipCurrentStage(at: now)
         XCTAssertEqual(controller.session.phase, .setup)

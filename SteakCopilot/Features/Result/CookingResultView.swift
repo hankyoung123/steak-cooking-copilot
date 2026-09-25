@@ -1,15 +1,24 @@
 import SwiftUI
 
-/// READY → EAT → FEEDBACK.
+/// The single ending page.
+///
+/// TAKE OUT hands over to FINISHING (the rest), and when the carryover estimate
+/// elapses the cook lands **here, once**. It used to be three pages: READY and
+/// EAT were the same screen with a different button label ("Enjoy", then "Log
+/// this cook"), and only the third carried the feedback form, so logging a cook
+/// cost three taps through two identical pages. The form is now part of this
+/// page, and the primary action logs the cook and returns to setup in one tap.
+///
+/// `.eat` and `.feedback` still render this page, because that is what a session
+/// persisted by an older build restores into; the flow itself only ever enters
+/// `.ready`.
 ///
 /// The bands use `SessionLayoutMetrics.Result`, which reuses the session's top
 /// rule: one control band, one title band, one hero band, one summary band, one
 /// reserved middle band, and the primary action pinned to the bottom action row.
-/// The middle band is the only one whose content changes length — the feedback
-/// form is taller than the result note — so its height is reserved for the
-/// taller of the two and its content is top aligned. That is what keeps the hero,
-/// the summary card and the CTA from moving when the form appears; previously the
-/// CTA sat *below* the form and dropped by more than a hundred points.
+/// The middle band is reserved for the feedback form, which is now always the
+/// content there, so the hero, the summary card and the CTA cannot move while
+/// the form is used.
 struct CookingResultView: View {
     @Environment(AppTheme.self) private var theme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -135,22 +144,15 @@ struct CookingResultView: View {
             .sessionLayoutProbe(ResultLayoutID.summary)
     }
 
-    /// The only band whose content length differs between phases ("how it went"
-    /// note vs the feedback form). Its height is reserved for the taller of the
-    /// two, and the content is top aligned inside it, so the feedback form
-    /// appearing never pushes the hero or the summary card.
+    /// The feedback form, which is the page's purpose: it is the only way the
+    /// app learns anything from a cook, and it is why "how was it" belongs on
+    /// the result page rather than behind two more taps.
     private func middleSlot(_ layout: SessionLayoutMetrics.Result) -> some View {
-        Group {
-            if controller.session.phase == .feedback {
-                feedbackControls
-            } else {
-                resultNote
-            }
-        }
-        .padding(.horizontal, layout.contentInset)
-        .frame(maxWidth: .infinity)
-        .frame(height: layout.middleHeight, alignment: .top)
-        .contentTransition(.opacity)
+        feedbackControls
+            .padding(.horizontal, layout.contentInset)
+            .frame(maxWidth: .infinity)
+            .frame(height: layout.middleHeight, alignment: .top)
+            .contentTransition(.opacity)
     }
 
     private func bottomActionSlot(_ layout: SessionLayoutMetrics.Result) -> some View {
@@ -207,23 +209,6 @@ struct CookingResultView: View {
                 .stroke(theme.ink.opacity(0.08), lineWidth: 0.8)
         }
         .shadow(color: .black.opacity(0.04), radius: 8, y: 4)
-    }
-
-    private var resultNote: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(String(format: String(localized: "Perfect %@"), controller.session.configuration.doneness.title))
-                .font(.system(size: 14, weight: .regular, design: .serif))
-            Text("Juicy and tender. Great job!")
-                .font(.system(size: 11))
-                .foregroundStyle(theme.ink.opacity(0.58))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(15)
-        .background(theme.card.opacity(0.7), in: RoundedRectangle(cornerRadius: 8))
-        .overlay {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(theme.ink.opacity(0.08), lineWidth: 0.8)
-        }
     }
 
     private var feedbackControls: some View {
@@ -315,6 +300,9 @@ struct CookingResultView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// "WELL DONE" is the state the cook ends in; the form below asks the
+    /// question. A session restored in the legacy `.feedback` phase keeps its own
+    /// eyebrow.
     private var resultEyebrow: String {
         controller.session.phase == .feedback
             ? String(localized: "COOK COMPLETE")
@@ -323,8 +311,7 @@ struct CookingResultView: View {
 
     private var resultTitle: String {
         switch controller.session.phase {
-        case .ready: String(localized: "Enjoy!")
-        case .eat: String(localized: "Enjoy!")
+        case .ready, .eat: String(localized: "Enjoy!")
         case .feedback: String(localized: "How was it?")
         default: String(localized: "Enjoy!")
         }
@@ -351,30 +338,14 @@ struct CookingResultView: View {
         return String(format: "%02lld:%02lld", Int64(seconds / 60), Int64(seconds % 60))
     }
 
-    private var primaryTitle: String {
-        switch controller.session.phase {
-        case .ready: String(localized: "Enjoy")
-        case .eat: String(localized: "Log this cook")
-        case .feedback: String(localized: "Save & Cook Again")
-        default: String(localized: "Done")
-        }
-    }
+    /// One action, one identifier, whichever ending phase a session is in: the
+    /// page logs the cook and goes back to setup.
+    private var primaryTitle: String { String(localized: "Save & Cook Again") }
 
-    private var primaryIdentifier: String {
-        switch controller.session.phase {
-        case .ready: "ready.continue"
-        case .eat: "eat.feedback"
-        case .feedback: "feedback.save"
-        default: "result.primary"
-        }
-    }
+    private var primaryIdentifier: String { "feedback.save" }
 
     private func performPrimaryAction() {
-        if controller.session.phase == .feedback {
-            controller.submitFeedback(doneness: doneness, crust: crust)
-        } else {
-            controller.confirmCurrentAction()
-        }
+        controller.submitFeedback(doneness: doneness, crust: crust)
     }
 
     private func donenessAsset(for option: DonenessFeedback) -> String {

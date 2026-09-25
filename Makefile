@@ -23,7 +23,7 @@ NO_PARALLEL_TESTING := -parallel-testing-enabled NO
 LAYOUT_UI_TESTS := \
 	-only-testing:SteakCopilotUITests/SteakCopilotUITests/testHomeSkeletonSlotsDoNotMoveBetweenCuts \
 	-only-testing:SteakCopilotUITests/SteakCopilotUITests/testSessionSkeletonSlotsDoNotMoveBetweenCookingPhases \
-	-only-testing:SteakCopilotUITests/SteakCopilotUITests/testResultSkeletonSlotsDoNotMoveBetweenReadyEatFeedback
+	-only-testing:SteakCopilotUITests/SteakCopilotUITests/testResultPageKeepsTheFormAndTheCallToActionOnScreen
 
 .PHONY: help tuning check-tuning self-test build test-unit test-ui test-ui-layout test clean
 

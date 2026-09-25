@@ -155,7 +155,7 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertTrue(evidence.sawButter)
         XCTAssertTrue(evidence.sawTakeOut)
         let reachedFinishingOrResult = app.staticTexts["FINISHING"].waitForExistence(timeout: 2)
-            || app.buttons["ready.continue"].waitForExistence(timeout: 4)
+            || app.buttons["feedback.save"].waitForExistence(timeout: 4)
         XCTAssertTrue(reachedFinishingOrResult)
         XCTAssertFalse(app.staticTexts.matching(NSPredicate(format: "label MATCHES %@", "[0-9]+\\.[0-9]°C")).firstMatch.exists)
         attachScreenshot(named: "case-a-estimated-finish", app: app)
@@ -363,17 +363,10 @@ final class SteakCopilotUITests: XCTestCase {
         attachScreenshot(named: "prototype-finish", app: app)
 
         confirmSkip(in: app)
-        XCTAssertTrue(app.buttons["ready.continue"].waitForExistence(timeout: 3))
-        attachScreenshot(named: "prototype-ready", app: app)
-
-        confirmSkip(in: app)
-        XCTAssertTrue(app.buttons["eat.feedback"].waitForExistence(timeout: 3))
-        attachScreenshot(named: "prototype-eat", app: app)
-
-        confirmSkip(in: app)
         XCTAssertTrue(app.buttons["feedback.save"].waitForExistence(timeout: 3))
-        attachScreenshot(named: "prototype-feedback", app: app)
+        attachScreenshot(named: "prototype-result", app: app)
 
+        // The ending page is one page now: skipping it leaves for setup.
         confirmSkip(in: app)
         XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 3))
 
@@ -439,7 +432,7 @@ final class SteakCopilotUITests: XCTestCase {
 
         // FINISHING runs for the estimated carryover time, which at the
         // visual-cook time scale is ~18s, so the wait must exceed that.
-        XCTAssertTrue(app.buttons["ready.continue"].waitForExistence(timeout: 45))
+        XCTAssertTrue(app.buttons["feedback.save"].waitForExistence(timeout: 45))
         settleArtwork()
         attachScreenshot(named: "prototype-result", app: app)
     }
@@ -650,46 +643,27 @@ final class SteakCopilotUITests: XCTestCase {
     /// The upper bands are fixed and the middle band is reserved for the taller
     /// of the two, so the feedback controls must not push the top navigation, the
     /// title, the hero or the summary card.
-    func testResultSkeletonSlotsDoNotMoveBetweenReadyEatFeedback() {
+    func testResultPageKeepsTheFormAndTheCallToActionOnScreen() {
         let app = launchApp(layoutProbes: true)
         app.buttons["setup.primary"].tap()
 
-        // Skip PREP → HEAT → SEAR → FINISHING → READY.
+        // Skip PREP → HEAT → SEAR → FINISHING → the ending page.
         for _ in 0..<4 { confirmSkip(in: app) }
-        XCTAssertTrue(app.buttons["ready.continue"].waitForExistence(timeout: 5))
 
-        var samples: [ResultSkeletonSample] = []
-        for _ in 0..<3 {
-            settleArtwork(after: 0.4)
-            samples.append(captureResultSkeleton(in: app))
-
-            if app.buttons["eat.feedback"].exists {
-                app.buttons["eat.feedback"].tap()
-            } else if app.buttons["ready.continue"].exists {
-                app.buttons["ready.continue"].tap()
-            } else {
-                break
-            }
-        }
-
-        XCTAssertEqual(
-            samples.count,
-            3,
-            "Expected a READY, an EAT and a FEEDBACK sample"
+        // The form is part of the page from the start, and the CTA must still be
+        // reachable without scrolling: the middle band is reserved for the form,
+        // which is what used to make the CTA drop when the form arrived.
+        let save = app.buttons["feedback.save"]
+        XCTAssertTrue(save.waitForExistence(timeout: 5))
+        XCTAssertTrue(
+            app.buttons["feedback.doneness.0"].exists,
+            "The ending page must carry the feedback form"
         )
-        // WELL DONE covers READY and EAT, COOK COMPLETE is FEEDBACK.
-        XCTAssertEqual(
-            Set(samples.map(\.eyebrow)).count,
-            2,
-            "The samples should span all three result phases, saw \(samples.map(\.eyebrow))"
-        )
+        XCTAssertTrue(save.isHittable, "The CTA must be on screen with the form")
 
-        let tolerance: CGFloat = 2
-        assertStable(samples, "result.topControls", tolerance) { $0.topControls }
-        assertStable(samples, "result.title", tolerance) { $0.title }
-        assertStable(samples, "result.hero", tolerance) { $0.hero }
-        assertStable(samples, "result.summary", tolerance) { $0.summary }
-        assertStable(samples, "result.primaryAction", tolerance) { $0.primaryAction }
+        let sample = captureResultSkeleton(in: app)
+        XCTAssertEqual(sample.eyebrow, "WELL DONE")
+        XCTAssertGreaterThan(sample.primaryAction.height, 0)
 
         attachScreenshot(named: "layout-result-feedback", app: app)
     }
@@ -858,10 +832,6 @@ final class SteakCopilotUITests: XCTestCase {
         // something to learn.
         app.buttons["setup.primary"].tap()
         for _ in 0..<4 { confirmSkip(in: app) }
-        XCTAssertTrue(app.buttons["ready.continue"].waitForExistence(timeout: 5))
-        app.buttons["ready.continue"].tap()
-        XCTAssertTrue(app.buttons["eat.feedback"].waitForExistence(timeout: 3))
-        app.buttons["eat.feedback"].tap()
 
         let save = app.buttons["feedback.save"]
         XCTAssertTrue(save.waitForExistence(timeout: 3))
@@ -1317,15 +1287,12 @@ final class SteakCopilotUITests: XCTestCase {
         return (flipCount, sawFatCap, sawButter, sawTakeOut)
     }
 
+    /// The rest completes on its own, and the result page carries the feedback
+    /// form, so ending a cook is one tap: long enough to cover the finishing
+    /// estimate at any time scale.
     private func finishReadyFeedbackFlow(_ app: XCUIApplication) {
-        // Long enough to cover the finishing estimate at any time scale.
-        XCTAssertTrue(app.buttons["ready.continue"].waitForExistence(timeout: 45))
-        app.buttons["ready.continue"].tap()
-        XCTAssertTrue(app.buttons["eat.feedback"].waitForExistence(timeout: 3))
-        app.buttons["eat.feedback"].tap()
-
         let save = app.buttons["feedback.save"]
-        XCTAssertTrue(save.waitForExistence(timeout: 3))
+        XCTAssertTrue(save.waitForExistence(timeout: 45))
         while !save.isHittable { app.swipeUp() }
         save.tap()
         XCTAssertTrue(app.buttons["setup.primary"].waitForExistence(timeout: 3))

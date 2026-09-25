@@ -304,13 +304,11 @@ final class CookingSessionController {
         case .takeOut:
             beginFinishing(at: date)
         case .eat:
-            if session.phase == .ready {
-                session.enter(.eat, at: date)
-                persistAndRefresh(at: date)
-            } else if session.phase == .eat {
-                session.enter(.feedback, at: date)
-                persistAndRefresh(at: date)
-            }
+            // The result page logs the cook itself, in one tap, so nothing in
+            // the flow asks the controller to walk the retired
+            // READY → EAT → FEEDBACK chain any more. A session restored into one
+            // of those phases renders the same page and exits the same way.
+            break
         case .wait, .baste, .waitForFinish:
             break
         }
@@ -340,9 +338,9 @@ final class CookingSessionController {
             beginFinishing(at: date)
         case .finishing:
             completeFinishing(at: date)
-        case .ready, .eat:
-            confirmCurrentAction(at: date)
-        case .feedback:
+        case .ready, .eat, .feedback:
+            // Skipping the ending page leaves without logging, which is one tap
+            // rather than walking the retired READY → EAT → FEEDBACK chain.
             await startOver(at: date)
         case .setup:
             break

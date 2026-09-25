@@ -67,8 +67,9 @@ final class SessionLayoutMetricsTests: XCTestCase {
                 "The result skeleton must fit a \(height)pt container outright"
             )
             XCTAssertGreaterThan(layout.heroHeight, 0)
-            // The middle band is the only one whose content length changes
-            // (note vs feedback form); it is reserved for the taller one.
+            // The middle band holds the feedback form, which is the ending
+            // page's only content there: it is reserved so the form can never
+            // push the hero, the summary card or the CTA.
             XCTAssertGreaterThanOrEqual(
                 layout.middleHeight,
                 160,
