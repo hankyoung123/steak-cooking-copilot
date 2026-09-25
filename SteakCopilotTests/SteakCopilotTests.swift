@@ -31,7 +31,7 @@ final class SteakCopilotTests: XCTestCase {
         )
     }
 
-    func testCookingStagesUseTheFiveSuppliedFullBleedBackgrounds() {
+    func testCookingStagesUseTheSixSuppliedFullBleedBackgrounds() {
         XCTAssertEqual(
             CookingStageArtwork.resolve(for: .sear, action: .wait).backgroundAsset,
             "CookSearBackground"
@@ -58,9 +58,66 @@ final class SteakCopilotTests: XCTestCase {
             ).backgroundAsset,
             "CookRestBackground"
         )
+        // The seared composition is the one that is only reachable after the
+        // first flip.
+        XCTAssertEqual(
+            CookingStageArtwork.resolve(
+                for: .sear,
+                action: .wait,
+                flipCount: 1
+            ).backgroundAsset,
+            "CookSearedBackground"
+        )
         XCTAssertNil(
             CookingStageArtwork.resolve(for: .prep, action: .wait).backgroundAsset
         )
+    }
+
+    /// The reported defect: after the first flip the steak has been seared on
+    /// both faces, so the raw compositions are no longer true. Every searing
+    /// moment past the first flip must show the seared steak.
+    func testBothSidesSearedArtworkAfterTheFirstFlip() {
+        let searingActions: [CookingAction] = [
+            .wait, .flip, .standFatCap
+        ]
+
+        for flipCount in 1...6 {
+            for action in searingActions {
+                for phase: CookingPhase in [.sear, .fatCap] {
+                    let artwork = CookingStageArtwork.resolve(
+                        for: phase,
+                        action: action,
+                        flipCount: flipCount
+                    )
+                    XCTAssertEqual(
+                        artwork.backgroundAsset,
+                        "CookSearedBackground",
+                        """
+                        \(phase)/\(action) after \(flipCount) flip(s) must show \
+                        the seared steak, not \(artwork.asset)
+                        """
+                    )
+                }
+            }
+        }
+
+        // And the raw compositions are only reachable *before* the first flip.
+        for action in searingActions {
+            let before = CookingStageArtwork.resolve(
+                for: .sear,
+                action: action,
+                flipCount: 0
+            )
+            XCTAssertNotEqual(
+                before.backgroundAsset,
+                "CookSearedBackground",
+                "Before the first flip the steak is not seared on both faces"
+            )
+            XCTAssertTrue(
+                ["CookSearBackground", "CookFlipBackground"].contains(before.asset),
+                "Unexpected pre-flip artwork \(before.asset)"
+            )
+        }
     }
 
     /// Regression: a stage must never render a complete composition *and* an
@@ -78,52 +135,58 @@ final class SteakCopilotTests: XCTestCase {
         for phase in phases {
             for action in actions {
                 for prepIsDry in [true, false] {
-                    let artwork = CookingStageArtwork.resolve(
-                        for: phase,
-                        action: action,
-                        prepIsDry: prepIsDry
-                    )
+                    for flipCount in [0, 1, 4] {
+                        let artwork = CookingStageArtwork.resolve(
+                            for: phase,
+                            action: action,
+                            prepIsDry: prepIsDry,
+                            flipCount: flipCount
+                        )
 
-                    XCTAssertFalse(
-                        artwork.backgroundAsset != nil && artwork.objectAsset != nil,
-                        "\(phase)/\(action) would draw two food layers"
-                    )
-                    XCTAssertEqual(
-                        artwork.allowsSteakCutout,
-                        artwork.backgroundAsset == nil,
-                        "\(phase)/\(action) cutout policy must follow the composition"
-                    )
-                    XCTAssertTrue(
-                        artwork.usesBackgroundOnly || artwork.showsObjectOverlay
-                            || artwork.asset.isEmpty == false,
-                        "\(phase)/\(action) must resolve to exactly one layer"
-                    )
+                        XCTAssertFalse(
+                            artwork.backgroundAsset != nil && artwork.objectAsset != nil,
+                            "\(phase)/\(action)/\(flipCount) would draw two food layers"
+                        )
+                        XCTAssertEqual(
+                            artwork.allowsSteakCutout,
+                            artwork.backgroundAsset == nil,
+                            "\(phase)/\(action) cutout policy must follow the composition"
+                        )
+                        XCTAssertTrue(
+                            artwork.usesBackgroundOnly || artwork.showsObjectOverlay
+                                || artwork.asset.isEmpty == false,
+                            "\(phase)/\(action) must resolve to exactly one layer"
+                        )
+                    }
                 }
             }
         }
     }
 
     func testCompleteCompositionsNeverAllowACutout() {
-        // Prepare, heat and every cook/finishing stage: the five supplied
+        // Prepare, heat and every cook/finishing stage: the six supplied
         // cooking photographs contain the pan and the steak.
         let composedPhases: [CookingPhase] = [
             .sear, .fatCap, .baste, .checkTemperature, .finishing
         ]
 
         for phase in composedPhases {
-            let artwork = CookingStageArtwork.resolve(
-                for: phase,
-                action: .wait
-            )
-            XCTAssertTrue(
-                artwork.usesBackgroundOnly,
-                "\(phase) should render a complete composition"
-            )
-            XCTAssertFalse(
-                artwork.allowsSteakCutout,
-                "\(phase) must not overlay a steak cutout on the photograph"
-            )
-            XCTAssertNil(artwork.objectAsset)
+            for flipCount in [0, 1, 4] {
+                let artwork = CookingStageArtwork.resolve(
+                    for: phase,
+                    action: .wait,
+                    flipCount: flipCount
+                )
+                XCTAssertTrue(
+                    artwork.usesBackgroundOnly,
+                    "\(phase)/\(flipCount) should render a complete composition"
+                )
+                XCTAssertFalse(
+                    artwork.allowsSteakCutout,
+                    "\(phase) must not overlay a steak cutout on the photograph"
+                )
+                XCTAssertNil(artwork.objectAsset)
+            }
         }
     }
 

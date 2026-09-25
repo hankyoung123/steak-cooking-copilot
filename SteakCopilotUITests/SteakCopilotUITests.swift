@@ -126,7 +126,11 @@ final class SteakCopilotUITests: XCTestCase {
     }
 
     func testCaseBStripUsesFatCapAndTakesOut() {
-        let app = launchApp()
+        // The "watch it happen" scale, not `-fastCook`: a 4cm strip has a 1.2s
+        // fat-cap window at the fast scale, which is the same order as one
+        // XCUITest query-plus-tap, so which actions the walk managed to witness
+        // depended on how loaded the host was.
+        let app = launchApp(fastCook: false, visualCook: true)
         app.buttons["home.nextCut"].tap()
         app.buttons["home.settings"].tap()
         app.sliders["setup.thickness"].adjust(toNormalizedSliderPosition: 0.67)
@@ -143,11 +147,20 @@ final class SteakCopilotUITests: XCTestCase {
         for _ in 0..<30 {
             if app.staticTexts["FINISHING"].exists { break }
 
+            // The fat cap is read from the flow counter rather than from the
+            // button label. The counter advances when the app *records* the
+            // milestone, so it cannot go stale between the query and the tap the
+            // way a label can at the late-stage transition. Strip's route is
+            // 01 sear · 02 flip · 03 fat cap · 04 butter · 05 baste · 06 take out.
+            let step = app.staticTexts["session.step"]
+            if step.exists, step.label.hasPrefix("03 / ") {
+                sawFatCap = true
+            }
+
             let confirm = app.buttons["cook.confirm"]
             XCTAssertTrue(confirm.waitForExistence(timeout: 5))
             let label = confirm.label
             flipCount += label == "Flipped" ? 1 : 0
-            sawFatCap = sawFatCap || label == "Start fat cap"
             sawButter = sawButter || label == "Butter added"
             sawTakeOut = sawTakeOut || label == "Steak is out"
             tapWhenEnabled(confirm, timeout: 15)
@@ -185,6 +198,78 @@ final class SteakCopilotUITests: XCTestCase {
     /// must not also layer an object cutout on top of it (which rendered two
     /// steaks). The stage artwork is exposed to accessibility as images whose
     /// labels are the asset names, so the rendered layer count is observable.
+    /// Regression: one flip is enough to have seared both faces, so the stage
+    /// must switch to the seared composition and must not fall back to the raw
+    /// one for the rest of the searing loop.
+    ///
+    /// Runs at the real time scale, because the interesting window (the first
+    /// searing wait and the loop that follows it) is one flip interval long —
+    /// 30s here, against 2.4s under `-visualCook`, which is too short to stand
+    /// on either side of the transition.
+    ///
+    /// The stage artwork is exposed to accessibility as images whose labels are
+    /// the asset names, so the composition is observable from the outside.
+    func testStageShowsTheSearedCompositionAfterTheFirstFlip() {
+        let app = launchApp(fastCook: false, visualCook: false)
+        startCooking(app)
+
+        // Before the first flip the visible face is raw.
+        let raw = stageImage(prefix: "CookSearBackground", in: app)
+        XCTAssertTrue(
+            raw.waitForExistence(timeout: 8),
+            "Expected the raw steak first, saw: \(stageImageLabels(in: app))"
+        )
+        XCTAssertFalse(
+            stageImage(prefix: "CookSearedBackground", in: app).exists,
+            "Nothing is seared on both faces before the first flip"
+        )
+        settleArtwork(after: 0.4)
+        attachScreenshot(named: "stage-raw-before-first-flip", app: app)
+
+        // Flip once.
+        let confirm = app.buttons["cook.confirm"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 40))
+        tapWhenEnabled(confirm, timeout: 20)
+
+        // After it, the seared composition is the only correct one…
+        XCTAssertTrue(
+            stageImage(prefix: "CookSearedBackground", in: app)
+                .waitForExistence(timeout: 10),
+            "After the first flip the stage must show the seared steak, saw: "
+                + stageImageLabels(in: app)
+        )
+        settleArtwork(after: 0.4)
+        attachScreenshot(named: "stage-seared-after-first-flip", app: app)
+
+        // …and the raw compositions must be gone for the rest of the loop.
+        XCTAssertFalse(
+            stageImage(prefix: "CookSearBackground", in: app).exists,
+            "The stage went back to the raw steak after the first flip"
+        )
+        XCTAssertFalse(
+            stageImage(prefix: "CookFlipBackground", in: app).exists,
+            "The tongs photo shows the raw face and only fits the first flip"
+        )
+    }
+
+    /// Stage artwork by asset name. The images carry the asset name as their
+    /// accessibility *label*, so they are matched by label, not by identifier.
+    private func stageImage(
+        prefix: String,
+        in app: XCUIApplication
+    ) -> XCUIElement {
+        app.images.matching(
+            NSPredicate(format: "label BEGINSWITH %@", prefix)
+        ).firstMatch
+    }
+
+    private func stageImageLabels(in app: XCUIApplication) -> String {
+        app.images.allElementsBoundByIndex
+            .map(\.label)
+            .filter { !$0.isEmpty }
+            .joined(separator: ", ")
+    }
+
     func testCookingStageRendersOneArtworkLayerWithoutCutoutOverlap() {
         let app = launchApp()
         startCooking(app)

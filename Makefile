@@ -12,6 +12,13 @@ DERIVED := .derivedData/dev
 # lives in SessionLayoutMetricsTests, which is far cheaper than a UI walk.
 DESTINATION := platform=iOS Simulator,name=iPhone 17
 
+# …and the same run must not be split across simulator clones. Xcode clones the
+# destination for parallel testing by default, and the clones then compete for
+# CPU: the cook walks drive the app on `-fastCook` (about 8s of pan time) and
+# fall behind it under load, so they sample fewer phases than they assert. Each
+# walk passes on its own; pinning one device is what makes the suite reproducible.
+NO_PARALLEL_TESTING := -parallel-testing-enabled NO
+
 # The only UI tests that need to run while iterating on layout.
 LAYOUT_UI_TESTS := \
 	-only-testing:SteakCopilotUITests/SteakCopilotUITests/testHomeSkeletonSlotsDoNotMoveBetweenCuts \
@@ -60,6 +67,7 @@ test-ui-layout:
 		-project $(PROJECT) -scheme $(SCHEME) \
 		-destination '$(DESTINATION)' \
 		-derivedDataPath $(DERIVED) \
+		$(NO_PARALLEL_TESTING) \
 		$(LAYOUT_UI_TESTS) \
 		CODE_SIGNING_ALLOWED=NO
 
@@ -68,6 +76,7 @@ test-ui:
 		-project $(PROJECT) -scheme $(SCHEME) \
 		-destination '$(DESTINATION)' \
 		-derivedDataPath $(DERIVED) \
+		$(NO_PARALLEL_TESTING) \
 		-only-testing:SteakCopilotUITests \
 		CODE_SIGNING_ALLOWED=NO
 

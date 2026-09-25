@@ -13,6 +13,18 @@ import SwiftUI
 /// Drawing a complete composition and an object cutout at the same time
 /// renders two steaks, which is exactly the overlap this type prevents: the
 /// view no longer guesses, it asks for the policy and renders what it says.
+///
+/// The six compositions describe the steak's actual state, so the searing loop
+/// asks a second question: **has it been flipped yet?**
+///
+/// - `CookSearBackground` — raw top face, only before the first flip.
+/// - `CookFlipBackground` — tongs lifting the steak; the seared face is down
+///   and the raw face is up, which is only true of the first flip.
+/// - `CookSearedBackground` — both faces seared, for every searing moment after
+///   the first flip. Showing the raw composition again once side two has been
+///   in the pan is the state error this rule exists to prevent.
+/// - `CookBasteBackground`, `CookCheckBackground`, `CookRestBackground` — the
+///   butter, take-out and resting moments.
 struct CookingStageArtwork: Equatable, Sendable {
     /// Opaque complete photograph, drawn full-bleed. Never combined with an
     /// object layer.
@@ -43,11 +55,19 @@ struct CookingStageArtwork: Equatable, Sendable {
     /// Resolves the artwork for a stage. The artwork family is a property of
     /// the stage, not of the presentation, so a stage can never end up
     /// layered differently depending on where it is rendered.
+    ///
+    /// `flipCount` is how many times the steak has been turned. One flip is
+    /// enough to have seared both faces, which is why it is the threshold:
+    /// `CookingSession.flipCount` is the fact, and the raw compositions stop
+    /// being true the moment it leaves zero.
     static func resolve(
         for phase: CookingPhase,
         action: CookingAction,
-        prepIsDry: Bool = true
+        prepIsDry: Bool = true,
+        flipCount: Int = 0
     ) -> CookingStageArtwork {
+        let bothFacesSeared = flipCount >= 1
+
         switch phase {
         case .prep:
             // No background photo for prep: the transparent cutout is the
@@ -64,13 +84,17 @@ struct CookingStageArtwork: Equatable, Sendable {
         case .sear, .fatCap:
             switch action {
             case .flip, .standFatCap:
-                return backgroundOnly("CookFlipBackground")
+                return backgroundOnly(
+                    bothFacesSeared ? "CookSearedBackground" : "CookFlipBackground"
+                )
             case .addButter, .baste:
                 return backgroundOnly("CookBasteBackground")
             case .checkTemperature, .takeOut:
                 return backgroundOnly("CookCheckBackground")
             default:
-                return backgroundOnly("CookSearBackground")
+                return backgroundOnly(
+                    bothFacesSeared ? "CookSearedBackground" : "CookSearBackground"
+                )
             }
         case .baste:
             return [.checkTemperature, .takeOut].contains(action)
@@ -85,7 +109,7 @@ struct CookingStageArtwork: Equatable, Sendable {
         }
     }
 
-    /// Convenience for the five supplied full-bleed compositions.
+    /// Convenience for the six supplied full-bleed compositions.
     private static func backgroundOnly(_ asset: String) -> CookingStageArtwork {
         CookingStageArtwork(backgroundAsset: asset, objectAsset: nil)
     }
@@ -258,11 +282,16 @@ struct CookingStageScene: View {
     }
 
     /// The resolved artwork policy for the current stage.
+    ///
+    /// `flipCount` decides between the raw and the seared compositions: after
+    /// the first flip both faces have been in the pan, so the raw photograph
+    /// must not come back for the rest of the searing loop.
     private var artwork: CookingStageArtwork {
         CookingStageArtwork.resolve(
             for: controller.session.phase,
             action: controller.guidance.currentAction,
-            prepIsDry: prepIsDry
+            prepIsDry: prepIsDry,
+            flipCount: controller.session.flipCount
         )
     }
 
