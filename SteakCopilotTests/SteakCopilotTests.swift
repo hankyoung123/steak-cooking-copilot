@@ -74,49 +74,58 @@ final class SteakCopilotTests: XCTestCase {
     }
 
     /// The reported defect: after the first flip the steak has been seared on
-    /// both faces, so the raw compositions are no longer true. Every searing
-    /// moment past the first flip must show the seared steak.
+    /// both faces, so the **searing wait** must show the seared steak rather
+    /// than going back to the raw one.
+    ///
+    /// The action prompts are a different question — what is the app asking
+    /// for — so the tongs photograph stays at every flip, which is why this
+    /// test separates the two instead of sweeping them together.
     func testBothSidesSearedArtworkAfterTheFirstFlip() {
-        let searingActions: [CookingAction] = [
-            .wait, .flip, .standFatCap
-        ]
-
         for flipCount in 1...6 {
-            for action in searingActions {
-                for phase: CookingPhase in [.sear, .fatCap] {
-                    let artwork = CookingStageArtwork.resolve(
-                        for: phase,
-                        action: action,
-                        flipCount: flipCount
-                    )
-                    XCTAssertEqual(
-                        artwork.backgroundAsset,
-                        "CookSearedBackground",
-                        """
-                        \(phase)/\(action) after \(flipCount) flip(s) must show \
-                        the seared steak, not \(artwork.asset)
-                        """
-                    )
-                }
+            for phase: CookingPhase in [.sear, .fatCap] {
+                let waiting = CookingStageArtwork.resolve(
+                    for: phase,
+                    action: .wait,
+                    flipCount: flipCount
+                )
+                XCTAssertEqual(
+                    waiting.backgroundAsset,
+                    "CookSearedBackground",
+                    """
+                    \(phase) after \(flipCount) flip(s) must show the seared \
+                    steak, not \(waiting.asset)
+                    """
+                )
             }
         }
 
-        // And the raw compositions are only reachable *before* the first flip.
-        for action in searingActions {
-            let before = CookingStageArtwork.resolve(
-                for: .sear,
-                action: action,
-                flipCount: 0
-            )
-            XCTAssertNotEqual(
-                before.backgroundAsset,
-                "CookSearedBackground",
-                "Before the first flip the steak is not seared on both faces"
-            )
-            XCTAssertTrue(
-                ["CookSearBackground", "CookFlipBackground"].contains(before.asset),
-                "Unexpected pre-flip artwork \(before.asset)"
-            )
+        // The raw searing wait is only reachable *before* the first flip.
+        let before = CookingStageArtwork.resolve(
+            for: .sear,
+            action: .wait,
+            flipCount: 0
+        )
+        XCTAssertEqual(before.backgroundAsset, "CookSearBackground")
+    }
+
+    /// The flip / fat-cap prompt keeps its own photograph at every flip: it is
+    /// an instruction, not a statement about the steak's state, so it must not
+    /// follow `flipCount`.
+    func testTheFlipPromptKeepsTheTongsAtEveryFlip() {
+        for flipCount in 0...6 {
+            for phase: CookingPhase in [.sear, .fatCap] {
+                for action: CookingAction in [.flip, .standFatCap] {
+                    XCTAssertEqual(
+                        CookingStageArtwork.resolve(
+                            for: phase,
+                            action: action,
+                            flipCount: flipCount
+                        ).backgroundAsset,
+                        "CookFlipBackground",
+                        "\(phase)/\(action) at flip \(flipCount)"
+                    )
+                }
+            }
         }
     }
 

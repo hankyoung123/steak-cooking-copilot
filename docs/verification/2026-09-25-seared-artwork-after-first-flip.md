@@ -33,17 +33,25 @@ in the pan:
 let bothFacesSeared = flipCount >= 1
 ```
 
+The change is confined to the **searing wait**, because the two families of
+photograph answer two different questions:
+
 | Stage | Before the first flip | After the first flip |
 | --- | --- | --- |
-| searing wait | `CookSearBackground` (raw) | `CookSearedBackground` |
-| FLIP / FAT CAP prompt | `CookFlipBackground` (tongs) | `CookSearedBackground` |
+| searing wait *(state)* | `CookSearBackground` (raw) | **`CookSearedBackground`** |
+| FLIP / FAT CAP prompt *(instruction)* | `CookFlipBackground` (tongs) | `CookFlipBackground` (tongs) |
 | butter / baste | `CookBasteBackground` | `CookBasteBackground` |
 | take-out / check | `CookCheckBackground` | `CookCheckBackground` |
 
-A sixth complete composition, `CookSearedBackground`, was added for this state
-(941 × 1672, opaque RGB, the same format as the other five). `CookFlipBackground`
-is now reachable only before the first flip, which is the only moment its raw
-face is true.
+The wait is the only thing that reports the steak's state, so it is the only
+thing that follows `flipCount`. The tongs photograph is an instruction — "turn
+it now" — not a claim about the face that happens to be visible while the steak
+is lifted, so it stays at every flip and at the fat-cap stand. (An earlier
+revision of this change switched the prompt too; it was reverted at the user's
+request, and `testTheFlipPromptKeepsTheTongsAtEveryFlip` now pins it.)
+
+A sixth complete composition, `CookSearedBackground`, was added for the new
+state (941 × 1672, opaque RGB, the same format as the other five).
 
 The whole-frame motion response is unchanged: the flip cue is still a
 scale/brightness pulse on the composition, so nothing depends on which
@@ -73,17 +81,21 @@ than assembled by hand.
 
 ## Automated results
 
-- Unit tests: **277/277 passed**. The artwork policy tests now sweep
-  `flipCount` in `{0, 1, 4}` instead of assuming a single unflipped stage, and
-  `testBothSidesSearedArtworkAfterTheFirstFlip` asserts that every searing
-  moment from flip 1 to flip 6 resolves to `CookSearedBackground`, and that the
-  raw compositions are unreachable once it has happened.
+- Unit tests: **278/278 passed**. The artwork policy tests now sweep
+  `flipCount` in `{0, 1, 4}` instead of assuming a single unflipped stage.
+  `testBothSidesSearedArtworkAfterTheFirstFlip` covers the *state* side (the
+  searing wait from flip 1 to flip 6 resolves to `CookSearedBackground`, and the
+  raw wait is only reachable at flip 0) and
+  `testTheFlipPromptKeepsTheTongsAtEveryFlip` covers the *instruction* side (the
+  tongs photograph at flip 0 through flip 6, for both `.flip` and `.standFatCap`).
 - UI tests: **21/21 passed**, including the new
   `testStageShowsTheSearedCompositionAfterTheFirstFlip`, which runs at the real
   time scale (the interesting window is one 30s flip interval long, 2.4s under
-  `-visualCook`) and asserts on the *asset name* in the accessibility tree:
-  raw before the flip, seared after it, and neither the raw nor the tongs
-  composition reachable afterwards.
+  `-visualCook`) and asserts on the *asset name* in the accessibility tree: the
+  raw wait before the flip, the seared wait after it, and the raw wait
+  unreachable afterwards. It deliberately does **not** assert the tongs
+  photograph away — that is the flip prompt, and it is expected back at the next
+  flip.
 - The two pre-existing artwork UI tests still pass:
   `testCookingStageRendersOneArtworkLayerWithoutCutoutOverlap` and
   `testPrototypeVisualStatesUseStageSpecificArtwork`.

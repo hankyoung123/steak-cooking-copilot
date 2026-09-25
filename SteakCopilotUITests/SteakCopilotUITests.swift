@@ -193,14 +193,10 @@ final class SteakCopilotUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["FINISHING"].waitForExistence(timeout: 4))
     }
 
-    /// Regression for the overlapping artwork bug: a cook stage draws a
-    /// complete photograph that already contains the pan and the steak, so it
-    /// must not also layer an object cutout on top of it (which rendered two
-    /// steaks). The stage artwork is exposed to accessibility as images whose
-    /// labels are the asset names, so the rendered layer count is observable.
-    /// Regression: one flip is enough to have seared both faces, so the stage
-    /// must switch to the seared composition and must not fall back to the raw
-    /// one for the rest of the searing loop.
+    /// Regression: one flip is enough to have seared both faces, so the searing
+    /// **wait** must switch to the seared composition and must not fall back to
+    /// the raw one for the rest of the loop. The flip prompt keeps its own
+    /// photograph, because that is an instruction rather than a state.
     ///
     /// Runs at the real time scale, because the interesting window (the first
     /// searing wait and the loop that follows it) is one flip interval long —
@@ -241,14 +237,13 @@ final class SteakCopilotUITests: XCTestCase {
         settleArtwork(after: 0.4)
         attachScreenshot(named: "stage-seared-after-first-flip", app: app)
 
-        // …and the raw compositions must be gone for the rest of the loop.
+        // …and the raw searing wait must not come back: only the wait reports
+        // the state, and from here on that state is "seared on both faces".
+        // The tongs prompt is allowed to return at the next flip — it is an
+        // instruction, not a claim about the state.
         XCTAssertFalse(
             stageImage(prefix: "CookSearBackground", in: app).exists,
             "The stage went back to the raw steak after the first flip"
-        )
-        XCTAssertFalse(
-            stageImage(prefix: "CookFlipBackground", in: app).exists,
-            "The tongs photo shows the raw face and only fits the first flip"
         )
     }
 
@@ -270,6 +265,11 @@ final class SteakCopilotUITests: XCTestCase {
             .joined(separator: ", ")
     }
 
+    /// Regression for the overlapping artwork bug: a cook stage draws a
+    /// complete photograph that already contains the pan and the steak, so it
+    /// must not also layer an object cutout on top of it (which rendered two
+    /// steaks). The stage artwork is exposed to accessibility as images whose
+    /// labels are the asset names, so the rendered layer count is observable.
     func testCookingStageRendersOneArtworkLayerWithoutCutoutOverlap() {
         let app = launchApp()
         startCooking(app)

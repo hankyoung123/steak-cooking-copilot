@@ -14,17 +14,27 @@ import SwiftUI
 /// renders two steaks, which is exactly the overlap this type prevents: the
 /// view no longer guesses, it asks for the policy and renders what it says.
 ///
-/// The six compositions describe the steak's actual state, so the searing loop
-/// asks a second question: **has it been flipped yet?**
+/// The six compositions answer two different questions, and they are not
+/// interchangeable:
+///
+/// **What state is the steak in?** — the searing wait, which is most of the
+/// loop:
 ///
 /// - `CookSearBackground` — raw top face, only before the first flip.
-/// - `CookFlipBackground` — tongs lifting the steak; the seared face is down
-///   and the raw face is up, which is only true of the first flip.
-/// - `CookSearedBackground` — both faces seared, for every searing moment after
-///   the first flip. Showing the raw composition again once side two has been
-///   in the pan is the state error this rule exists to prevent.
+/// - `CookSearedBackground` — both faces seared, for the searing wait after the
+///   first flip. Showing the raw composition again once side two has been in
+///   the pan is the state error this rule exists to prevent.
+///
+/// **What is the app asking for?** — the action prompts:
+///
+/// - `CookFlipBackground` — tongs lifting the steak. This is an instruction
+///   ("turn it now"), not a claim about the face that happens to be visible
+///   while the steak is lifted, so it is the same at every flip and at the
+///   fat-cap stand. Deliberately not switched on `flipCount`.
 /// - `CookBasteBackground`, `CookCheckBackground`, `CookRestBackground` — the
 ///   butter, take-out and resting moments.
+///
+/// Only the state images follow `flipCount`; the prompt images do not.
 struct CookingStageArtwork: Equatable, Sendable {
     /// Opaque complete photograph, drawn full-bleed. Never combined with an
     /// object layer.
@@ -57,9 +67,10 @@ struct CookingStageArtwork: Equatable, Sendable {
     /// layered differently depending on where it is rendered.
     ///
     /// `flipCount` is how many times the steak has been turned. One flip is
-    /// enough to have seared both faces, which is why it is the threshold:
-    /// `CookingSession.flipCount` is the fact, and the raw compositions stop
-    /// being true the moment it leaves zero.
+    /// enough to have seared both faces, which is why it is the threshold for
+    /// the **searing wait** images: `CookingSession.flipCount` is the fact, and
+    /// the raw photograph stops being true the moment it leaves zero. The
+    /// action prompts are not state, so they ignore it.
     static func resolve(
         for phase: CookingPhase,
         action: CookingAction,
@@ -84,9 +95,8 @@ struct CookingStageArtwork: Equatable, Sendable {
         case .sear, .fatCap:
             switch action {
             case .flip, .standFatCap:
-                return backgroundOnly(
-                    bothFacesSeared ? "CookSearedBackground" : "CookFlipBackground"
-                )
+                // The prompt, not the state: same photograph at every flip.
+                return backgroundOnly("CookFlipBackground")
             case .addButter, .baste:
                 return backgroundOnly("CookBasteBackground")
             case .checkTemperature, .takeOut:
