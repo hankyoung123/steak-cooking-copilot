@@ -33,14 +33,18 @@ struct AdvancedSettingsSheet: View {
                     settingDivider
                     thicknessSection
                     settingDivider
-                    valueRow("Target Temperature", value: targetText)
-                    settingDivider
-                    valueRow("Estimated Time", value: durationText)
+                    VStack(spacing: 0) {
+                        valueRow("Target Temperature", value: targetText)
+                            .padding(.vertical, 14)
+                        settingDivider
+                        valueRow("Estimated Time", value: durationText)
+                            .padding(.vertical, 14)
+                    }
 
                     Text("These settings are recommendations based on your last cook.")
                         .font(.system(size: 9))
                         .foregroundStyle(theme.ink.opacity(0.42))
-                        .padding(.top, 52)
+                        .padding(.top, 36)
                         .padding(.bottom, 20)
                 }
                 .padding(.horizontal, 24)
@@ -137,30 +141,23 @@ struct AdvancedSettingsSheet: View {
                 value: String(format: "%.1f cm", draft.configuration.thicknessCM)
             )
 
-            HStack(spacing: 7) {
-                ForEach([2.0, 2.5, 3.0, 3.5, 4.0, 5.0], id: \.self) { thickness in
-                    Button(String(format: "%.1f", thickness)) {
-                        draft.configuration.thicknessCM = thickness
-                    }
-                    .font(.system(size: 10, weight: .medium))
-                    .foregroundStyle(theme.ink.opacity(0.72))
-                    .frame(maxWidth: .infinity, minHeight: 34)
-                    .background(
-                        draft.configuration.thicknessCM == thickness
-                            ? theme.card.opacity(0.92)
-                            : Color.clear,
-                        in: RoundedRectangle(cornerRadius: 6)
+            // Adaptive rather than one row of six: a single row needs ~46pt per
+            // chip, and the sheet is not always 402pt wide — iOS presents it
+            // inset on some devices, which clipped the last chip. The grid
+            // resolves its column count from the width it is actually given, so
+            // a chip can never fall outside the content area. Three per row at
+            // every phone width, two only in a very narrow container.
+            LazyVGrid(
+                columns: [
+                    GridItem(
+                        .adaptive(minimum: Self.minimumChipWidth),
+                        spacing: Self.chipSpacing
                     )
-                    .overlay {
-                        RoundedRectangle(cornerRadius: 6)
-                            .stroke(
-                                draft.configuration.thicknessCM == thickness
-                                    ? theme.butter
-                                    : theme.ink.opacity(0.07),
-                                lineWidth: 0.8
-                            )
-                    }
-                    .buttonStyle(EditorialPressStyle())
+                ],
+                spacing: Self.chipSpacing
+            ) {
+                ForEach(Self.thicknessChoices, id: \.self) { thickness in
+                    thicknessChip(thickness)
                 }
             }
 
@@ -171,6 +168,45 @@ struct AdvancedSettingsSheet: View {
                 .accessibilityIdentifier("setup.thickness")
         }
         .padding(.vertical, 15)
+    }
+
+    /// The narrowest a chip may render before the grid drops to fewer columns.
+    /// The old single row could not honour this, which is what clipped `5.0`.
+    private static let minimumChipWidth: CGFloat = 84
+    private static let chipSpacing: CGFloat = 7
+    private static let thicknessChoices: [Double] = [2.0, 2.5, 3.0, 3.5, 4.0, 5.0]
+
+    private func thicknessChip(_ thickness: Double) -> some View {
+        let isSelected = draft.configuration.thicknessCM == thickness
+
+        return Button {
+            withAnimation(.snappy(duration: 0.22)) {
+                draft.configuration.thicknessCM = thickness
+            }
+        } label: {
+            Text(String(format: "%.1f", thickness))
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(theme.ink.opacity(isSelected ? 0.92 : 0.72))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(maxWidth: .infinity, minHeight: 44)
+                .background(
+                    isSelected ? theme.card.opacity(0.92) : Color.clear,
+                    in: RoundedRectangle(cornerRadius: 6)
+                )
+                .overlay {
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(
+                            isSelected ? theme.butter : theme.ink.opacity(0.07),
+                            lineWidth: 0.8
+                        )
+                }
+        }
+        .buttonStyle(EditorialPressStyle())
+        .accessibilityIdentifier(
+            String(format: "setup.thickness.%.1f", thickness)
+        )
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 
     private func valueRow(_ title: LocalizedStringKey, value: String) -> some View {

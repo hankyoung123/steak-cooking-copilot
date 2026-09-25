@@ -88,6 +88,44 @@ final class SteakCopilotUITests: XCTestCase {
         attachScreenshot(named: "setup-five-doneness", app: app)
     }
 
+    /// Regression: the thickness choices were one row of six equal chips, which
+    /// needs ~46pt each, so a narrower sheet (iOS presents it inset on some
+    /// devices) pushed the last chip outside the content area and clipped it.
+    /// Every choice must be fully inside the sheet and tappable.
+    func testEveryThicknessChoiceIsInsideTheSheet() {
+        let app = launchApp()
+        app.buttons["home.settings"].tap()
+        XCTAssertTrue(app.buttons["settings.save"].waitForExistence(timeout: 3))
+
+        let choices = ["2.0", "2.5", "3.0", "3.5", "4.0", "5.0"]
+        let window = app.windows.firstMatch.frame
+
+        for choice in choices {
+            let chip = app.buttons["setup.thickness.\(choice)"]
+            XCTAssertTrue(
+                chip.waitForExistence(timeout: 3),
+                "Missing thickness choice \(choice)"
+            )
+            XCTAssertTrue(chip.isHittable, "Thickness \(choice) is not tappable")
+            XCTAssertGreaterThanOrEqual(chip.frame.minX, window.minX - 0.5, choice)
+            XCTAssertLessThanOrEqual(
+                chip.frame.maxX,
+                window.maxX + 0.5,
+                "Thickness \(choice) runs past the sheet edge"
+            )
+        }
+
+        // The last choice is the one that used to be clipped, so selecting it
+        // proves it is really reachable and wired up.
+        app.buttons["setup.thickness.5.0"].tap()
+        XCTAssertTrue(
+            app.buttons["setup.thickness.5.0"].isSelected,
+            "Tapping 5.0 should select it"
+        )
+        XCTAssertFalse(app.buttons["setup.thickness.4.0"].isSelected)
+        attachScreenshot(named: "advanced-settings-thickness", app: app)
+    }
+
     func testHomePresentsSettingsAndCookLog() {
         let app = launchApp()
         attachScreenshot(named: "home-v2", app: app)
