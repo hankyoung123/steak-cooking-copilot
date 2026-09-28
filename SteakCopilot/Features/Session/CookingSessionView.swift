@@ -629,9 +629,14 @@ struct CookingSessionView: View {
     private func instructionTitle(at date: Date) -> String {
         switch controller.session.phase {
         case .prep:
-            dried ? String(localized: "Season both sides") : String(localized: "Pat every surface dry")
+            // One title per prep step, so the supporting line always reads under
+            // the step it belongs to (the third one states the estimate's own
+            // premise, which is what the cook needs right before the pan).
+            if !dried { String(localized: "Pat every surface dry") }
+            else if !salted { String(localized: "Season both sides") }
+            else { String(localized: "Ready to preheat") }
         case .heat:
-            String(localized: "Wait for a hard sizzle")
+            String(localized: "Wait until droplets dance")
         case .finishing:
             String(localized: "Carryover heat will finish the center.")
         default:
@@ -654,13 +659,43 @@ struct CookingSessionView: View {
     /// During the searing loop it carries how many flips the plan still expects
     /// before the finish steps. That slot is already reserved at a fixed height,
     /// so the count costs no layout change and cannot push the rows below it.
+    ///
+    /// PREP and PREHEAT use it for criteria the cook can actually check, one per
+    /// step, rather than for adjectives:
+    ///
+    ///   * the dry line and the 40-minute salt timing are Kenji López-Alt's
+    ///     measurements as reported by the Hawaii Tribune-Herald (paper towels,
+    ///     "what really matters is how dry the steak is", the 40-minute window);
+    ///   * the water-droplet test is §V.2 of the culinary fluid mechanics review
+    ///     (Rev. Mod. Phys. 95, 025004): a sizzle only means the pan is past the
+    ///     water's boiling point, and the droplets have to levitate. No
+    ///     temperature number appears there or here — the review describes the
+    ///     two regimes, not a value;
+    ///   * the 20°C premise is this project's own assumption
+    ///     (`thermal.initialCentreTemperatureC`), stated so a cook from the
+    ///     fridge is not silently behind the estimate.
+    ///
+    /// Sources and the numbers that were deliberately left out:
+    /// `docs/verification/2026-09-28-prep-quantitative-criteria.md`.
     private func instructionDetail(at date: Date) -> String? {
         switch controller.session.phase {
         case .prep:
-            return String(localized: "A dry surface gives you a deeper, faster crust.")
+            if !dried {
+                return String(
+                    localized: "Press with paper towels until they come away dry. Water that has not boiled off barely browns."
+                )
+            }
+            if !salted {
+                return String(
+                    localized: "Salt about 40 minutes ahead when you can: it draws water out and the surface dries again."
+                )
+            }
+            return String(
+                localized: "The timing estimate assumes a 20°C centre when the steak goes in. Straight from the fridge runs behind it."
+            )
         case .heat:
             return String(
-                localized: "Oil should shimmer and the steak should sizzle immediately on contact."
+                localized: "A sizzle only means the pan passed 100°C. Droplets that skitter without boiling mean it is hot enough, and the steak will not stick."
             )
         default:
             guard let flips = controller.remainingSearFlips(at: date), flips > 0 else {

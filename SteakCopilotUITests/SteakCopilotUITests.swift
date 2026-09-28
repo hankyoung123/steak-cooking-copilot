@@ -41,8 +41,28 @@ final class SteakCopilotUITests: XCTestCase {
 
         // Drive into the searing loop so the new status readout and the flip
         // countdown are exercised in Chinese as well as English.
+        //
+        // The two prep steps are asserted here because each one swaps in its own
+        // supporting line: the dry criterion, the 40-minute salt timing, and then
+        // the estimate's 20°C premise once both are done.
         app.buttons["prep.dry"].tap()
+        XCTAssertTrue(app.staticTexts["两面调味"].waitForExistence(timeout: 3))
+        XCTAssertEqual(
+            app.staticTexts["有条件就提前约 40 分钟撒盐：盐先析出水分，表面随后回干。"].exists,
+            true,
+            "the salt step should carry the timing"
+        )
+        attachScreenshot(named: "prep-salt-step-zh-Hans", app: app)
+
         app.buttons["prep.salt"].tap()
+        XCTAssertTrue(app.staticTexts["可以预热锅了"].waitForExistence(timeout: 3))
+        XCTAssertEqual(
+            app.staticTexts["时间估算按下锅时中心 20°C 为前提；刚从冰箱取出会偏生。"].exists,
+            true,
+            "the last prep step should state the estimate's premise"
+        )
+        attachScreenshot(named: "prep-ready-step-zh-Hans", app: app)
+
         tapWhenEnabled(app.buttons["prep.continue"], timeout: 3)
         XCTAssertTrue(app.buttons["heat.ready"].waitForExistence(timeout: 3))
         app.buttons["heat.ready"].tap()
