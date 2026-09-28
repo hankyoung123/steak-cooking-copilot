@@ -61,6 +61,16 @@
         }
       }
     },
+    "%@ · %@" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "%@ · %@"
+          }
+        }
+      }
+    },
     "%@ · Pull at %.0f°C · ~%lld min" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -179,6 +189,16 @@
         }
       }
     },
+    "ABOUT" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "关于"
+          }
+        }
+      }
+    },
     "ADD BUTTER" : {
       "localizations" : {
         "zh-Hans" : {
@@ -284,7 +304,9 @@
         }
       }
     },
-    "Bounce" : {},
+    "Bounce" : {
+
+    },
     "Build the crust" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -316,7 +338,9 @@
         }
       }
     },
-    "Calibration" : {},
+    "Calibration" : {
+
+    },
     "Cancel" : {
       "localizations" : {
         "zh-Hans" : {
@@ -386,7 +410,9 @@
         }
       }
     },
-    "Changed fields" : {},
+    "Changed fields" : {
+
+    },
     "CHECK" : {
       "localizations" : {
         "zh-Hans" : {
@@ -550,16 +576,18 @@
         }
       }
     },
-    "Copy" : {},
-    "Keep at least one cut on the home screen." : {
+    "Cooking reminders" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "首页至少要保留一个部位。"
+            "value" : "烹饪提醒"
           }
         }
       }
+    },
+    "Copy" : {
+
     },
     "Crust" : {
       "extractionState" : "stale",
@@ -568,16 +596,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "焦壳"
-          }
-        }
-      }
-    },
-    "Hiding a cut only takes it off the home screen. Its settings and everything it has learned are kept." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "隐藏只会把它从首页移除，它的设置和已经学到的调整都会保留。"
           }
         }
       }
@@ -626,23 +644,15 @@
         }
       }
     },
-    "Cuts" : {},
+    "Cuts" : {
+
+    },
     "CUTS ON HOME" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "首页显示的部位"
-          }
-        }
-      }
-    },
-    "REMINDERS" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "提醒"
           }
         }
       }
@@ -709,8 +719,12 @@
         }
       }
     },
-    "Doneness adjustments" : {},
-    "Draft not applied — %lld issue(s)" : {},
+    "Doneness adjustments" : {
+
+    },
+    "Draft not applied — %lld issue(s)" : {
+
+    },
     "Dry" : {
       "localizations" : {
         "zh-Hans" : {
@@ -732,6 +746,7 @@
       }
     },
     "Enjoy" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -897,7 +912,9 @@
         }
       }
     },
-    "Export" : {},
+    "Export" : {
+
+    },
     "Fat cap" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1110,6 +1127,16 @@
         }
       }
     },
+    "Haptics" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "触感"
+          }
+        }
+      }
+    },
     "HEAT" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1148,6 +1175,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "帮助下一块牛排煎得更好。"
+          }
+        }
+      }
+    },
+    "Hiding a cut only takes it off the home screen. Its settings and everything it has learned are kept." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "隐藏只会把它从首页移除，它的设置和已经学到的调整都会保留。"
           }
         }
       }
@@ -1216,8 +1253,12 @@
         }
       }
     },
-    "Import file…" : {},
-    "Import pasted JSON" : {},
+    "Import file…" : {
+
+    },
+    "Import pasted JSON" : {
+
+    },
     "Insert probe in the thickest part." : {
       "localizations" : {
         "zh-Hans" : {
@@ -1229,11 +1270,22 @@
       }
     },
     "Juicy and tender. Great job!" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "多汁鲜嫩，做得很棒！"
+          }
+        }
+      }
+    },
+    "Keep at least one cut on the home screen." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "首页至少要保留一个部位。"
           }
         }
       }
@@ -1280,6 +1332,26 @@
         }
       }
     },
+    "LEARNED ADJUSTMENTS" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "学习到的调整"
+          }
+        }
+      }
+    },
+    "Learned from your feedback after a cook. Each entry shifts the timing for that cut, thickness and doneness." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "根据你每次烹饪后的反馈学习而来。每条都会影响对应部位、厚度与熟度的时间。"
+          }
+        }
+      }
+    },
     "Let heat move gently toward the center." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1314,6 +1386,7 @@
       }
     },
     "Log this cook" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1364,14 +1437,18 @@
         }
       }
     },
-    "Motion" : {},
-    "Needs fat cap" : {},
+    "Motion" : {
+
+    },
+    "Needs fat cap" : {
+
+    },
     "New York Strip" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "纽约客牛排"
+            "value" : "西冷牛排"
           }
         }
       }
@@ -1446,7 +1523,19 @@
         }
       }
     },
-    "Notifications" : {},
+    "Nothing yet. Feedback after a cook is what teaches the app." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "暂无。烹饪后的反馈才会让它学习。"
+          }
+        }
+      }
+    },
+    "Notifications" : {
+
+    },
     "Now!" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1454,6 +1543,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "现在！"
+          }
+        }
+      }
+    },
+    "Nudges you when the next flip, baste or pull is due, so you can step away from the pan." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "在需要翻面、淋浇或出锅时提醒你，不必一直守在锅边。"
           }
         }
       }
@@ -1527,7 +1626,9 @@
         }
       }
     },
-    "Override JSON" : {},
+    "Override JSON" : {
+
+    },
     "Pan is ready" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1592,6 +1693,7 @@
       }
     },
     "Perfect %@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1665,7 +1767,9 @@
         }
       }
     },
-    "Production defaults" : {},
+    "Production defaults" : {
+
+    },
     "Progress" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1739,16 +1843,6 @@
         }
       }
     },
-    "Nudges you when the next flip, baste or pull is due, so you can step away from the pan." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "在需要翻面、淋浇或出锅时提醒你，不必一直守在锅边。"
-          }
-        }
-      }
-    },
     "READY" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1791,6 +1885,16 @@
         }
       }
     },
+    "REMINDERS" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提醒"
+          }
+        }
+      }
+    },
     "Remove from the pan" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1812,7 +1916,39 @@
         }
       }
     },
-    "Reset to production" : {},
+    "Reset" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置"
+          }
+        }
+      }
+    },
+    "Reset adjustments" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置调整"
+          }
+        }
+      }
+    },
+    "Reset learned adjustments?" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重置学习到的调整？"
+          }
+        }
+      }
+    },
+    "Reset to production" : {
+
+    },
     "Rest off the heat" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -1855,33 +1991,15 @@
         }
       }
     },
-    "Cooking reminders" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "烹饪提醒"
-          }
-        }
-      }
+    "Running" : {
+
     },
-    "Running" : {},
     "Salt" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "撒盐"
-          }
-        }
-      }
-    },
-    "Sound" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "音效"
           }
         }
       }
@@ -1918,16 +2036,6 @@
         }
       }
     },
-    "Haptics" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "触感"
-          }
-        }
-      }
-    },
     "Save & Cook Again" : {
       "localizations" : {
         "zh-Hans" : {
@@ -1949,23 +2057,15 @@
         }
       }
     },
-    "Save override" : {},
+    "Save override" : {
+
+    },
     "SEAR" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "煎制"
-          }
-        }
-      }
-    },
-    "LEARNED ADJUSTMENTS" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "学习到的调整"
           }
         }
       }
@@ -2069,32 +2169,12 @@
         }
       }
     },
-    "Nothing yet. Feedback after a cook is what teaches the app." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "暂无。烹饪后的反馈才会让它学习。"
-          }
-        }
-      }
-    },
     "Settings" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "设置"
-          }
-        }
-      }
-    },
-    "Learned from your feedback after a cook. Each entry shifts the timing for that cut, thickness and doneness." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "根据你每次烹饪后的反馈学习而来。每条都会影响对应部位、厚度与熟度的时间。"
           }
         }
       }
@@ -2109,16 +2189,8 @@
         }
       }
     },
-    "Share" : {},
-    "Reset learned adjustments?" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重置学习到的调整？"
-          }
-        }
-      }
+    "Share" : {
+
     },
     "Skip" : {
       "localizations" : {
@@ -2126,16 +2198,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "跳过"
-          }
-        }
-      }
-    },
-    "Reset" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重置"
           }
         }
       }
@@ -2234,7 +2296,29 @@
         }
       }
     },
-    "Source" : {},
+    "Sound" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "音效"
+          }
+        }
+      }
+    },
+    "SOUND & HAPTICS" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "声音与触感"
+          }
+        }
+      }
+    },
+    "Source" : {
+
+    },
     "STAND IT UP" : {
       "localizations" : {
         "zh-Hans" : {
@@ -2251,6 +2335,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "立起煎脂肪边"
+          }
+        }
+      }
+    },
+    "Standard" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "标准"
           }
         }
       }
@@ -2370,32 +2464,12 @@
         }
       }
     },
-    "ABOUT" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "关于"
-          }
-        }
-      }
-    },
     "TARGET TEMP" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "目标温度"
-          }
-        }
-      }
-    },
-    "Version" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "版本"
           }
         }
       }
@@ -2417,6 +2491,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "中心温度"
+          }
+        }
+      }
+    },
+    "Temperatures shown while cooking are model estimates, not measurements. They never decide when the steak is done." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "烹饪中显示的温度是模型估算，不是实测。它不会决定牛排何时完成。"
           }
         }
       }
@@ -2443,6 +2527,16 @@
         }
       }
     },
+    "The app will go back to its built-in timings for every cut. Your saved settings and cook history are kept." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "所有部位都会回到内置时间。已保存的设置和烹饪记录会保留。"
+          }
+        }
+      }
+    },
     "The steak is still cooking." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2464,13 +2558,25 @@
         }
       }
     },
-    "Thermal" : {},
+    "Thermal" : {
+
+    },
     "These settings are recommendations based on your last cook." : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "这些设置会根据你上一次的烹饪结果提供建议。"
+          }
+        }
+      }
+    },
+    "Thick" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "厚"
           }
         }
       }
@@ -2491,6 +2597,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "厚度"
+          }
+        }
+      }
+    },
+    "Thin" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "薄"
           }
         }
       }
@@ -2569,16 +2685,6 @@
         }
       }
     },
-    "Temperatures shown while cooking are model estimates, not measurements. They never decide when the steak is done." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "烹饪中显示的温度是模型估算，不是实测。它不会决定牛排何时完成。"
-          }
-        }
-      }
-    },
     "Time to eat" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2586,16 +2692,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "开始享用"
-          }
-        }
-      }
-    },
-    "%@ · %@" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "%@ · %@"
           }
         }
       }
@@ -2682,7 +2778,9 @@
         }
       }
     },
-    "Tuning Lab" : {},
+    "Tuning Lab" : {
+
+    },
     "Turn it over now." : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2723,6 +2821,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "使用此读数"
+          }
+        }
+      }
+    },
+    "Version" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "版本"
           }
         }
       }
@@ -2869,66 +2977,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "当前进度将被清除，并返回设置界面。"
-          }
-        }
-      }
-    },
-    "SOUND & HAPTICS" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "声音与触感"
-          }
-        }
-      }
-    },
-    "Reset adjustments" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "重置调整"
-          }
-        }
-      }
-    },
-    "Thin" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "薄"
-          }
-        }
-      }
-    },
-    "Standard" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "标准"
-          }
-        }
-      }
-    },
-    "Thick" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "厚"
-          }
-        }
-      }
-    },
-    "The app will go back to its built-in timings for every cut. Your saved settings and cook history are kept." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "所有部位都会回到内置时间。已保存的设置和烹饪记录会保留。"
           }
         }
       }

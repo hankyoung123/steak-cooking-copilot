@@ -19,7 +19,7 @@ enum HomeLayoutID {
 /// ## Why the setup screen gets the same treatment as the session
 ///
 /// The three cuts have different name lengths in both languages — `RIBEYE` /
-/// `STRIP` / `TENDERLOIN`, `肉眼牛排` / `纽约客牛排` / `菲力` — and the screen
+/// `STRIP` / `TENDERLOIN`, `肉眼牛排` / `西冷牛排` / `菲力` — and the screen
 /// was a plain `VStack` of intrinsically sized rows. Nothing pinned the title
 /// band, the parameter row, the summary or the call to action, so any copy
 /// change was free to reflow everything below it.
@@ -148,9 +148,9 @@ extension HomeLayoutMetrics {
         heroImageInset: 14,
         navigationHeight: 44,
         // Wide enough for the longest neighbour name in either language
-        // ("NEW YORK STRIP" / "纽约客牛排") to fit without truncating. The
-        // slot is fixed on both sides, so the dot group cannot drift when the
-        // neighbour changes.
+        // ("NEW YORK STRIP"; the Chinese names are shorter) to fit without
+        // truncating. The slot is fixed on both sides, so the dot group cannot
+        // drift when the neighbour changes.
         navigationLabelWidth: 92,
         navigationMaxWidth: 302,
         titleHeight: 70,

@@ -11,6 +11,16 @@ final class SteakCopilotUITests: XCTestCase {
         // longest copy this screen has to lay out, so the home skeleton is
         // worth an explicit reference image in Chinese.
         attachScreenshot(named: "home-zh-Hans", app: app)
+
+        // The strip's localized name is the one the carousel has to lay out, so
+        // it is asserted rather than only screenshotted.
+        app.buttons["home.nextCut"].tap()
+        XCTAssertTrue(
+            app.staticTexts["西冷牛排"].waitForExistence(timeout: 3),
+            "The strip's Chinese name should be 西冷牛排"
+        )
+        attachScreenshot(named: "home-zh-Hans-strip", app: app)
+
         app.buttons["home.settings"].tap()
         XCTAssertEqual(
             app.buttons["setup.doneness.mediumWell"].label,

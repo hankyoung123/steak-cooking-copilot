@@ -4,7 +4,7 @@ import SwiftUI
 ///
 /// The whole screen is a fixed skeleton: `HomeLayoutMetrics` decides the
 /// geometry of every band from the device size alone, and the selected cut only
-/// changes what is *inside* a band. That is what stops `肉眼牛排` / `纽约客牛排` /
+/// changes what is *inside* a band. That is what stops `肉眼牛排` / `西冷牛排` /
 /// `菲力` (and `RIBEYE` / `NEW YORK STRIP` / `TENDERLOIN`) from reflowing the
 /// title, the parameter row, the summary or the call to action.
 ///
