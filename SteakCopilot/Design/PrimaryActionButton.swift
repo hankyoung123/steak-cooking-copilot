@@ -6,6 +6,10 @@ struct PrimaryActionButton: View {
     var icon: String? = nil
     var isEnabled = true
     var lightOnDark = false
+    /// Drawn over artwork rather than on its own band: the shadow deepens so the
+    /// block still reads as a surface sitting above the photograph instead of as
+    /// a printed block on a flat page.
+    var floating = false
     let action: () -> Void
 
     var body: some View {
@@ -33,11 +37,13 @@ struct PrimaryActionButton: View {
                     .stroke(lightOnDark ? Color.white.opacity(0.24) : Color.white.opacity(0.07), lineWidth: 0.8)
             }
             .shadow(
-                // Kept deliberately shallow: this is meant to read as a printed
-                // black block, not a floating Material card.
-                color: Color.black.opacity(lightOnDark ? 0 : 0.12),
-                radius: 6,
-                y: 3
+                // Printed black block on a flat page; a deeper, softer shadow when
+                // it floats over the photograph, so it separates from the artwork.
+                color: Color.black.opacity(
+                    floating ? (lightOnDark ? 0.45 : 0.24) : (lightOnDark ? 0 : 0.12)
+                ),
+                radius: floating ? 18 : 6,
+                y: floating ? 9 : 3
             )
         }
         .buttonStyle(EditorialPressStyle())

@@ -161,12 +161,21 @@ struct SessionLayoutMetrics: Equatable, Sendable {
     let bottomSecondaryHeight: CGFloat
     let bottomSecondarySpacing: CGFloat
 
-    /// The bottom area holds two fixed rows: the contextual secondary control
-    /// (prep toggles, "no thermometer") and the primary call to action. The
-    /// primary row is bottom aligned, so the CTA has one screen position in
-    /// every phase — including the phases where the secondary row is empty.
+    /// Clearance the floating primary action occupies at the bottom of the flow.
+    ///
+    /// The action is drawn as an overlay over the artwork rather than as a row in
+    /// the flow, so it needs no spacing of its own above it: the two numbers that
+    /// used to separate the in-flow rows (`bottomActionSpacing` and
+    /// `bottomSecondarySpacing`) are still declared — the result skeleton reuses
+    /// them — but they are no longer part of the session's budget. That is what
+    /// lets the instruction, the rail and the telemetry sit lower, clear of the
+    /// bright part of the photograph.
+    var floatingActionClearance: CGFloat { bottomPrimaryHeight }
+
+    /// The bottom area holds the contextual secondary row (prep toggles) in the
+    /// flow, then the clearance under it where the primary action floats.
     var bottomActionHeight: CGFloat {
-        bottomSecondaryHeight + bottomSecondarySpacing + bottomPrimaryHeight
+        bottomSecondaryHeight + floatingActionClearance
     }
 
     /// Height consumed by everything that is not the scene.
@@ -179,7 +188,6 @@ struct SessionLayoutMetrics: Equatable, Sendable {
             + instructionHeight
             + statusSpacing
             + statusHeight
-            + bottomActionSpacing
             + bottomActionHeight
     }
 
@@ -206,7 +214,7 @@ extension SessionLayoutMetrics {
         headerHeight: 96,
         sceneHeight: 0,
         instructionHeight: 58,
-        statusHeight: 112,
+        statusHeight: 96,
         headerSpacing: 10,
         sceneSpacing: 6,
         instructionSpacing: 14,
@@ -228,7 +236,7 @@ extension SessionLayoutMetrics {
         headerHeight: 80,
         sceneHeight: 0,
         instructionHeight: 58,
-        statusHeight: 112,
+        statusHeight: 96,
         headerSpacing: 8,
         sceneSpacing: 4,
         instructionSpacing: 12,

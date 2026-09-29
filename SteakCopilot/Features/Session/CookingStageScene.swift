@@ -244,6 +244,14 @@ struct CookingStageScene: View {
             // The photograph stays essentially still; only a subtle
             // brightness / micro-scale response so motion never reads as
             // camera shake and never as a second layer.
+            //
+            // It is also zoomed and lifted a little. The session's reading
+            // cluster (instruction, progress rail, telemetry) sits in the lower
+            // third, and in every one of the compositions the subject sits in the
+            // middle — so without the lift the text landed on the steak, where no
+            // scrim can give it enough contrast without burying the photograph.
+            // The zoom is what buys the lift: scaling about the centre makes the
+            // image taller than the frame, so panning up cannot expose an edge.
             Image(sceneAsset)
                 .resizable()
                 .scaledToFill()
@@ -252,6 +260,8 @@ struct CookingStageScene: View {
                     height: size.height,
                     alignment: focalAlignment
                 )
+                .scaleEffect(Self.compositionZoom, anchor: .center)
+                .offset(y: -size.height * Self.compositionLift)
                 .clipped()
                 .id(sceneAsset)
                 .transition(.opacity)
@@ -315,6 +325,16 @@ struct CookingStageScene: View {
         default: .center
         }
     }
+
+    /// How much the full-bleed composition is enlarged before it is lifted.
+    ///
+    /// Scaling about the centre is what makes the pan-up possible: at 1.12 the
+    /// image overhangs the frame by about 45pt top and bottom, so lifting it by
+    /// `compositionLift` (38pt) still leaves the frame fully covered.
+    private static let compositionZoom: CGFloat = 1.12
+    /// Fraction of the frame height the composition is panned up by, so the
+    /// subject leaves the reading cluster's band.
+    private static let compositionLift: CGFloat = 0.05
 
     private var horizontalInset: CGFloat {
         switch controller.session.phase {

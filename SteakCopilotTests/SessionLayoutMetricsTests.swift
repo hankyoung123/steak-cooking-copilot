@@ -80,20 +80,23 @@ final class SessionLayoutMetricsTests: XCTestCase {
 
     // MARK: - Slot arithmetic
 
-    /// The bottom action row is the anchor the CTA is measured against: the
-    /// primary row is bottom aligned inside it, so its position is
-    /// `bottomActionHeight - bottomPrimaryHeight` in every phase.
-    func testBottomActionRowIsTheSumOfItsRows() {
+    /// The bottom block is the contextual secondary row in the flow plus the
+    /// clearance the floating primary action occupies under it. The clearance has
+    /// to cover the action itself, or the floating row would sit on the toggles.
+    func testBottomActionRowIsTheSecondaryRowPlusTheFloatingClearance() {
         for height in phoneHeights {
             let layout = SessionLayoutMetrics.resolve(
                 for: CGSize(width: 393, height: height)
             )
             XCTAssertEqual(
                 layout.bottomActionHeight,
-                layout.bottomSecondaryHeight
-                    + layout.bottomSecondarySpacing
-                    + layout.bottomPrimaryHeight,
+                layout.bottomSecondaryHeight + layout.floatingActionClearance,
                 accuracy: 0.001
+            )
+            XCTAssertGreaterThanOrEqual(
+                layout.floatingActionClearance,
+                layout.bottomPrimaryHeight,
+                "The clearance must cover the floating action"
             )
         }
     }
@@ -104,6 +107,8 @@ final class SessionLayoutMetricsTests: XCTestCase {
         let layout = SessionLayoutMetrics.resolve(
             for: CGSize(width: 393, height: 759)
         )
+        // The floating action's rows are not in the flow: its clearance is inside
+        // `bottomActionHeight`, and the two former spacings are no longer spent.
         let expected = layout.topControlHeight
             + layout.headerSpacing
             + layout.headerHeight
@@ -112,7 +117,6 @@ final class SessionLayoutMetricsTests: XCTestCase {
             + layout.instructionHeight
             + layout.statusSpacing
             + layout.statusHeight
-            + layout.bottomActionSpacing
             + layout.bottomActionHeight
 
         XCTAssertEqual(layout.heightExcludingScene, expected, accuracy: 0.001)

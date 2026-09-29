@@ -45,6 +45,9 @@ struct CookingSessionView: View {
                 // supported device at a normal text size it is inert, which is
                 // what makes the slot positions trustworthy.
                 .scrollBounceBehavior(.basedOnSize)
+                .overlay(alignment: .bottom) {
+                    floatingPrimaryAction(layout: layout, at: context.date)
+                }
             }
         }
         .foregroundStyle(isDarkStage ? theme.porcelain : theme.ink)
@@ -59,19 +62,25 @@ struct CookingSessionView: View {
 
     // MARK: - Skeleton
 
-    /// Slot order is fixed for every phase. `Spacer` absorbs the slack on tall
-    /// devices, so the bottom action stays pinned to the bottom edge and the
-    /// rows above it keep their exact offsets.
+    /// Slot order is fixed for every phase. The slack sits *above* the
+    /// instruction band, so on a tall container the reading cluster stays just
+    /// above the floating action instead of drifting up onto the photograph.
+    ///
+    /// The primary action is not a row here at all — it floats over the artwork
+    /// (see `floatingPrimaryAction`), and the flow reserves only the clearance it
+    /// occupies, which is what lets the instruction, the rail and the telemetry
+    /// sit clear of the bright part of the photograph.
     private func skeleton(layout: SessionLayoutMetrics, at date: Date) -> some View {
         VStack(spacing: 0) {
             topControlsSlot(layout)
             heroSlot(layout, at: date)
             sceneSlot(layout)
+            Spacer(minLength: 0)
             instructionSlot(layout, at: date)
             statusSlot(layout, at: date)
-            Spacer(minLength: 0)
-            bottomActionSlot(layout, at: date)
+            bottomSecondarySlot(layout, at: date)
         }
+        .padding(.bottom, layout.floatingActionClearance)
     }
 
     private func topControlsSlot(_ layout: SessionLayoutMetrics) -> some View {
@@ -173,15 +182,46 @@ struct CookingSessionView: View {
         }
     }
 
-    private func bottomActionSlot(_ layout: SessionLayoutMetrics, at date: Date) -> some View {
-        VStack(spacing: layout.bottomSecondarySpacing) {
-            bottomSecondaryControl(layout: layout, at: date)
-            bottomPrimaryControl(layout: layout, at: date)
+    /// The contextual row in the flow: PREP's two toggles, empty in every other
+    /// phase. Its height is reserved for all phases so the rows above it never
+    /// move; the primary action is not here any more — it floats.
+    private func bottomSecondarySlot(_ layout: SessionLayoutMetrics, at date: Date) -> some View {
+        bottomSecondaryControl(layout: layout, at: date)
+            .padding(.horizontal, layout.contentInset)
+            .frame(maxWidth: .infinity)
+            .frame(height: layout.bottomSecondaryHeight)
+    }
+
+    /// The one primary action per phase, floating over the artwork at the bottom
+    /// of the screen.
+    ///
+    /// It is an overlay rather than a flow row for two reasons. The bottom of
+    /// every cook composition is its dark part, so a floating action never sits
+    /// on the steak; and because it is out of the flow it cannot push the
+    /// instruction, the rail or the telemetry. Its own frame is a fixed
+    /// bottom-anchored slot, so it also keeps one position across phases — the
+    /// layout probe still measures it, empty or not.
+    private func floatingPrimaryAction(
+        layout: SessionLayoutMetrics,
+        at date: Date
+    ) -> some View {
+        bottomPrimaryControl(layout: layout, at: date)
+            .padding(.horizontal, layout.contentInset)
+            // With nothing to offer the row still holds its frame, so the probe
+            // stays put; it just stops swallowing touches over the artwork.
+            .allowsHitTesting(showsPrimaryAction)
+    }
+
+    /// Whether the phase has an action for the floating row to offer.
+    private var showsPrimaryAction: Bool {
+        switch controller.session.phase {
+        case .prep, .heat:
+            true
+        case .sear, .fatCap, .baste, .checkTemperature:
+            confirmTitle != nil
+        default:
+            false
         }
-        .padding(.horizontal, layout.contentInset)
-        .frame(maxWidth: .infinity)
-        .frame(height: layout.bottomActionHeight, alignment: .bottom)
-        .padding(.top, layout.bottomActionSpacing)
     }
 
     /// The contextual row. Its height is reserved in every phase, so the
@@ -222,14 +262,16 @@ struct CookingSessionView: View {
                     title: String(localized: "Continue to preheat"),
                     icon: "arrow.right",
                     isEnabled: dried && salted,
-                    lightOnDark: isDarkStage
+                    lightOnDark: isDarkStage,
+                    floating: true
                 ) { controller.finishPrep(at: date) }
                 .accessibilityIdentifier("prep.continue")
             case .heat:
                 PrimaryActionButton(
                     title: String(localized: "Pan is ready"),
                     icon: "arrow.right",
-                    lightOnDark: isDarkStage
+                    lightOnDark: isDarkStage,
+                    floating: true
                 ) { controller.panIsReady(at: date) }
                 .accessibilityIdentifier("heat.ready")
             case .sear, .fatCap, .baste, .checkTemperature:
@@ -240,7 +282,8 @@ struct CookingSessionView: View {
                         title: title,
                         icon: "arrow.right",
                         isEnabled: isConfirmable(at: date),
-                        lightOnDark: isDarkStage
+                        lightOnDark: isDarkStage,
+                        floating: true
                     ) { controller.confirmCurrentAction(at: date) }
                     .accessibilityLabel(title)
                     .accessibilityIdentifier("cook.confirm")
