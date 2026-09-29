@@ -180,6 +180,7 @@
       }
     },
     "A dry surface gives you a deeper, faster crust." : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
@@ -1568,6 +1569,7 @@
       }
     },
     "Oil should shimmer and the steak should sizzle immediately on contact." : {
+      "extractionState" : "stale",
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -1905,22 +1907,22 @@
         }
       }
     },
-    "REMINDERS" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "提醒"
-          }
-        }
-      }
-    },
     "Ready to preheat" : {
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "可以预热锅了"
+          }
+        }
+      }
+    },
+    "REMINDERS" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "提醒"
           }
         }
       }
@@ -2295,26 +2297,6 @@
         }
       }
     },
-    "The timing estimate assumes a 20°C centre when the steak goes in. Straight from the fridge runs behind it." : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "时间估算按下锅时中心 20°C 为前提；刚从冰箱取出会偏生。"
-          }
-        }
-      }
-    },
-    "Wait until droplets dance" : {
-      "localizations" : {
-        "zh-Hans" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "等到水珠打转"
-          }
-        }
-      }
-    },
     "sliced" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2618,6 +2600,16 @@
         }
       }
     },
+    "The timing estimate assumes a 20°C centre when the steak goes in. Straight from the fridge runs behind it." : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "时间估算按下锅时中心 20°C 为前提；刚从冰箱取出会偏生。"
+          }
+        }
+      }
+    },
     "Thermal" : {
 
     },
@@ -2916,11 +2908,22 @@
       }
     },
     "Wait for a hard sizzle" : {
+      "extractionState" : "stale",
       "localizations" : {
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
             "value" : "等待强烈滋滋声"
+          }
+        }
+      }
+    },
+    "Wait until droplets dance" : {
+      "localizations" : {
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "等到水珠打转"
           }
         }
       }

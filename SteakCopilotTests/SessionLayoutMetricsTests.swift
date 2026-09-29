@@ -82,7 +82,7 @@ final class SessionLayoutMetricsTests: XCTestCase {
 
     /// The bottom block is the contextual secondary row in the flow plus the
     /// clearance the floating primary action occupies under it. The clearance has
-    /// to cover the action itself, or the floating row would sit on the toggles.
+    /// to exceed the action's own height, or the action sits on the toggles.
     func testBottomActionRowIsTheSecondaryRowPlusTheFloatingClearance() {
         for height in phoneHeights {
             let layout = SessionLayoutMetrics.resolve(
@@ -93,10 +93,18 @@ final class SessionLayoutMetricsTests: XCTestCase {
                 layout.bottomSecondaryHeight + layout.floatingActionClearance,
                 accuracy: 0.001
             )
-            XCTAssertGreaterThanOrEqual(
+            XCTAssertGreaterThan(
                 layout.floatingActionClearance,
                 layout.bottomPrimaryHeight,
-                "The clearance must cover the floating action"
+                """
+                The floating action must not touch the row above it: the \
+                clearance has to exceed the action's height by the margin
+                """
+            )
+            XCTAssertEqual(
+                layout.floatingActionClearance - layout.bottomPrimaryHeight,
+                layout.floatingActionMargin,
+                accuracy: 0.001
             )
         }
     }

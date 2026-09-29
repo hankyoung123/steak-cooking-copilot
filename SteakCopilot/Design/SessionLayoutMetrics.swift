@@ -160,6 +160,11 @@ struct SessionLayoutMetrics: Equatable, Sendable {
     let bottomPrimaryHeight: CGFloat
     let bottomSecondaryHeight: CGFloat
     let bottomSecondarySpacing: CGFloat
+    /// Gap between the contextual secondary row and the floating primary action,
+    /// and therefore also between the action and the bottom edge of the flow.
+    /// Without it the clearance is exactly the action's height, and the two rows
+    /// touch — which is what "the toggles are stuck to the button" looked like.
+    let floatingActionMargin: CGFloat
 
     /// Clearance the floating primary action occupies at the bottom of the flow.
     ///
@@ -170,7 +175,9 @@ struct SessionLayoutMetrics: Equatable, Sendable {
     /// them — but they are no longer part of the session's budget. That is what
     /// lets the instruction, the rail and the telemetry sit lower, clear of the
     /// bright part of the photograph.
-    var floatingActionClearance: CGFloat { bottomPrimaryHeight }
+    var floatingActionClearance: CGFloat {
+        bottomPrimaryHeight + floatingActionMargin
+    }
 
     /// The bottom area holds the contextual secondary row (prep toggles) in the
     /// flow, then the clearance under it where the primary action floats.
@@ -224,7 +231,8 @@ extension SessionLayoutMetrics {
         statusContentSpacing: 10,
         bottomPrimaryHeight: 56,
         bottomSecondaryHeight: 46,
-        bottomSecondarySpacing: 8
+        bottomSecondarySpacing: 8,
+        floatingActionMargin: 16
     )
 
     static let compact = SessionLayoutMetrics(
@@ -246,7 +254,8 @@ extension SessionLayoutMetrics {
         statusContentSpacing: 8,
         bottomPrimaryHeight: 56,
         bottomSecondaryHeight: 46,
-        bottomSecondarySpacing: 8
+        bottomSecondarySpacing: 8,
+        floatingActionMargin: 14
     )
 
     /// Resolves the skeleton for a container. Pure: the phase is not an input,
@@ -311,7 +320,8 @@ extension SessionLayoutMetrics {
             statusContentSpacing: statusContentSpacing,
             bottomPrimaryHeight: bottomPrimaryHeight * scale,
             bottomSecondaryHeight: bottomSecondaryHeight * scale,
-            bottomSecondarySpacing: bottomSecondarySpacing
+            bottomSecondarySpacing: bottomSecondarySpacing,
+            floatingActionMargin: floatingActionMargin
         )
     }
 
@@ -335,7 +345,8 @@ extension SessionLayoutMetrics {
             statusContentSpacing: statusContentSpacing,
             bottomPrimaryHeight: bottomPrimaryHeight,
             bottomSecondaryHeight: bottomSecondaryHeight,
-            bottomSecondarySpacing: bottomSecondarySpacing
+            bottomSecondarySpacing: bottomSecondarySpacing,
+            floatingActionMargin: floatingActionMargin
         )
     }
 }
